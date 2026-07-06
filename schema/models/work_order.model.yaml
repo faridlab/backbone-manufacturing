@@ -1,0 +1,212 @@
+# =============================================================================
+# Domain: Manufacturing — execution (transactional, EMITS GL)
+# Entities: WorkOrder (+ WorkOrderItem) + JobCard
+# Description: The ACT of building. A WorkOrder produces `qty` of an item against a
+# Bom; releasing it explodes the Bom into WorkOrderItems (required materials). Its
+# lifecycle emits three WIP postings via the AccountingPost seam:
+#   consume  Dr WIP · Cr Raw-Material Stock   (materials issued to WIP)
+#   operate  Dr WIP · Cr Conversion-Applied   (job-card labour/overhead)
+#   receive  Dr Finished-Goods · Cr WIP        (FG = raw + operating)
+# so WIP nets to ZERO on completion. Manufacturing owns no stock/ledger — it drives
+# inventory for the physical moves and emits the valuation posts. Accounts +
+# warehouses + item are logical FKs (accounting / inventory / catalog).
+# =============================================================================
+
+models:
+  - name: WorkOrder
+    collection: work_orders
+    description: "An order to manufacture qty of an item against a BOM; emits WIP/FG postings"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique work order id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      work_order_number:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "WO number (unique per company)"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The item to produce # logical FK to catalog.Product.id"
+      bom_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Bom.id)"]
+        description: "The BOM to build against"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity to produce"
+      produced_qty:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,4)", "@non_negative"]
+        description: "Quantity received as finished goods so far"
+      status:
+        type: WorkOrderStatus
+        attributes: ["@required", "@default(draft)"]
+        description: "Lifecycle state"
+
+      # --- valuation accumulators (filled as the WO progresses) ---
+      raw_material_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Value of materials consumed into WIP"
+      operating_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Conversion cost charged to WIP from job cards"
+
+      # --- warehouses (inventory seam) + GL accounts (accounting seam), logical FKs ---
+      wip_warehouse_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "WIP warehouse # logical FK to inventory.Warehouse.id"
+      fg_warehouse_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Finished-goods warehouse # logical FK to inventory.Warehouse.id"
+      wip_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Work-in-progress account # logical FK to accounting.Account.id"
+      fg_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Finished-goods inventory account # logical FK to accounting.Account.id"
+      raw_material_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Raw-material stock account # logical FK to accounting.Account.id"
+      conversion_cost_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Conversion-cost-applied account # logical FK to accounting.Account.id"
+
+      planned_start_date:
+        type: datetime?
+        description: "Planned start"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, work_order_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [company_id, status]
+      - type: index
+        fields: [item_id]
+
+  - name: WorkOrderItem
+    collection: work_order_items
+    description: "A required material for a work order (exploded from the BOM), with consumption tracking"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line id"
+      work_order_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(WorkOrder.id)"]
+        description: "Parent work order"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Component item # logical FK to catalog.Product.id"
+      required_qty:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@non_negative"]
+        description: "Quantity required (BOM component qty × WO qty / BOM qty)"
+      consumed_qty:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,4)", "@non_negative"]
+        description: "Quantity actually issued to WIP (bounded by required_qty)"
+      rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Valuation rate used for the consumed quantity"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [work_order_id]
+
+  - name: JobCard
+    collection: job_cards
+    description: "Shop-floor record of an operation run for a work order; drives conversion cost"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique job card id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      work_order_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(WorkOrder.id)"]
+        description: "The work order this operation belongs to"
+      operation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Operation.id)"]
+        description: "The operation performed"
+      workstation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Workstation.id)"]
+        description: "Where it ran (supplies the hour rate)"
+      total_time_mins:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,4)", "@non_negative"]
+        description: "Total time logged for this operation"
+      hour_rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Snapshotted workstation hourly rate"
+      operating_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "total_time_mins / 60 × hour_rate (charged to WIP once)"
+      status:
+        type: JobCardStatus
+        attributes: ["@required", "@default(open)"]
+        description: "open → completed (charged to WIP on completion)"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [work_order_id, status]
+
+enums:
+  - name: WorkOrderStatus
+    description: "Work order lifecycle"
+    variants:
+      - name: draft
+        description: "Created, not released"
+        default: true
+      - name: released
+        description: "Released — materials required, exploded from the BOM"
+      - name: in_process
+        description: "Materials consumed / operations underway (WIP has value)"
+      - name: completed
+        description: "Fully produced — finished goods received, WIP cleared"
+      - name: stopped
+        description: "Halted"
+
+  - name: JobCardStatus
+    description: "Job card lifecycle"
+    variants:
+      - name: open
+        description: "Recording time"
+        default: true
+      - name: completed
+        description: "Finished — conversion cost charged to WIP"

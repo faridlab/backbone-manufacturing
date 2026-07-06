@@ -1,0 +1,218 @@
+# =============================================================================
+# Domain: Manufacturing — product definition (master data, no GL)
+# Entities: Workstation, Operation, Bom (+ BomItem + BomOperation)
+# Description: WHAT to build. A Bom is the recipe for one manufactured item: its
+# component materials (BomItem) and the operations that convert them (BomOperation,
+# each on a Workstation at an hourly rate). The Bom's cost rolls up from both —
+# `raw_material_cost` (Σ items) + `operating_cost` (Σ operations) = `total_cost`.
+# Region-neutral, posts NO GL: a Bom only DEFINES cost; the Work Order execution
+# context is what emits WIP/FG postings. Cross-module ids are logical FKs.
+# =============================================================================
+
+models:
+  - name: Workstation
+    collection: workstations
+    description: "A machine/work-center with an hourly conversion-cost rate"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique workstation id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      workstation_name:
+        type: string
+        attributes: ["@required", "@max(140)"]
+        description: "Human name"
+      hour_rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Conversion cost per hour (labour + overhead)"
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Workstation is available"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [company_id, is_active]
+
+  - name: Operation
+    collection: operations
+    description: "A named production step (e.g. cut, assemble), optionally on a default workstation"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique operation id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      operation_name:
+        type: string
+        attributes: ["@required", "@max(140)"]
+        description: "Human name"
+      default_workstation_id:
+        type: uuid?
+        attributes: ["@foreign_key(Workstation.id)"]
+        description: "Default workstation for this operation"
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Operation is available"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [company_id, is_active]
+
+  - name: Bom
+    collection: boms
+    description: "The recipe for one manufactured item — components + operations, with a cost roll-up"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique BOM id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The manufactured item # logical FK to catalog.Product.id"
+      bom_code:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "BOM number (unique per company)"
+      quantity:
+        type: decimal
+        attributes: ["@default(1)", "@precision(18,4)", "@positive"]
+        description: "Base quantity this BOM produces (costs are per this qty)"
+      uom:
+        type: string?
+        attributes: ["@max(20)"]
+        description: "Unit of measure of the produced item"
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Currency code"
+      raw_material_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Σ component amounts (rolled up)"
+      operating_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Σ operation costs (rolled up)"
+      total_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "raw_material_cost + operating_cost"
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "BOM is usable"
+      is_default:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "The default BOM for the item"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, bom_code]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [company_id, item_id, is_active]
+
+  - name: BomItem
+    collection: bom_items
+    description: "One component line of a BOM"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line id"
+      bom_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Bom.id)"]
+        description: "Parent BOM"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Component item # logical FK to catalog.Product.id"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity of the component per BOM base qty"
+      rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Unit cost of the component (valuation rate)"
+      amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "quantity × rate"
+      is_phantom:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "A phantom sub-assembly — never stocked; at Work Order release it is exploded THROUGH to its own BOM's components (resolved by item_id), not issued as a material."
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [bom_id]
+
+  - name: BomOperation
+    collection: bom_operations
+    description: "One operation line of a BOM (drives operating cost)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line id"
+      bom_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Bom.id)"]
+        description: "Parent BOM"
+      operation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Operation.id)"]
+        description: "The operation performed"
+      workstation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Workstation.id)"]
+        description: "Where it runs (supplies the hour rate)"
+      time_in_mins:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@non_negative"]
+        description: "Standard time for this operation per BOM base qty"
+      hour_rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Snapshotted workstation hourly rate"
+      operating_cost:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "time_in_mins / 60 × hour_rate"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [bom_id]
