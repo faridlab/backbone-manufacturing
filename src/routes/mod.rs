@@ -12,13 +12,21 @@ use std::sync::Arc;
 // Import handlers
 use crate::presentation::http::{
     create_workstation_routes,
+    create_workstation_read_routes,
     create_operation_routes,
+    create_operation_read_routes,
     create_bom_routes,
+    create_bom_read_routes,
     create_bom_item_routes,
+    create_bom_item_read_routes,
     create_bom_operation_routes,
+    create_bom_operation_read_routes,
     create_work_order_routes,
+    create_work_order_read_routes,
     create_work_order_item_routes,
-    create_job_card_routes
+    create_work_order_item_read_routes,
+    create_job_card_routes,
+    create_job_card_read_routes
 };
 
 // Import AppState for stateful routes
@@ -50,6 +58,23 @@ pub fn create_stateless_routes(module: &crate::ManufacturingModule) -> Router<()
         .merge(create_work_order_routes(module.work_order_service.clone()))
         .merge(create_work_order_item_routes(module.work_order_item_service.clone()))
         .merge(create_job_card_routes(module.job_card_service.clone()))
+}
+
+/// Read-only routes for the Manufacturing module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_manufacturing_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_manufacturing_routes(module: &crate::ManufacturingModule) -> Router<()> {
+    Router::new()
+        .merge(create_workstation_read_routes(module.workstation_service.clone()))
+        .merge(create_operation_read_routes(module.operation_service.clone()))
+        .merge(create_bom_read_routes(module.bom_service.clone()))
+        .merge(create_bom_item_read_routes(module.bom_item_service.clone()))
+        .merge(create_bom_operation_read_routes(module.bom_operation_service.clone()))
+        .merge(create_work_order_read_routes(module.work_order_service.clone()))
+        .merge(create_work_order_item_read_routes(module.work_order_item_service.clone()))
+        .merge(create_job_card_read_routes(module.job_card_service.clone()))
 }
 
 /// Get all routes (stateless) for the Manufacturing module.
