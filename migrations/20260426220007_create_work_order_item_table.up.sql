@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS manufacturing.work_order_items (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     work_order_id UUID NOT NULL,
     item_id UUID NOT NULL,
-    required_qty NUMERIC NOT NULL,
-    consumed_qty NUMERIC NOT NULL DEFAULT 0,
-    rate NUMERIC NOT NULL DEFAULT 0,
+    required_qty NUMERIC(18, 4) NOT NULL CHECK (required_qty >= 0),
+    consumed_qty NUMERIC(18, 4) NOT NULL DEFAULT 0 CHECK (consumed_qty >= 0),
+    rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (rate >= 0),
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
 );

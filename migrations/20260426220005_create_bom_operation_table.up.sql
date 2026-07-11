@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS manufacturing.bom_operations (
     bom_id UUID NOT NULL,
     operation_id UUID NOT NULL,
     workstation_id UUID NOT NULL,
-    time_in_mins NUMERIC NOT NULL,
-    hour_rate NUMERIC NOT NULL DEFAULT 0,
-    operating_cost NUMERIC NOT NULL DEFAULT 0,
+    time_in_mins NUMERIC(18, 4) NOT NULL CHECK (time_in_mins >= 0),
+    hour_rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (hour_rate >= 0),
+    operating_cost NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (operating_cost >= 0),
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
 );

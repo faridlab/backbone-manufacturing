@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS manufacturing.bom_items (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     bom_id UUID NOT NULL,
     item_id UUID NOT NULL,
-    quantity NUMERIC NOT NULL,
-    rate NUMERIC NOT NULL DEFAULT 0,
-    amount NUMERIC NOT NULL DEFAULT 0,
+    quantity NUMERIC(18, 4) NOT NULL,
+    rate NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (rate >= 0),
+    amount NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
     is_phantom BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB NOT NULL DEFAULT '{"created_at":null,"updated_at":null,"deleted_at":null,"created_by":null,"updated_by":null,"deleted_by":null}'::jsonb,
     PRIMARY KEY (id)
