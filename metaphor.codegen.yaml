@@ -15,6 +15,18 @@ user_owned:
   - "src/application/service/manufacturing_gl.rs"
   - "src/application/service/manufacturing_ports.rs"
   - "src/application/service/manufacturing_write_service.rs"
+
+  # The six document repositories own the hand-written manufacturing SQL that the write service
+  # orchestrates (the BOM header+lines inserts, the BOM explosion reads, and the release / consume /
+  # receive / job-card transition gates that are the once-only guards on the WIP posts). Declared
+  # here — not renamed with a `_custom` suffix — so the generator skips them wholesale; this
+  # declaration is what makes editing them legitimate.
+  - "src/infrastructure/persistence/bom_repository.rs"
+  - "src/infrastructure/persistence/bom_item_repository.rs"
+  - "src/infrastructure/persistence/bom_operation_repository.rs"
+  - "src/infrastructure/persistence/work_order_repository.rs"
+  - "src/infrastructure/persistence/work_order_item_repository.rs"
+  - "src/infrastructure/persistence/job_card_repository.rs"
   - "tests/integrity_probes.rs"
   - "tests/manufacturing_golden_cases.rs"
   - "tests/plant_to_produce_seam.rs"

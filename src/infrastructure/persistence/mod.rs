@@ -36,4 +36,12 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
+// The hand-written manufacturing SQL's parameter/projection types. Their repositories are declared
+// `user_owned` in metaphor.codegen.yaml; these types mirror COLUMNS, not entities.
+pub use bom_repository::NewBomRow;
+pub use bom_item_repository::{BomComponentRow, NewBomItemRow};
+pub use bom_operation_repository::NewBomOperationRow;
+pub use work_order_repository::{NewWorkOrderRow, ReleaseSourceRow, WorkOrderRow};
+pub use work_order_item_repository::{NewWorkOrderItemRow, WorkOrderRequirementRow};
+pub use job_card_repository::{JobCardCompletionRow, NewJobCardRow};
 // END CUSTOM

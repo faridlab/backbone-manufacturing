@@ -12,8 +12,14 @@
 
 use backbone_orm::company_scope;
 use rust_decimal::{Decimal, RoundingStrategy};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::infrastructure::persistence::{
+    BomItemRepository, BomOperationRepository, BomRepository, JobCardRepository, NewBomItemRow,
+    NewBomOperationRow, NewBomRow, NewJobCardRow, NewWorkOrderItemRow, NewWorkOrderRow,
+    WorkOrderItemRepository, WorkOrderRepository, WorkOrderRow,
+};
 
 use super::manufacturing_events::*;
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostLine, GlPostSink};
@@ -111,11 +117,25 @@ pub struct ReceiveOutcome {
 
 pub struct ManufacturingWriteService {
     pool: PgPool,
+    boms: BomRepository,
+    bom_items: BomItemRepository,
+    bom_operations: BomOperationRepository,
+    work_orders: WorkOrderRepository,
+    work_order_items: WorkOrderItemRepository,
+    job_cards: JobCardRepository,
 }
 
 impl ManufacturingWriteService {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            boms: BomRepository::new(pool.clone()),
+            bom_items: BomItemRepository::new(pool.clone()),
+            bom_operations: BomOperationRepository::new(pool.clone()),
+            work_orders: WorkOrderRepository::new(pool.clone()),
+            work_order_items: WorkOrderItemRepository::new(pool.clone()),
+            job_cards: JobCardRepository::new(pool.clone()),
+            pool,
+        }
     }
 
     // ---- product definition -----------------------------------------------------------------
@@ -145,36 +165,41 @@ impl ManufacturingWriteService {
         // passes the WITH CHECK fence. The explicit `company_id` bind stays as defense-in-depth.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, b.company_id).await?;
-        let ins = sqlx::query(
-            r#"INSERT INTO manufacturing.boms
-                 (id, company_id, item_id, bom_code, quantity, uom, currency,
-                  raw_material_cost, operating_cost, total_cost, is_active, is_default)
-               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,true,false)"#,
-        )
-        .bind(id).bind(b.company_id).bind(b.item_id).bind(&b.bom_code).bind(b.quantity)
-        .bind(&b.uom).bind(raw).bind(operating).bind(total)
-        .execute(&mut *tx).await;
+        let ins = self.boms.insert_bom(&mut tx, &NewBomRow {
+            id,
+            company_id: b.company_id,
+            item_id: b.item_id,
+            bom_code: &b.bom_code,
+            quantity: b.quantity,
+            uom: b.uom.as_deref(),
+            raw_material_cost: raw,
+            operating_cost: operating,
+            total_cost: total,
+        }).await;
         if let Err(e) = ins {
             return Err(if is_dup(&e) { ManufacturingError::DuplicateNumber(b.bom_code) } else { e.into() });
         }
         for it in &b.items {
-            sqlx::query(
-                r#"INSERT INTO manufacturing.bom_items (id, bom_id, item_id, quantity, rate, amount, is_phantom)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
-            )
-            .bind(Uuid::new_v4()).bind(id).bind(it.item_id).bind(it.quantity).bind(it.rate)
-            .bind(money(it.quantity * it.rate)).bind(it.is_phantom)
-            .execute(&mut *tx).await?;
+            self.bom_items.insert_component(&mut tx, &NewBomItemRow {
+                id: Uuid::new_v4(),
+                bom_id: id,
+                item_id: it.item_id,
+                quantity: it.quantity,
+                rate: it.rate,
+                amount: money(it.quantity * it.rate),
+                is_phantom: it.is_phantom,
+            }).await?;
         }
         for op in &b.operations {
-            sqlx::query(
-                r#"INSERT INTO manufacturing.bom_operations
-                     (id, bom_id, operation_id, workstation_id, time_in_mins, hour_rate, operating_cost)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
-            )
-            .bind(Uuid::new_v4()).bind(id).bind(op.operation_id).bind(op.workstation_id)
-            .bind(op.time_in_mins).bind(op.hour_rate).bind(money(op.time_in_mins / sixty() * op.hour_rate))
-            .execute(&mut *tx).await?;
+            self.bom_operations.insert_operation(&mut tx, &NewBomOperationRow {
+                id: Uuid::new_v4(),
+                bom_id: id,
+                operation_id: op.operation_id,
+                workstation_id: op.workstation_id,
+                time_in_mins: op.time_in_mins,
+                hour_rate: op.hour_rate,
+                operating_cost: money(op.time_in_mins / sixty() * op.hour_rate),
+            }).await?;
         }
         tx.commit().await?;
         Ok(id)
@@ -189,19 +214,22 @@ impl ManufacturingWriteService {
         }
         let id = Uuid::new_v4();
         // RLS scope (ADR-0008): company on the DTO — scope the insert so it passes the WITH CHECK fence.
-        let insert_q = sqlx::query(
-            r#"INSERT INTO manufacturing.work_orders
-                 (id, company_id, work_order_number, item_id, bom_id, quantity, status,
-                  wip_warehouse_id, fg_warehouse_id, wip_account_id, fg_account_id,
-                  raw_material_account_id, conversion_cost_account_id)
-               VALUES ($1,$2,$3,$4,$5,$6,'draft'::work_order_status,$7,$8,$9,$10,$11,$12)"#,
-        )
-        .bind(id).bind(o.company_id).bind(&o.work_order_number).bind(o.item_id).bind(o.bom_id)
-        .bind(o.quantity).bind(o.wip_warehouse_id).bind(o.fg_warehouse_id).bind(o.wip_account_id)
-        .bind(o.fg_account_id).bind(o.raw_material_account_id).bind(o.conversion_cost_account_id);
         let r = company_scope::with_company_scope(
             Some(o.company_id),
-            company_scope::execute_scoped(&self.pool, insert_q),
+            self.work_orders.insert_draft(&self.pool, &NewWorkOrderRow {
+                id,
+                company_id: o.company_id,
+                work_order_number: &o.work_order_number,
+                item_id: o.item_id,
+                bom_id: o.bom_id,
+                quantity: o.quantity,
+                wip_warehouse_id: o.wip_warehouse_id,
+                fg_warehouse_id: o.fg_warehouse_id,
+                wip_account_id: o.wip_account_id,
+                fg_account_id: o.fg_account_id,
+                raw_material_account_id: o.raw_material_account_id,
+                conversion_cost_account_id: o.conversion_cost_account_id,
+            }),
         )
         .await;
         if let Err(e) = r {
@@ -221,24 +249,15 @@ impl ManufacturingWriteService {
         // (it rides the REQUEST-dedicated connection carrying the caller's `app.company_id`, so another
         // company's work order simply isn't found), then bind ITS company onto the transaction below.
         // The once-only guard is unaffected: it remains the in-transaction draft→released gate.
-        let wo = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT company_id, item_id, bom_id, quantity, status::text AS status
-                   FROM manufacturing.work_orders WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(wo_id),
-        )
-        .await?
-        .ok_or(ManufacturingError::NotFound("work order"))?;
-        let status: String = wo.get("status");
-        if status != "draft" {
+        let wo = self.work_orders.find_release_source(&self.pool, wo_id).await?
+            .ok_or(ManufacturingError::NotFound("work order"))?;
+        if wo.status != "draft" {
             return Err(ManufacturingError::InvalidState("work order is not draft"));
         }
-        let company_id: Uuid = wo.get("company_id");
-        let item_id: Uuid = wo.get("item_id");
-        let bom_id: Uuid = wo.get("bom_id");
-        let wo_qty: Decimal = wo.get("quantity");
+        let company_id: Uuid = wo.company_id;
+        let item_id: Uuid = wo.item_id;
+        let bom_id: Uuid = wo.bom_id;
+        let wo_qty: Decimal = wo.quantity;
 
         // Explode the BOM into required materials, recursing THROUGH phantom sub-assemblies to their
         // own components (a phantom is never stocked). Deterministic + static — no MRP.
@@ -248,26 +267,19 @@ impl ManufacturingWriteService {
         // Gate the explosion on the draft→released transition (once-only).
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, company_id).await?;
-        let moved = sqlx::query(
-            r#"UPDATE manufacturing.work_orders SET status='released'::work_order_status
-               WHERE id=$1 AND status='draft'::work_order_status"#,
-        )
-        .bind(wo_id)
-        .execute(&mut *tx)
-        .await?;
-        if moved.rows_affected() != 1 {
+        let moved = self.work_orders.gate_release(&mut tx, wo_id).await?;
+        if moved != 1 {
             return Err(ManufacturingError::InvalidState("work order is not draft"));
         }
 
         for (item, qty, rate) in &required {
-            sqlx::query(
-                r#"INSERT INTO manufacturing.work_order_items
-                     (id, work_order_id, item_id, required_qty, consumed_qty, rate)
-                   VALUES ($1,$2,$3,$4,0,$5)"#,
-            )
-            .bind(Uuid::new_v4()).bind(wo_id).bind(item).bind(qty).bind(rate)
-            .execute(&mut *tx)
-            .await?;
+            self.work_order_items.insert_requirement(&mut tx, &NewWorkOrderItemRow {
+                id: Uuid::new_v4(),
+                work_order_id: wo_id,
+                item_id: *item,
+                required_qty: *qty,
+                rate: *rate,
+            }).await?;
         }
         tx.commit().await?;
         sink.publish(&ManufacturingEvent::WorkOrderReleased(WorkOrderReleased {
@@ -300,54 +312,30 @@ impl ManufacturingWriteService {
             // explosion is fenced even when driven by a non-request caller (job / event subscriber).
             let base: Decimal = company_scope::with_company_scope(
                 Some(company_id),
-                company_scope::fetch_optional_scalar_scoped(
-                    &self.pool,
-                    sqlx::query_scalar(
-                        r#"SELECT quantity FROM manufacturing.boms WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-                    )
-                    .bind(bom_id),
-                ),
+                self.boms.fetch_output_quantity(&self.pool, bom_id),
             )
             .await?
             .ok_or(ManufacturingError::NotFound("bom"))?;
 
             let comps = company_scope::with_company_scope(
                 Some(company_id),
-                company_scope::fetch_all_rows_scoped(
-                    &self.pool,
-                    sqlx::query(
-                        r#"SELECT item_id, quantity, rate, is_phantom FROM manufacturing.bom_items WHERE bom_id=$1"#,
-                    )
-                    .bind(bom_id),
-                ),
+                self.bom_items.list_components(&self.pool, bom_id),
             )
             .await?;
 
             for c in &comps {
-                let cqty: Decimal = c.get("quantity");
-                let needed = cqty * want_units / base;
-                if c.get::<bool, _>("is_phantom") {
+                let needed = c.quantity * want_units / base;
+                if c.is_phantom {
                     // Resolve the phantom item's own BOM (default first) and explode through it.
-                    let phantom_item: Uuid = c.get("item_id");
                     let child_bom: Uuid = company_scope::with_company_scope(
                         Some(company_id),
-                        company_scope::fetch_optional_scalar_scoped(
-                            &self.pool,
-                            sqlx::query_scalar(
-                                r#"SELECT id FROM manufacturing.boms
-                                   WHERE company_id=$1 AND item_id=$2 AND is_active=true
-                                     AND (metadata->>'deleted_at') IS NULL
-                                   ORDER BY is_default DESC, (metadata->>'created_at') ASC LIMIT 1"#,
-                            )
-                            .bind(company_id)
-                            .bind(phantom_item),
-                        ),
+                        self.boms.find_active_bom_for_item(&self.pool, company_id, c.item_id),
                     )
                     .await?
                     .ok_or(ManufacturingError::Invalid("phantom component has no BOM".into()))?;
                     self.explode_bom(company_id, child_bom, needed, depth + 1, out).await?;
                 } else {
-                    out.push((c.get("item_id"), needed, c.get("rate")));
+                    out.push((c.item_id, needed, c.rate));
                 }
             }
             Ok(())
@@ -378,23 +366,14 @@ impl ManufacturingWriteService {
         // company is known here — bind it explicitly for the line read and the transaction below.
         let items = company_scope::with_company_scope(
             Some(wo.company_id),
-            company_scope::fetch_all_rows_scoped(
-                &self.pool,
-                sqlx::query(
-                    r#"SELECT id, item_id, required_qty, consumed_qty FROM manufacturing.work_order_items
-                       WHERE work_order_id=$1"#,
-                )
-                .bind(wo_id),
-            ),
+            self.work_order_items.list_requirements(&self.pool, wo_id),
         )
         .await?;
         let mut lines = Vec::new();
         for it in &items {
-            let req: Decimal = it.get("required_qty");
-            let done: Decimal = it.get("consumed_qty");
-            let remaining = req - done;
+            let remaining = it.required_qty - it.consumed_qty;
             if remaining > Decimal::ZERO {
-                lines.push((it.get::<Uuid, _>("id"), it.get::<Uuid, _>("item_id"), remaining));
+                lines.push((it.id, it.item_id, remaining));
             }
         }
         if lines.is_empty() {
@@ -439,29 +418,15 @@ impl ManufacturingWriteService {
         // Record consumption + advance state, gated on released → in_process.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, wo.company_id).await?;
-        let moved = sqlx::query(
-            r#"UPDATE manufacturing.work_orders
-               SET status='in_process'::work_order_status, raw_material_cost = raw_material_cost + $2
-               WHERE id=$1 AND status='released'::work_order_status"#,
-        )
-        .bind(wo_id)
-        .bind(raw_value)
-        .execute(&mut *tx)
-        .await?;
-        if moved.rows_affected() != 1 {
+        let moved = self.work_orders.gate_consume(&mut tx, wo_id, raw_value).await?;
+        if moved != 1 {
             // Someone else consumed concurrently — the post deduped; don't double-book state.
             tx.rollback().await?;
             let now = self.load_wo(wo_id).await?;
             return Ok(ConsumeOutcome { raw_material_value: now.raw_material_cost, already: true });
         }
         for (line_id, _item, qty) in &lines {
-            sqlx::query(
-                r#"UPDATE manufacturing.work_order_items SET consumed_qty = consumed_qty + $2 WHERE id=$1"#,
-            )
-            .bind(line_id)
-            .bind(qty)
-            .execute(&mut *tx)
-            .await?;
+            self.work_order_items.add_consumed_qty(&mut tx, *line_id, *qty).await?;
         }
         tx.commit().await?;
         sink.publish(&ManufacturingEvent::MaterialsConsumed(MaterialsConsumed {
@@ -482,17 +447,16 @@ impl ManufacturingWriteService {
         // RLS scope (ADR-0008): company on the DTO — scope the insert so it passes the WITH CHECK fence.
         company_scope::with_company_scope(
             Some(j.company_id),
-            company_scope::execute_scoped(
-                &self.pool,
-                sqlx::query(
-                    r#"INSERT INTO manufacturing.job_cards
-                         (id, company_id, work_order_id, operation_id, workstation_id, total_time_mins,
-                          hour_rate, operating_cost, status)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'open'::job_card_status)"#,
-                )
-                .bind(id).bind(j.company_id).bind(j.work_order_id).bind(j.operation_id).bind(j.workstation_id)
-                .bind(j.total_time_mins).bind(j.hour_rate).bind(cost),
-            ),
+            self.job_cards.insert_open(&self.pool, &NewJobCardRow {
+                id,
+                company_id: j.company_id,
+                work_order_id: j.work_order_id,
+                operation_id: j.operation_id,
+                workstation_id: j.workstation_id,
+                total_time_mins: j.total_time_mins,
+                hour_rate: j.hour_rate,
+                operating_cost: cost,
+            }),
         )
         .await?;
         Ok(id)
@@ -508,33 +472,20 @@ impl ManufacturingWriteService {
     ) -> Result<Decimal, ManufacturingError> {
         // RLS scope (ADR-0008), ID-only pattern — see `release_work_order`: the join is fenced by the
         // request-dedicated connection; the transaction below binds the job card's own company.
-        let jc = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT j.company_id, j.work_order_id, j.operating_cost, j.status::text AS status,
-                          w.wip_account_id, w.conversion_cost_account_id, w.work_order_number, w.status::text AS wo_status
-                   FROM manufacturing.job_cards j
-                   JOIN manufacturing.work_orders w ON w.id = j.work_order_id
-                   WHERE j.id=$1 AND (j.metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(job_card_id),
-        )
-        .await?
-        .ok_or(ManufacturingError::NotFound("job card"))?;
-        let status: String = jc.get("status");
-        if status == "completed" {
-            return Ok(jc.get("operating_cost"));
+        let jc = self.job_cards.find_completion_source(&self.pool, job_card_id).await?
+            .ok_or(ManufacturingError::NotFound("job card"))?;
+        if jc.status == "completed" {
+            return Ok(jc.operating_cost);
         }
-        let wo_status: String = jc.get("wo_status");
-        if wo_status != "in_process" && wo_status != "released" {
+        if jc.work_order_status != "in_process" && jc.work_order_status != "released" {
             return Err(ManufacturingError::InvalidState("work order not open for operations"));
         }
-        let company_id: Uuid = jc.get("company_id");
-        let wo_id: Uuid = jc.get("work_order_id");
-        let cost: Decimal = jc.get("operating_cost");
-        let wip = jc.get::<Option<Uuid>, _>("wip_account_id").ok_or(ManufacturingError::MissingAccount("wip"))?;
+        let company_id: Uuid = jc.company_id;
+        let wo_id: Uuid = jc.work_order_id;
+        let cost: Decimal = jc.operating_cost;
+        let wip = jc.wip_account_id.ok_or(ManufacturingError::MissingAccount("wip"))?;
         let conv = jc
-            .get::<Option<Uuid>, _>("conversion_cost_account_id")
+            .conversion_cost_account_id
             .ok_or(ManufacturingError::MissingAccount("conversion_cost"))?;
 
         if cost > Decimal::ZERO {
@@ -545,7 +496,7 @@ impl ManufacturingWriteService {
                 source_type: "manufacturing".into(),
                 // The job card id is already a distinct voucher id.
                 source_id: job_card_id,
-                source_reference: Some(jc.get::<String, _>("work_order_number")),
+                source_reference: Some(jc.work_order_number.clone()),
                 posting_date: chrono::Utc::now().date_naive(),
                 currency: "IDR".into(),
                 posting_type: "original".into(),
@@ -560,25 +511,13 @@ impl ManufacturingWriteService {
 
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, company_id).await?;
-        let moved = sqlx::query(
-            r#"UPDATE manufacturing.job_cards SET status='completed'::job_card_status
-               WHERE id=$1 AND status='open'::job_card_status"#,
-        )
-        .bind(job_card_id)
-        .execute(&mut *tx)
-        .await?;
-        if moved.rows_affected() != 1 {
+        let moved = self.job_cards.gate_complete(&mut tx, job_card_id).await?;
+        if moved != 1 {
             tx.rollback().await?;
             return Ok(cost); // already completed concurrently; post deduped
         }
         if cost > Decimal::ZERO {
-            sqlx::query(
-                r#"UPDATE manufacturing.work_orders SET operating_cost = operating_cost + $2 WHERE id=$1"#,
-            )
-            .bind(wo_id)
-            .bind(cost)
-            .execute(&mut *tx)
-            .await?;
+            self.work_orders.add_operating_cost(&mut tx, wo_id, cost).await?;
         }
         tx.commit().await?;
         sink.publish(&ManufacturingEvent::ConversionCharged(ConversionCharged {
@@ -673,18 +612,8 @@ impl ManufacturingWriteService {
         //    the loser's (idempotent) side effects were harmless dups.
         let mut tx = self.pool.begin().await?;
         company_scope::bind_company_on(&mut tx, wo.company_id).await?;
-        let moved = sqlx::query(
-            r#"UPDATE manufacturing.work_orders
-               SET produced_qty = produced_qty + $2,
-                   status = CASE WHEN produced_qty + $2 >= quantity THEN 'completed'::work_order_status
-                                 ELSE status END
-               WHERE id=$1 AND status='in_process'::work_order_status AND produced_qty + $2 <= quantity"#,
-        )
-        .bind(wo_id)
-        .bind(produced_qty)
-        .execute(&mut *tx)
-        .await?;
-        if moved.rows_affected() != 1 {
+        let moved = self.work_orders.gate_receive(&mut tx, wo_id, produced_qty).await?;
+        if moved != 1 {
             // Another receive won the race (its side effects deduped ours) — not an error.
             tx.rollback().await?;
             return Ok(ReceiveOutcome { finished_value: value, completed: true, already: true });
@@ -730,58 +659,14 @@ impl ManufacturingWriteService {
         Ok(money((wo.raw_material_cost + wo.operating_cost) * wo.produced_qty / wo.quantity))
     }
 
-    async fn load_wo(&self, wo_id: Uuid) -> Result<WoRow, ManufacturingError> {
+    async fn load_wo(&self, wo_id: Uuid) -> Result<WorkOrderRow, ManufacturingError> {
         // RLS scope (ADR-0008), ID-only pattern: no company argument — the read rides the
         // request-dedicated connection, so RLS fences it to the caller's tenant. Callers that are
         // EVENT-driven (not on a request) must wrap the call in
         // `with_company_scope(Some(event.company_id))` or this read fails closed.
-        let r = company_scope::fetch_optional_row_scoped(
-            &self.pool,
-            sqlx::query(
-                r#"SELECT company_id, work_order_number, item_id, quantity, produced_qty,
-                          status::text AS status, raw_material_cost, operating_cost,
-                          wip_warehouse_id, fg_warehouse_id, wip_account_id, fg_account_id,
-                          raw_material_account_id, conversion_cost_account_id
-                   FROM manufacturing.work_orders WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(wo_id),
-        )
-        .await?
-        .ok_or(ManufacturingError::NotFound("work order"))?;
-        Ok(WoRow {
-            company_id: r.get("company_id"),
-            work_order_number: r.get("work_order_number"),
-            item_id: r.get("item_id"),
-            quantity: r.get("quantity"),
-            produced_qty: r.get("produced_qty"),
-            status: r.get("status"),
-            raw_material_cost: r.get("raw_material_cost"),
-            operating_cost: r.get("operating_cost"),
-            wip_warehouse_id: r.get("wip_warehouse_id"),
-            fg_warehouse_id: r.get("fg_warehouse_id"),
-            wip_account_id: r.get("wip_account_id"),
-            fg_account_id: r.get("fg_account_id"),
-            raw_material_account_id: r.get("raw_material_account_id"),
-            conversion_cost_account_id: r.get("conversion_cost_account_id"),
-        })
+        self.work_orders.load(&self.pool, wo_id).await?
+            .ok_or(ManufacturingError::NotFound("work order"))
     }
-}
-
-struct WoRow {
-    company_id: Uuid,
-    work_order_number: String,
-    item_id: Uuid,
-    quantity: Decimal,
-    produced_qty: Decimal,
-    status: String,
-    raw_material_cost: Decimal,
-    operating_cost: Decimal,
-    wip_warehouse_id: Option<Uuid>,
-    fg_warehouse_id: Option<Uuid>,
-    wip_account_id: Option<Uuid>,
-    fg_account_id: Option<Uuid>,
-    raw_material_account_id: Option<Uuid>,
-    conversion_cost_account_id: Option<Uuid>,
 }
 
 fn is_dup(e: &sqlx::Error) -> bool {
