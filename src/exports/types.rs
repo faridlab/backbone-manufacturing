@@ -229,6 +229,7 @@ impl From<BomItemId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomItemDto {
     pub id: BomItemId,
+    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -288,6 +289,7 @@ impl From<BomOperationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomOperationDto {
     pub id: BomOperationId,
+    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -417,6 +419,7 @@ impl From<WorkOrderItemId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkOrderItemDto {
     pub id: WorkOrderItemId,
+    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub required_qty: Decimal,

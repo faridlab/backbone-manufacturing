@@ -329,6 +329,9 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
     fn search_fields() -> &'static [&'static str] {
         &["work_order_number"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for WorkOrder entity

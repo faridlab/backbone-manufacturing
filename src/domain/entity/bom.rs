@@ -253,6 +253,9 @@ impl backbone_orm::EntityRepoMeta for Bom {
     fn search_fields() -> &'static [&'static str] {
         &["bom_code", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Bom entity

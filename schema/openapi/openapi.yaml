@@ -3381,6 +3381,7 @@ components:
       type: object
       required:
         - id
+        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3390,6 +3391,9 @@ components:
         - metadata
       properties:
         id:
+          type: string
+          format: uuid
+        company_id:
           type: string
           format: uuid
         bom_id:
@@ -3425,6 +3429,7 @@ components:
     CreateBomItemRequest:
       type: object
       required:
+        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3433,6 +3438,9 @@ components:
         - is_phantom
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3453,6 +3461,7 @@ components:
     UpdateBomItemRequest:
       type: object
       required:
+        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3461,6 +3470,9 @@ components:
         - is_phantom
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3481,6 +3493,9 @@ components:
     PatchBomItemRequest:
       type: object
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3512,6 +3527,7 @@ components:
       type: object
       required:
         - id
+        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3521,6 +3537,9 @@ components:
         - metadata
       properties:
         id:
+          type: string
+          format: uuid
+        company_id:
           type: string
           format: uuid
         bom_id:
@@ -3557,6 +3576,7 @@ components:
     CreateBomOperationRequest:
       type: object
       required:
+        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3565,6 +3585,9 @@ components:
         - operating_cost
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3586,6 +3609,7 @@ components:
     UpdateBomOperationRequest:
       type: object
       required:
+        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3594,6 +3618,9 @@ components:
         - operating_cost
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3615,6 +3642,9 @@ components:
     PatchBomOperationRequest:
       type: object
       properties:
+        company_id:
+          type: string
+          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -3931,6 +3961,7 @@ components:
       type: object
       required:
         - id
+        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -3939,6 +3970,9 @@ components:
         - metadata
       properties:
         id:
+          type: string
+          format: uuid
+        company_id:
           type: string
           format: uuid
         work_order_id:
@@ -3972,6 +4006,7 @@ components:
     CreateWorkOrderItemRequest:
       type: object
       required:
+        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -3979,6 +4014,9 @@ components:
         - rate
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -3997,6 +4035,7 @@ components:
     UpdateWorkOrderItemRequest:
       type: object
       required:
+        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -4004,6 +4043,9 @@ components:
         - rate
         - metadata
       properties:
+        company_id:
+          type: string
+          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -4022,6 +4064,9 @@ components:
     PatchWorkOrderItemRequest:
       type: object
       properties:
+        company_id:
+          type: string
+          format: uuid
         work_order_id:
           type: string
           format: uuid

@@ -182,6 +182,7 @@ impl ManufacturingWriteService {
         for it in &b.items {
             self.bom_items.insert_component(&mut tx, &NewBomItemRow {
                 id: Uuid::new_v4(),
+                company_id: b.company_id,
                 bom_id: id,
                 item_id: it.item_id,
                 quantity: it.quantity,
@@ -193,6 +194,7 @@ impl ManufacturingWriteService {
         for op in &b.operations {
             self.bom_operations.insert_operation(&mut tx, &NewBomOperationRow {
                 id: Uuid::new_v4(),
+                company_id: b.company_id,
                 bom_id: id,
                 operation_id: op.operation_id,
                 workstation_id: op.workstation_id,
@@ -275,6 +277,7 @@ impl ManufacturingWriteService {
         for (item, qty, rate) in &required {
             self.work_order_items.insert_requirement(&mut tx, &NewWorkOrderItemRow {
                 id: Uuid::new_v4(),
+                company_id,
                 work_order_id: wo_id,
                 item_id: *item,
                 required_qty: *qty,

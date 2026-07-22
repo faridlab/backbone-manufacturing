@@ -43,6 +43,7 @@ impl WorkOrderItemRepository {
 /// statement pins it to 0; only [`WorkOrderItemRepository::add_consumed_qty`] ever moves it.
 pub struct NewWorkOrderItemRow {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub required_qty: Decimal,
@@ -63,7 +64,9 @@ impl WorkOrderItemRepository {
     ///
     /// Takes the CALLER'S connection so the requirement commits in the SAME transaction as the
     /// release gate — that gate is what makes this write once-only. The caller binds the company on
-    /// that connection (`bind_company_on`) before calling — don't re-bind.
+    /// that connection (`bind_company_on`) before calling — don't re-bind. The explicit `company_id`
+    /// bind (denormalized from the parent work order) stays as defense-in-depth behind the RLS fence
+    /// (ADR-0010 Decision A).
     pub async fn insert_requirement(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -71,10 +74,10 @@ impl WorkOrderItemRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.work_order_items
-                 (id, work_order_id, item_id, required_qty, consumed_qty, rate)
-               VALUES ($1,$2,$3,$4,0,$5)"#,
+                 (id, company_id, work_order_id, item_id, required_qty, consumed_qty, rate)
+               VALUES ($1,$2,$3,$4,$5,0,$6)"#,
         )
-        .bind(r.id).bind(r.work_order_id).bind(r.item_id).bind(r.required_qty).bind(r.rate)
+        .bind(r.id).bind(r.company_id).bind(r.work_order_id).bind(r.item_id).bind(r.required_qty).bind(r.rate)
         .execute(conn)
         .await?;
         Ok(())

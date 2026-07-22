@@ -43,6 +43,7 @@ impl BomItemRepository {
 /// write service (`money(quantity * rate)`), not re-derived here.
 pub struct NewBomItemRow {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -66,17 +67,18 @@ impl BomItemRepository {
     ///
     /// Takes the CALLER'S connection so the component commits in the SAME transaction as its header.
     /// The caller binds the company on that connection (`bind_company_on`) before calling — don't
-    /// re-bind.
+    /// re-bind. The explicit `company_id` bind (denormalized from the parent BOM) stays as
+    /// defense-in-depth behind the RLS fence (ADR-0010 Decision A).
     pub async fn insert_component(
         &self,
         conn: &mut sqlx::PgConnection,
         c: &NewBomItemRow,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            r#"INSERT INTO manufacturing.bom_items (id, bom_id, item_id, quantity, rate, amount, is_phantom)
-               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
+            r#"INSERT INTO manufacturing.bom_items (id, company_id, bom_id, item_id, quantity, rate, amount, is_phantom)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
         )
-        .bind(c.id).bind(c.bom_id).bind(c.item_id).bind(c.quantity).bind(c.rate)
+        .bind(c.id).bind(c.company_id).bind(c.bom_id).bind(c.item_id).bind(c.quantity).bind(c.rate)
         .bind(c.amount).bind(c.is_phantom)
         .execute(conn)
         .await?;

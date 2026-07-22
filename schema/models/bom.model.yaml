@@ -145,6 +145,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner, denormalized from the parent BOM # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -185,6 +189,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner, denormalized from the parent BOM # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]

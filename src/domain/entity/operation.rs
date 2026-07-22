@@ -217,6 +217,9 @@ impl backbone_orm::EntityRepoMeta for Operation {
     fn search_fields() -> &'static [&'static str] {
         &["operation_name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for Operation entity

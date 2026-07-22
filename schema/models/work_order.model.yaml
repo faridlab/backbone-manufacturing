@@ -110,6 +110,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner, denormalized from the parent work order # logical FK to organization.Company.id"
       work_order_id:
         type: uuid
         attributes: ["@required", "@foreign_key(WorkOrder.id)"]
