@@ -21,6 +21,13 @@ pub mod manufacturing_gl;
 pub mod manufacturing_ports;
 pub mod manufacturing_events;
 pub mod manufacturing_write_service;
+// The write surface, chunked: each is an `impl ManufacturingWriteService` block over the vocabulary
+// that stays in `manufacturing_write_service` (so the `manufacturing_write_service::{NewBom, ...}`
+// import paths are unchanged).
+pub mod manufacturing_bom_definition;
+pub mod manufacturing_work_order;
+pub mod manufacturing_execution;
+pub mod manufacturing_job_card;
 // END CUSTOM
 
 pub use workstation_service::WorkstationService;

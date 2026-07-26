@@ -15,6 +15,13 @@ user_owned:
   - "src/application/service/manufacturing_gl.rs"
   - "src/application/service/manufacturing_ports.rs"
   - "src/application/service/manufacturing_write_service.rs"
+  # The write surface, chunked out of manufacturing_write_service.rs. Each is an
+  # `impl ManufacturingWriteService` block; the shared vocabulary (input structs, outcomes, errors,
+  # helpers) stays in manufacturing_write_service.rs.
+  - "src/application/service/manufacturing_bom_definition.rs"
+  - "src/application/service/manufacturing_work_order.rs"
+  - "src/application/service/manufacturing_execution.rs"
+  - "src/application/service/manufacturing_job_card.rs"
 
   # The six document repositories own the hand-written manufacturing SQL that the write service
   # orchestrates (the BOM header+lines inserts, the BOM explosion reads, and the release / consume /
