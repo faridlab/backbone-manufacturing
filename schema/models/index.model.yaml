@@ -24,6 +24,17 @@ config:
       - graphql
       - grpc
       - proto
+      # Dead scaffolding cut at the source: manufacturing wires only
+      # service/validator/workflows in application/mod.rs, so these per-entity
+      # layers were emitted but never declared (orphans — not compiled).
+      # Disabling stops regen from re-creating them. Same pattern as backbone-catalog.
+      - auth                 # no RBAC guards wired
+      - bulk_operations      # no bulk create/update helpers wired
+      - usecases             # no use-case orchestration wired
+      # src/routes/ + src/handlers/ (composition + AppState) are likewise not declared
+      # in lib.rs — manufacturing composes routes inline via all_crud_routes() instead.
+      - routes_composer      # src/routes/mod.rs not wired
+      - handlers_module      # src/handlers/mod.rs (AppState) not wired
 
 # Reuse sapiens for user identity (actors) — logical refs, no DB constraint.
 external_imports:
