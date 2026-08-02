@@ -67,8 +67,6 @@ pub enum SeederType {
     Development,
     /// Test data (for automated tests)
     Test,
-// <<< CUSTOM SEEDERS START >>>
-// Add custom seeders here.
 }
 
 // ============================================================================
@@ -78,3 +76,4 @@ pub enum SeederType {
 // <<< CUSTOM SEEDERS START >>>
 // Add custom seeders here
 // <<< CUSTOM SEEDERS END >>>
+

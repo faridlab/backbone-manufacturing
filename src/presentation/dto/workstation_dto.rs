@@ -272,3 +272,4 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
 // Add custom DTOs specific to Workstation here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+
