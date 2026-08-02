@@ -23,6 +23,9 @@ pub mod infrastructure;
 pub mod application;
 pub mod presentation;
 pub mod seeders;
+pub mod exports;
+// Hand-authored (not regenerated): the validated manufacturing execution surface — see `write_api`.
+pub mod write_api;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -60,14 +63,18 @@ use sqlx::PgPool;
 /// let router = manufacturing.all_crud_routes();
 /// ```
 pub struct ManufacturingModule {
-    pub workstation_service: Arc<WorkstationService>,
-    pub operation_service: Arc<OperationService>,
-    pub bom_service: Arc<BomService>,
-    pub bom_item_service: Arc<BomItemService>,
-    pub bom_operation_service: Arc<BomOperationService>,
-    pub work_order_service: Arc<WorkOrderService>,
-    pub work_order_item_service: Arc<WorkOrderItemService>,
-    pub job_card_service: Arc<JobCardService>,
+    pub(crate) workstation_service: Arc<WorkstationService>,
+    pub(crate) operation_service: Arc<OperationService>,
+    pub(crate) bom_service: Arc<BomService>,
+    pub(crate) bom_item_service: Arc<BomItemService>,
+    pub(crate) bom_operation_service: Arc<BomOperationService>,
+    pub(crate) work_order_service: Arc<WorkOrderService>,
+    pub(crate) work_order_item_service: Arc<WorkOrderItemService>,
+    pub(crate) job_card_service: Arc<JobCardService>,
+    // <<< CUSTOM FIELDS
+    pub(crate) manufacturing_write_service:
+        Arc<crate::application::service::ManufacturingWriteService>,
+    // END CUSTOM
 }
 
 impl ManufacturingModule {
@@ -113,6 +120,37 @@ impl ManufacturingModule {
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
+
+    // <<< CUSTOM ACCESSORS
+    /// The validated manufacturing execution engine (release → consume → operate → receive),
+    /// which rolls up BOM cost and emits the three WIP/FG GL posts so a Work Order's WIP nets to
+    /// zero on completion.
+    ///
+    /// This is **not** mounted by [`Self::all_crud_routes`] — that exposes *unguarded* generic CRUD
+    /// that bypasses every manufacturing invariant (a `PATCH status→completed` there posts no GL).
+    /// To serve validated writes over HTTP, compose the command router from [`write_api`]:
+    ///
+    /// ```ignore
+    /// let m = ManufacturingModule::builder().with_database(pool).build()?;
+    /// let deps = write_api::ManufacturingWriteDeps {
+    ///     write_service: m.write_service(),
+    ///     inventory: Arc::new(my_inventory_adapter),   // you own stock — supply a real InventoryPort
+    ///     gl:        Arc::new(my_gl_adapter),          // you own the ledger — supply a real GlPostSink
+    ///     events:    Arc::new(LoggingSink),            // or your bus sink
+    /// };
+    /// let app = Router::new()
+    ///     .merge(/* your read routes */)
+    ///     .merge(write_api::create_manufacturing_write_routes().with_state(deps));
+    /// ```
+    ///
+    /// The ports are caller-supplied per call: a no-op `GlPostSink` silently drops the WIP postings
+    /// (it compiles, it looks done, WIP leaks) — supply real adapters from the composing service.
+    pub fn write_service(
+        &self,
+    ) -> Arc<crate::application::service::ManufacturingWriteService> {
+        self.manufacturing_write_service.clone()
+    }
+    // END CUSTOM
 }
 
 /// Builder for ManufacturingModule
@@ -175,6 +213,12 @@ impl ManufacturingModuleBuilder {
         let job_card_service = Arc::new(JobCardService::with_repository(job_card_repository.clone()));
 
         // <<< CUSTOM
+        // The validated execution engine. It shares this module's pool (same RLS connection
+        // story as the generic services); the GL/inventory ports are supplied per call by the
+        // composing service via `write_api::ManufacturingWriteDeps`.
+        let manufacturing_write_service = Arc::new(
+            crate::application::service::ManufacturingWriteService::new(db_pool.clone()),
+        );
         // END CUSTOM
 
         Ok(ManufacturingModule {
@@ -187,6 +231,7 @@ impl ManufacturingModuleBuilder {
             work_order_item_service,
             job_card_service,
             // <<< CUSTOM
+            manufacturing_write_service,
             // END CUSTOM
         })
     }
