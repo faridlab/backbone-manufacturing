@@ -1,179 +1,149 @@
-# Backbone Module Skeleton
+# backbone-manufacturing
 
-A minimal, copy-ready starting point for new Backbone Framework modules.
-It ships with exactly **one** reference entity (`Example`) wired end-to-end
-so you can rename it to your own domain concept and start generating.
+A Backbone/Metaphor **domain module** (bounded context) for discrete manufacturing —
+*what to build* (Bill of Materials) and *the act of building* (Work Orders). A library
+crate (`[lib]` only) consumed by `backend-service` projects; wires its services via
+`ManufacturingModule::builder()`.
 
-## What you get
+Manufacturing **owns no stock and no ledger**. It defines cost (BOMs), drives
+`backbone-inventory` for the physical moves + valuation, and emits the WIP/FG postings
+through `backbone-accounting`. Cross-module ids are logical FKs.
 
-- A single schema model at `schema/models/example.model.yaml`
-- Two migrations (`001_create_enums.up.sql`, `002_create_example_table.up.sql`)
-- A complete DDD layer cake for `Example`:
-  - Domain entity + repository trait
-  - Application service (type alias over `GenericCrudService`)
-  - Application DTOs (Create / Update / Patch / Response)
-  - Infrastructure repository (thin newtype over `GenericCrudRepository`)
-  - Presentation HTTP handler
-  - Routes
-  - Seeder
-- A `Module` struct wiring the service into the framework
+## The domain
 
-## Directory layout
+The model is bipartitioned along the real seam (mirrored in `schema/models/`):
 
-The tree below shows the **complete canonical Backbone module structure**.
-This skeleton ships only the minimum viable subset (one `Example` entity,
-two migrations, the core DDD layers); every other folder is documented here
-so you know where to add the optional layers when you need them.
+**Product definition** — *what to build*; master data, posts **no GL**.
+- **Workstation** — a machine/work-center with an hourly conversion-cost rate.
+- **Operation** — a named production step (cut, assemble, …), optionally on a default workstation.
+- **Bom** — the recipe for one manufactured item: its component materials (`BomItem`) and the
+  operations that convert them (`BomOperation`). Cost rolls up:
+  `raw_material_cost (Σ items) + operating_cost (Σ operations) = total_cost`.
+- **BomItem** — one component line; a *phantom* sub-assembly is exploded through to its own
+  BOM at release, never stocked.
+- **BomOperation** — one operation line (drives operating cost; hour rate snapshotted).
 
-```
-backbone-module/
-│
-├── schema/                              # SCHEMA DEFINITIONS — Single Source of Truth
-│   ├── models/                          # Entity schema definitions
-│   │   └── example.model.yaml           # The one reference entity (rename me)
-│   ├── hooks/                           # Lifecycle hooks and triggers
-│   ├── workflows/                       # Business workflow definitions
-│   └── openapi/                         # OpenAPI / Swagger specifications
-│
-├── migrations/                          # DATABASE MIGRATIONS (PostgreSQL)
-│   ├── 001_create_enums.up.sql          # Enum types (e.g. example_status)
-│   ├── 001_create_enums.down.sql
-│   ├── 002_create_example_table.up.sql  # CREATE TABLE for the example entity
-│   └── 002_create_example_table.down.sql
-│
-├── src/                                 # SOURCE CODE (generated + custom)
-│   │
-│   ├── lib.rs                           # Module entry point + re-exports
-│   ├── module.rs                        # `Module` struct — wires service into framework
-│   │
-│   ├── domain/                          # Domain Layer — pure business model
-│   │   ├── entity/                      # Entity structs + trait impls
-│   │   │   └── example.rs
-│   │   ├── repositories/                # Repository traits (ports)
-│   │   │   └── example_repository.rs
-│   │   ├── value_objects/               # Value objects
-│   │   ├── event/                       # Domain events
-│   │   ├── state_machine/               # State transition definitions
-│   │   ├── services/                    # Domain services
-│   │   ├── specifications/              # Specification pattern
-│   │   └── permission/                  # Permission rules
-│   │
-│   ├── application/                     # Application Layer — use cases & orchestration
-│   │   ├── dto/                         # Create / Update / Patch / Response DTOs
-│   │   │   └── example_dto.rs
-│   │   ├── service/                     # Application services
-│   │   │   ├── example_service.rs       # Type alias over GenericCrudService
-│   │   │   └── error.rs                 # Service-level error types
-│   │   ├── usecases/                    # Use case implementations
-│   │   ├── commands/                    # CQRS commands
-│   │   ├── queries/                     # CQRS queries
-│   │   ├── validator/                   # Input validation
-│   │   ├── workflows/                   # Workflow orchestration
-│   │   ├── triggers/                    # Database trigger handlers
-│   │   ├── bulk_operations/             # Bulk import/export
-│   │   ├── auth/                        # Module-specific auth
-│   │   ├── middleware/                  # Application middleware
-│   │   └── subscriptions/               # Event subscriptions
-│   │
-│   ├── infrastructure/                  # Infrastructure Layer — adapters
-│   │   ├── persistence/                 # Repository implementations
-│   │   │   └── example_repository_impl.rs   # Postgres repo via GenericCrudRepository
-│   │   ├── event_store/                 # Event sourcing storage
-│   │   ├── projections/                 # CQRS read-model projections
-│   │   ├── cache/                       # Caching adapters
-│   │   ├── rate_limiter/                # Rate limiting
-│   │   ├── jobs/                        # Background jobs
-│   │   ├── messaging/                   # Message bus adapters
-│   │   ├── external/                    # Third-party integrations
-│   │   ├── metrics/                     # Prometheus metrics
-│   │   └── health/                      # Health check endpoints
-│   │
-│   ├── presentation/                    # Presentation Layer — transport
-│   │   ├── http/                        # REST / Axum handlers
-│   │   │   └── example_handler.rs       # BackboneCrudHandler wiring
-│   │   ├── grpc/                        # gRPC services
-│   │   ├── graphql/                     # GraphQL resolvers
-│   │   ├── cli/                         # CLI subcommands
-│   │   ├── dto/                         # Wire-format DTOs
-│   │   ├── middleware/                  # Transport middleware
-│   │   └── versioning/                  # API versioning
-│   │
-│   ├── routes/                          # Route composition
-│   │   └── example_routes.rs
-│   │
-│   ├── seeders/                         # Sample data for `backbone seed run`
-│   │   └── example_seeder.rs
-│   │
-│   ├── handlers/                        # Custom handler entry points
-│   ├── integration/                     # Inter-module integration adapters
-│   └── exports/                         # Public API exports
-│
-├── proto/                               # PROTOBUF DEFINITIONS (generated from schema)
-│   ├── domain/
-│   │   └── entity/                      # Entity messages
-│   └── services/                        # Service definitions
-│
-├── tests/
-│   ├── integration_tests.rs             # Stub — replace with your own test suite
-│   └── integration/                     # Integration test fixtures
-│
-├── config/                              # MODULE CONFIGURATION
-│   ├── application.yml                  # Default runtime config (db, server, log)
-│   ├── application-dev.yml              # Development overrides
-│   └── application-prod.yml             # Production overrides
-│
-├── docs/                                # Module-specific documentation
-├── benches/                             # Criterion benchmarks
-│
-├── buf.yaml                             # Protobuf lint config
-├── Cargo.toml                           # Trimmed deps — update `path = "..."` after copying
-└── README.md                            # This file
-```
+**Execution** — *the act of building*; transactional, **emits GL**.
+- **WorkOrder** — an order to produce `qty` of an item against a BOM. Lifecycle:
+  `draft → released → in_process → completed` (`stopped` halts). Releasing explodes the BOM
+  into required materials (`WorkOrderItem`).
+- **WorkOrderItem** — a required material exploded from the BOM, with consumption tracking.
+- **JobCard** — a shop-floor record of an operation run; completing it charges conversion
+  cost to WIP (`open → completed`).
 
-> **What ships in this skeleton:** `schema/models/example.model.yaml`, the two
-> example migrations, `Cargo.toml`, `README.md`, `buf.yaml`, `config/application.yml`,
-> `tests/integration_tests.rs`, and the `src/` layers `domain/{entity,repositories}`,
-> `application/{dto,service}`, `infrastructure/persistence`, `presentation/http`,
-> `routes`, `seeders`, plus `lib.rs` and `module.rs`.
-> Everything else in the tree above is a **placeholder for layers you can add later**.
+Status enums: `WorkOrderStatus`, `JobCardStatus`.
 
-## Getting started
+## The WIP / FG costing seam (the core invariant)
 
-1. **Copy** this directory to wherever your new module should live.
-2. **Name your crate** in `Cargo.toml` — set `[package].name`. The `backbone-*`
-   crates are **git dependencies** pinned to `branch = "main"`, so the skeleton
-   builds anywhere on disk with no path fix-up. For a release, pin them to a
-   tag or commit (`tag = "vX.Y.Z"` or `rev = "<sha>"`) for a reproducible build.
-3. **Rename** `example` to your entity name throughout:
-   - `schema/models/example.model.yaml` → `<your_entity>.model.yaml`
-   - Inside the YAML, change `Example`, `examples`, `ExampleStatus`
-   - The matching `src/` files and `migrations/*_example_*.sql`
-4. **Regenerate** with `metaphor`:
+A Work Order's value flows through WIP in **three balanced posts**, so **WIP nets to zero on
+completion**:
 
-   ```bash
-   metaphor schema schema generate <module_name> --target all --force
+| Step   | Posting                          | Meaning                                  |
+|--------|----------------------------------|------------------------------------------|
+| consume  | Dr WIP · Cr Raw-Material Stock | materials issued to WIP (valued by inventory) |
+| operate  | Dr WIP · Cr Conversion-Applied  | job-card labour/overhead                  |
+| receive  | Dr Finished-Goods · Cr WIP      | FG = raw + operating                       |
+
+Each post is transition-gated (the status advance is the once-only guard) and keyed by a
+stable idempotency key, so a retry never double-charges WIP. This lives in
+`ManufacturingWriteService` (`src/application/service/manufacturing_*.rs`), proven by the
+golden cases and the plant-to-produce seam test against the real accounting ledger.
+
+## HTTP surface — two paths, deliberately distinct
+
+1. **Unguarded generic CRUD** — `ManufacturingModule::all_crud_routes()` mounts 12 endpoints
+   per entity with **no** domain validation. It can create invalid rows or flip a WorkOrder to
+   `completed` with zero GL posts (stranded WIP). Use it only for **reads, trusted/admin, or
+   seeding**. (`routes()` is a deprecated alias for the same unguarded surface.)
+2. **Validated write commands** — [`write_api`](src/write_api.rs) forwards the WIP-costing
+   transitions to `ManufacturingWriteService`:
+
+   ```rust
+   use backbone_manufacturing::{ManufacturingModule, write_api};
+   use std::sync::Arc;
+
+   let m = ManufacturingModule::builder().with_database(pool.clone()).build()?;
+
+   // The validated command router (release → consume → operate → receive):
+   let deps = write_api::ManufacturingWriteDeps {
+       write_service: m.write_service(),
+       inventory: Arc::new(my_inventory_adapter), // real InventoryPort over backbone-inventory
+       gl:        Arc::new(my_gl_adapter),        // real GlPostSink over backbone-accounting
+       events:    Arc::new(LoggingSink),          // or your bus sink
+   };
+   let app = Router::new()
+       .merge(m.all_crud_routes())                                         // reads / admin
+       .merge(write_api::create_manufacturing_write_routes().with_state(deps));
    ```
 
-5. **Run migrations**:
+   The ports are **caller-supplied per call** — a no-op `GlPostSink` compiles and looks done but
+   silently drops the WIP postings (WIP leaks). Always supply real adapters from the composing
+   service.
 
-   ```bash
-   DATABASE_URL="postgresql://..." metaphor migration run
-   ```
+## Quick start
 
-## Custom code (regeneration safety)
+```bash
+metaphor schema schema validate          # check schema YAML
+metaphor dev test                         # run tests (DB-gated suites need DATABASE_URL)
+metaphor migration run                    # apply migrations
+```
 
-Anywhere you see a `// <<< CUSTOM` / `// END CUSTOM` marker, the content in
-between is preserved across regeneration. For code outside those markers, use
-the `_custom` suffix convention:
+## Schema is the single source of truth
 
-- `order_photo_service_custom.rs` — never rewritten
-- Register in `mod.rs` beneath a `// <<< CUSTOM` marker
-- Wire custom HTTP endpoints via `custom_routes.rs`, not the generated handler
+`schema/models/*.model.yaml` defines every entity; code is regenerated from it.
 
-## Going further
+- `bom.model.yaml` — Workstation, Operation, Bom, BomItem, BomOperation.
+- `work_order.model.yaml` — WorkOrder, WorkOrderItem, JobCard + `WorkOrderStatus`/`JobCardStatus`.
+- `index.model.yaml` — module/schema identity, shared types, and the `generators` config.
 
-This skeleton intentionally excludes the optional layers (event store, cache,
-gRPC, GraphQL, CLI, triggers, validators, workflows, state machines, ...).
-Add them back from the full framework docs as you need them. The directory
-structure mirrors what the generator expects, so adding a new layer is as
-simple as creating the corresponding `mod.rs` and pointing `lib.rs` at it.
+**Regeneration preserves only `// <<< CUSTOM … // END CUSTOM` blocks.** Custom logic goes in
+`*_custom.rs` siblings (e.g. the `manufacturing_*.rs` write-service chunks) or inside CUSTOM
+markers — never hand-edit generated code outside them.
+
+### Generator config
+
+`index.model.yaml` disables generators manufacturing doesn't wire:
+
+```yaml
+generators:
+  disabled:
+    - graphql
+    - grpc
+    - proto
+    - auth               # manufacturing wires only service/validator/workflows
+    - bulk_operations    #   + inline route composition (all_crud_routes / write_api)
+    - usecases
+    - routes_composer    # src/routes/ composition — not used (compose inline instead)
+    - handlers_module    # src/handlers/ AppState — not used
+```
+
+(These per-entity layers are opt-in at the generator source via `layers: true`; manufacturing
+doesn't wire them, so they're disabled. `specification` is kept — manufacturing wires it.)
+
+## Project layout
+
+```
+schema/models/          # SSoT — bom.model.yaml, work_order.model.yaml, index.model.yaml
+migrations/             # tables + enums + company RLS + audit triggers
+src/
+├── lib.rs              # ManufacturingModule + builder + all_crud_routes() + write_service()
+├── write_api.rs        # validated command router + ManufacturingWriteDeps
+├── domain/             # entities, repositories (ports), events, specifications, policies
+├── application/
+│   ├── service/        # GenericCrudService aliases + manufacturing_write_service.rs (+ chunks:
+│   │                   #   bom_definition, work_order, execution, job_card, gl, events, ports)
+│   ├── validator/
+│   └── workflows/
+├── infrastructure/     # persistence (GenericCrudRepository newtypes), event_store, integration
+├── presentation/       # http handlers (BackboneCrudHandler), dto, versioning
+├── exports/            # public read contract (ManufacturingQueryService trait)
+└── seeders/
+tests/                  # manufacturing_golden_cases, plant_to_produce_seam, integrity_probes, integration
+```
+
+## Further reading
+
+- `docs/FSD.md`, `docs/PRD.md` — functional + product spec.
+- `docs/handbook/` — glossary, maintainer guide, schema architecture.
+- `docs/adr/` — the manufacturing boundary and the WIP job-order costing seam.
+- `docs/council/` — decision records (e.g. the bounded-context-cleanliness review).
