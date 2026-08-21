@@ -75,7 +75,7 @@ pub struct WorkOrder {
 impl WorkOrder {
     /// Create a builder for WorkOrder
     pub fn builder() -> WorkOrderBuilder {
-        WorkOrderBuilder::default()
+        <WorkOrderBuilder as Default>::default()
     }
 
     /// Create a new WorkOrder with required fields
@@ -473,7 +473,7 @@ impl WorkOrderBuilder {
             bom_id,
             quantity,
             produced_qty: self.produced_qty.unwrap_or(Decimal::from(0)),
-            status: self.status.unwrap_or(WorkOrderStatus::default()),
+            status: self.status.unwrap_or_default(),
             raw_material_cost: self.raw_material_cost.unwrap_or(Decimal::from(0)),
             operating_cost: self.operating_cost.unwrap_or(Decimal::from(0)),
             wip_warehouse_id: self.wip_warehouse_id,

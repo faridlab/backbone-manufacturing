@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
+
+use super::BomStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for Bom
@@ -58,7 +60,7 @@ pub struct Bom {
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub total_cost: Decimal,
-    pub is_active: bool,
+    pub status: BomStatus,
     pub is_default: bool,
     #[serde(default)]
     #[sqlx(json)]
@@ -68,11 +70,11 @@ pub struct Bom {
 impl Bom {
     /// Create a builder for Bom
     pub fn builder() -> BomBuilder {
-        BomBuilder::default()
+        <BomBuilder as Default>::default()
     }
 
     /// Create a new Bom with required fields
-    pub fn new(company_id: Uuid, item_id: Uuid, bom_code: String, quantity: Decimal, currency: String, raw_material_cost: Decimal, operating_cost: Decimal, total_cost: Decimal, is_active: bool, is_default: bool) -> Self {
+    pub fn new(company_id: Uuid, item_id: Uuid, bom_code: String, quantity: Decimal, currency: String, raw_material_cost: Decimal, operating_cost: Decimal, total_cost: Decimal, status: BomStatus, is_default: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -84,7 +86,7 @@ impl Bom {
             raw_material_cost,
             operating_cost,
             total_cost,
-            is_active,
+            status,
             is_default,
             metadata: AuditMetadata::default(),
         }
@@ -140,6 +142,11 @@ impl Bom {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &BomStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -186,8 +193,8 @@ impl Bom {
                 "total_cost" => {
                     if let Ok(v) = serde_json::from_value(value) { self.total_cost = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "is_default" => {
                     if let Ok(v) = serde_json::from_value(value) { self.is_default = v; }
@@ -248,6 +255,7 @@ impl backbone_orm::EntityRepoMeta for Bom {
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "bom_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -273,7 +281,7 @@ pub struct BomBuilder {
     raw_material_cost: Option<Decimal>,
     operating_cost: Option<Decimal>,
     total_cost: Option<Decimal>,
-    is_active: Option<bool>,
+    status: Option<BomStatus>,
     is_default: Option<bool>,
 }
 
@@ -332,9 +340,9 @@ impl BomBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `BomStatus::default()`)
+    pub fn status(mut self, value: BomStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -363,7 +371,7 @@ impl BomBuilder {
             raw_material_cost: self.raw_material_cost.unwrap_or(Decimal::from(0)),
             operating_cost: self.operating_cost.unwrap_or(Decimal::from(0)),
             total_cost: self.total_cost.unwrap_or(Decimal::from(0)),
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             is_default: self.is_default.unwrap_or(false),
             metadata: AuditMetadata::default(),
         })

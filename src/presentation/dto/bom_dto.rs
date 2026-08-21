@@ -19,6 +19,7 @@ use validator::Validate;
 
 use crate::domain::entity::Bom;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::BomStatus;
 
 // =============================================================================
 // Create DTO
@@ -55,9 +56,7 @@ pub struct CreateBomDto {
     pub operating_cost: Decimal,
     #[serde(alias = "total_cost")]
     pub total_cost: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: BomStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_default")]
     pub is_default: bool,
@@ -98,9 +97,7 @@ pub struct UpdateBomDto {
     pub operating_cost: Decimal,
     #[serde(alias = "total_cost")]
     pub total_cost: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: BomStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_default")]
     pub is_default: bool,
@@ -143,9 +140,8 @@ pub struct PatchBomDto {
     pub operating_cost: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_cost")]
     pub total_cost: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<BomStatus>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_default")]
     pub is_default: Option<bool>,
@@ -154,7 +150,7 @@ pub struct PatchBomDto {
 impl PatchBomDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.is_active.is_some() || self.is_default.is_some()
+        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.status.is_some() || self.is_default.is_some()
     }
 }
 
@@ -185,8 +181,7 @@ pub struct BomResponseDto {
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub total_cost: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: BomStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub is_default: bool,
     pub metadata: AuditMetadata,
@@ -269,7 +264,7 @@ impl From<Bom> for BomResponseDto {
             raw_material_cost: entity.raw_material_cost,
             operating_cost: entity.operating_cost,
             total_cost: entity.total_cost,
-            is_active: entity.is_active,
+            status: entity.status,
             is_default: entity.is_default,
             metadata: entity.metadata,
         }
@@ -302,7 +297,7 @@ impl From<CreateBomDto> for Bom {
             raw_material_cost: dto.raw_material_cost,
             operating_cost: dto.operating_cost,
             total_cost: dto.total_cost,
-            is_active: dto.is_active,
+            status: dto.status,
             is_default: dto.is_default,
             metadata: AuditMetadata::default(),
         }
@@ -322,7 +317,7 @@ impl From<&Bom> for BomResponseDto {
             raw_material_cost: entity.raw_material_cost.clone(),
             operating_cost: entity.operating_cost.clone(),
             total_cost: entity.total_cost.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             is_default: entity.is_default.clone(),
             metadata: entity.metadata.clone(),
         }
@@ -346,7 +341,7 @@ impl backbone_core::ApplyUpdateDto<UpdateBomDto> for Bom {
         self.raw_material_cost = dto.raw_material_cost;
         self.operating_cost = dto.operating_cost;
         self.total_cost = dto.total_cost;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         self.is_default = dto.is_default;
         Ok(self)
     }
@@ -360,4 +355,3 @@ impl backbone_core::ApplyUpdateDto<UpdateBomDto> for Bom {
 // Add custom DTOs specific to Bom here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

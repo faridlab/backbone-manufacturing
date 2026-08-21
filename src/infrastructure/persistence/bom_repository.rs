@@ -43,8 +43,8 @@ impl BomRepository {
 /// The exact row a BOM-header insert writes.
 ///
 /// Mirrors the raw column shape rather than the `Bom` entity: the three cost columns are already
-/// rolled up server-side by the write service, and `currency` / `is_active` / `is_default` are pinned
-/// by the statement (`'IDR'`, `true`, `false`) rather than passed.
+/// rolled up server-side by the write service, and `currency` / `status` / `is_default` are pinned
+/// by the statement (`'IDR'`, `'active'`, `false`) rather than passed.
 pub struct NewBomRow<'a> {
     pub id: Uuid,
     pub company_id: Uuid,
@@ -77,8 +77,8 @@ impl BomRepository {
         sqlx::query(
             r#"INSERT INTO manufacturing.boms
                  (id, company_id, item_id, bom_code, quantity, uom, currency,
-                  raw_material_cost, operating_cost, total_cost, is_active, is_default)
-               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,true,false)"#,
+                  raw_material_cost, operating_cost, total_cost, status, is_default)
+               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,'active',false)"#,
         )
         .bind(b.id).bind(b.company_id).bind(b.item_id).bind(b.bom_code).bind(b.quantity)
         .bind(b.uom).bind(b.raw_material_cost).bind(b.operating_cost).bind(b.total_cost)
@@ -122,7 +122,7 @@ impl BomRepository {
             pool,
             sqlx::query_scalar(
                 r#"SELECT id FROM manufacturing.boms
-                   WHERE company_id=$1 AND item_id=$2 AND is_active=true
+                   WHERE company_id=$1 AND item_id=$2 AND status='active'
                      AND (metadata->>'deleted_at') IS NULL
                    ORDER BY is_default DESC, (metadata->>'created_at') ASC LIMIT 1"#,
             )

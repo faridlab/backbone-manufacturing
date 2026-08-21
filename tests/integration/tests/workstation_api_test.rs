@@ -27,7 +27,7 @@ impl TestDataGenerator for WorkstationTestData {
             "company_id": Uuid::new_v4().to_string(),
             "workstation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "hour_rate": 0,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -39,7 +39,7 @@ impl TestDataGenerator for WorkstationTestData {
             "company_id": Uuid::new_v4().to_string(),
             "workstation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "hour_rate": 0,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

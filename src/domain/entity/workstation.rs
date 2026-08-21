@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
+
+use super::WorkstationStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for Workstation
@@ -52,7 +54,7 @@ pub struct Workstation {
     pub company_id: Uuid,
     pub workstation_name: String,
     pub hour_rate: Decimal,
-    pub is_active: bool,
+    pub status: WorkstationStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -61,17 +63,17 @@ pub struct Workstation {
 impl Workstation {
     /// Create a builder for Workstation
     pub fn builder() -> WorkstationBuilder {
-        WorkstationBuilder::default()
+        <WorkstationBuilder as Default>::default()
     }
 
     /// Create a new Workstation with required fields
-    pub fn new(company_id: Uuid, workstation_name: String, hour_rate: Decimal, is_active: bool) -> Self {
+    pub fn new(company_id: Uuid, workstation_name: String, hour_rate: Decimal, status: WorkstationStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
             workstation_name,
             hour_rate,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -126,6 +128,11 @@ impl Workstation {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &WorkstationStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Partial Update
@@ -144,8 +151,8 @@ impl Workstation {
                 "hour_rate" => {
                     if let Ok(v) = serde_json::from_value(value) { self.hour_rate = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -202,6 +209,7 @@ impl backbone_orm::EntityRepoMeta for Workstation {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "workstation_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -221,7 +229,7 @@ pub struct WorkstationBuilder {
     company_id: Option<Uuid>,
     workstation_name: Option<String>,
     hour_rate: Option<Decimal>,
-    is_active: Option<bool>,
+    status: Option<WorkstationStatus>,
 }
 
 impl WorkstationBuilder {
@@ -243,9 +251,9 @@ impl WorkstationBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `WorkstationStatus::default()`)
+    pub fn status(mut self, value: WorkstationStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -261,7 +269,7 @@ impl WorkstationBuilder {
             company_id,
             workstation_name,
             hour_rate: self.hour_rate.unwrap_or(Decimal::from(0)),
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

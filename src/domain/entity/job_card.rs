@@ -67,7 +67,7 @@ pub struct JobCard {
 impl JobCard {
     /// Create a builder for JobCard
     pub fn builder() -> JobCardBuilder {
-        JobCardBuilder::default()
+        <JobCardBuilder as Default>::default()
     }
 
     /// Create a new JobCard with required fields
@@ -326,7 +326,7 @@ impl JobCardBuilder {
             total_time_mins: self.total_time_mins.unwrap_or(Decimal::from(0)),
             hour_rate: self.hour_rate.unwrap_or(Decimal::from(0)),
             operating_cost: self.operating_cost.unwrap_or(Decimal::from(0)),
-            status: self.status.unwrap_or(JobCardStatus::default()),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

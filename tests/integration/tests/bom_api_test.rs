@@ -33,7 +33,7 @@ impl TestDataGenerator for BomTestData {
             "raw_material_cost": 0,
             "operating_cost": 0,
             "total_cost": 0,
-            "is_active": false,
+            "status": "active",
             "is_default": false,
             "metadata": json!({}),
         })
@@ -52,7 +52,7 @@ impl TestDataGenerator for BomTestData {
             "raw_material_cost": 0,
             "operating_cost": 0,
             "total_cost": 0,
-            "is_active": false,
+            "status": "active",
             "is_default": false,
             "metadata": json!({}),
         })

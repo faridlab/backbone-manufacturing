@@ -64,7 +64,7 @@ pub struct BomItem {
 impl BomItem {
     /// Create a builder for BomItem
     pub fn builder() -> BomItemBuilder {
-        BomItemBuilder::default()
+        <BomItemBuilder as Default>::default()
     }
 
     /// Create a new BomItem with required fields

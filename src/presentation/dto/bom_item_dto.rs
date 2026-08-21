@@ -300,4 +300,3 @@ impl backbone_core::ApplyUpdateDto<UpdateBomItemDto> for BomItem {
 // Add custom DTOs specific to BomItem here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

@@ -52,7 +52,7 @@ pub struct WorkstationDto {
     pub company_id: Uuid,
     pub workstation_name: String,
     pub hour_rate: Decimal,
-    pub is_active: bool,
+    pub status: WorkstationStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -61,6 +61,7 @@ pub struct WorkstationDto {
 pub struct WorkstationSummary {
     pub id: WorkstationId,
     pub workstation_name: String,
+    pub status: WorkstationStatus,
 }
 
 /// Reference to Workstation for foreign key relationships
@@ -110,7 +111,7 @@ pub struct OperationDto {
     pub company_id: Uuid,
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
-    pub is_active: bool,
+    pub status: OperationStatus,
     pub metadata: serde_json::Value,
 }
 
@@ -119,6 +120,7 @@ pub struct OperationDto {
 pub struct OperationSummary {
     pub id: OperationId,
     pub operation_name: String,
+    pub status: OperationStatus,
 }
 
 /// Reference to Operation for foreign key relationships
@@ -174,7 +176,7 @@ pub struct BomDto {
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub total_cost: Decimal,
-    pub is_active: bool,
+    pub status: BomStatus,
     pub is_default: bool,
     pub metadata: serde_json::Value,
 }
@@ -183,6 +185,7 @@ pub struct BomDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomSummary {
     pub id: BomId,
+    pub status: BomStatus,
 }
 
 /// Reference to Bom for foreign key relationships

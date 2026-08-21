@@ -405,4 +405,3 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkOrderDto> for WorkOrder {
 // Add custom DTOs specific to WorkOrder here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

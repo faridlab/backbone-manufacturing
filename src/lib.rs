@@ -24,8 +24,6 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
-// Hand-authored (not regenerated): the validated manufacturing execution surface — see `write_api`.
-pub mod write_api;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -116,12 +114,40 @@ impl ManufacturingModule {
     /// mount exposes unguarded writes. Compose a guarded router (read + validated
     /// writes) for production, or call `all_crud_routes()` to opt into the full
     /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    #[deprecated(note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface")]
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
 
-    // <<< CUSTOM ACCESSORS
+    /// Read-only routes for every entity (GET endpoints only) — the safe base.
+    ///
+    /// Generic mutation can't reach here, so this surface cannot bypass a
+    /// validated write service's invariants. Use this as the production base and
+    /// merge validated write routes (or a write service's HTTP layer) onto it.
+    pub fn readonly_routes(&self) -> Router {
+        use presentation::http::{
+            create_workstation_read_routes,
+            create_operation_read_routes,
+            create_bom_read_routes,
+            create_bom_item_read_routes,
+            create_bom_operation_read_routes,
+            create_work_order_read_routes,
+            create_work_order_item_read_routes,
+            create_job_card_read_routes,
+        };
+
+        Router::new()
+            .merge(create_workstation_read_routes(self.workstation_service.clone()))
+            .merge(create_operation_read_routes(self.operation_service.clone()))
+            .merge(create_bom_read_routes(self.bom_service.clone()))
+            .merge(create_bom_item_read_routes(self.bom_item_service.clone()))
+            .merge(create_bom_operation_read_routes(self.bom_operation_service.clone()))
+            .merge(create_work_order_read_routes(self.work_order_service.clone()))
+            .merge(create_work_order_item_read_routes(self.work_order_item_service.clone()))
+            .merge(create_job_card_read_routes(self.job_card_service.clone()))
+    }
+
+    // <<< CUSTOM METHODS
     /// The validated manufacturing execution engine (release → consume → operate → receive),
     /// which rolls up BOM cost and emits the three WIP/FG GL posts so a Work Order's WIP nets to
     /// zero on completion.

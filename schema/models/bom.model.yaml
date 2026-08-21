@@ -30,17 +30,18 @@ models:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "Conversion cost per hour (labour + overhead)"
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Workstation is available"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: WorkstationStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive workstations are hidden from new BOM operations; existing BOM lines keep their snapshotted rate)"
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
       - type: index
-        fields: [company_id, is_active]
+        fields: [company_id, status]
 
   - name: Operation
     collection: operations
@@ -62,17 +63,18 @@ models:
         type: uuid?
         attributes: ["@foreign_key(Workstation.id)"]
         description: "Default workstation for this operation"
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Operation is available"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: OperationStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive operations are hidden from new BOM lines; existing lines keep their reference)"
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
       - type: index
-        fields: [company_id, is_active]
+        fields: [company_id, status]
 
   - name: Bom
     collection: boms
@@ -118,10 +120,11 @@ models:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "raw_material_cost + operating_cost"
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "BOM is usable"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: BomStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (inactive BOMs are hidden from work-order release and cost roll-up)"
       is_default:
         type: bool
         attributes: ["@default(false)"]
@@ -135,7 +138,7 @@ models:
         fields: [company_id, bom_code]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [company_id, item_id, is_active]
+        fields: [company_id, item_id, status]
 
   - name: BomItem
     collection: bom_items
@@ -224,3 +227,31 @@ models:
     indexes:
       - type: index
         fields: [bom_id]
+
+enums:
+  - name: WorkstationStatus
+    description: "Lifecycle of a workstation"
+    variants:
+      - name: active
+        description: "Selectable for new BOM operations"
+        default: true
+      - name: inactive
+        description: "Hidden from new BOM operations; existing lines keep their snapshotted rate"
+
+  - name: OperationStatus
+    description: "Lifecycle of a production operation"
+    variants:
+      - name: active
+        description: "Selectable for new BOM lines"
+        default: true
+      - name: inactive
+        description: "Hidden from new BOM lines; existing lines keep their reference"
+
+  - name: BomStatus
+    description: "Lifecycle of a bill of materials"
+    variants:
+      - name: active
+        description: "Usable for work-order release and cost roll-up"
+        default: true
+      - name: inactive
+        description: "Hidden from work-order release and cost roll-up"

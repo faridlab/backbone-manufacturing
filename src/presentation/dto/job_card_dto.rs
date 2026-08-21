@@ -316,4 +316,3 @@ impl backbone_core::ApplyUpdateDto<UpdateJobCardDto> for JobCard {
 // Add custom DTOs specific to JobCard here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

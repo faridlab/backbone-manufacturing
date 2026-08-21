@@ -63,7 +63,7 @@ pub struct WorkOrderItem {
 impl WorkOrderItem {
     /// Create a builder for WorkOrderItem
     pub fn builder() -> WorkOrderItemBuilder {
-        WorkOrderItemBuilder::default()
+        <WorkOrderItemBuilder as Default>::default()
     }
 
     /// Create a new WorkOrderItem with required fields

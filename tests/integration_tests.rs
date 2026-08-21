@@ -121,4 +121,3 @@ async fn test_job_card_api() {
         panic!("{} tests failed", failed.len());
     }
 }
-

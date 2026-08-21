@@ -19,6 +19,7 @@ use validator::Validate;
 
 use crate::domain::entity::Workstation;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::WorkstationStatus;
 
 // =============================================================================
 // Create DTO
@@ -42,9 +43,7 @@ pub struct CreateWorkstationDto {
     pub workstation_name: String,
     #[serde(alias = "hour_rate")]
     pub hour_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: WorkstationStatus,
 }
 
 // =============================================================================
@@ -69,9 +68,7 @@ pub struct UpdateWorkstationDto {
     pub workstation_name: String,
     #[serde(alias = "hour_rate")]
     pub hour_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: WorkstationStatus,
 }
 
 // =============================================================================
@@ -96,15 +93,14 @@ pub struct PatchWorkstationDto {
     pub workstation_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "hour_rate")]
     pub hour_rate: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<WorkstationStatus>,
 }
 
 impl PatchWorkstationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.workstation_name.is_some() || self.hour_rate.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.workstation_name.is_some() || self.hour_rate.is_some() || self.status.is_some()
     }
 }
 
@@ -127,8 +123,7 @@ pub struct WorkstationResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub workstation_name: String,
     pub hour_rate: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: WorkstationStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -203,7 +198,7 @@ impl From<Workstation> for WorkstationResponseDto {
             company_id: entity.company_id,
             workstation_name: entity.workstation_name,
             hour_rate: entity.hour_rate,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -229,7 +224,7 @@ impl From<CreateWorkstationDto> for Workstation {
             company_id: dto.company_id,
             workstation_name: dto.workstation_name,
             hour_rate: dto.hour_rate,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -242,7 +237,7 @@ impl From<&Workstation> for WorkstationResponseDto {
             company_id: entity.company_id.clone(),
             workstation_name: entity.workstation_name.clone(),
             hour_rate: entity.hour_rate.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -259,7 +254,7 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
         self.company_id = dto.company_id;
         self.workstation_name = dto.workstation_name;
         self.hour_rate = dto.hour_rate;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }
@@ -272,4 +267,3 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
 // Add custom DTOs specific to Workstation here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

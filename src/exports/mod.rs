@@ -8,7 +8,7 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use manufacturing::exports::{WorkstationDto, ManufacturingQueryService};
+//! use manufacturing::exports::{WorkstationDto};
 //! ```
 
 mod types;
@@ -51,9 +51,6 @@ pub use events::*;
 /// - `JobCardDto` - Data transfer object for JobCard
 /// - `JobCardSummary` - Summary view of JobCard
 /// - `JobCardId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `ManufacturingQueryService` - Read-only queries
 ///
 /// ## Public Events
 /// - `WorkstationCreatedEvent` - Published when Workstation is created

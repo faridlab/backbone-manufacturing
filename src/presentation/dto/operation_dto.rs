@@ -18,6 +18,7 @@ use validator::Validate;
 
 use crate::domain::entity::Operation;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::OperationStatus;
 
 // =============================================================================
 // Create DTO
@@ -41,9 +42,7 @@ pub struct CreateOperationDto {
     pub operation_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "default_workstation_id")]
     pub default_workstation_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: OperationStatus,
 }
 
 // =============================================================================
@@ -68,9 +67,7 @@ pub struct UpdateOperationDto {
     pub operation_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "default_workstation_id")]
     pub default_workstation_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: OperationStatus,
 }
 
 // =============================================================================
@@ -95,15 +92,14 @@ pub struct PatchOperationDto {
     pub operation_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "default_workstation_id")]
     pub default_workstation_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<OperationStatus>,
 }
 
 impl PatchOperationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.operation_name.is_some() || self.default_workstation_id.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.operation_name.is_some() || self.default_workstation_id.is_some() || self.status.is_some()
     }
 }
 
@@ -126,8 +122,7 @@ pub struct OperationResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: OperationStatus,
     pub metadata: AuditMetadata,
 }
 
@@ -202,7 +197,7 @@ impl From<Operation> for OperationResponseDto {
             company_id: entity.company_id,
             operation_name: entity.operation_name,
             default_workstation_id: entity.default_workstation_id,
-            is_active: entity.is_active,
+            status: entity.status,
             metadata: entity.metadata,
         }
     }
@@ -228,7 +223,7 @@ impl From<CreateOperationDto> for Operation {
             company_id: dto.company_id,
             operation_name: dto.operation_name,
             default_workstation_id: dto.default_workstation_id,
-            is_active: dto.is_active,
+            status: dto.status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -241,7 +236,7 @@ impl From<&Operation> for OperationResponseDto {
             company_id: entity.company_id.clone(),
             operation_name: entity.operation_name.clone(),
             default_workstation_id: entity.default_workstation_id.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -258,7 +253,7 @@ impl backbone_core::ApplyUpdateDto<UpdateOperationDto> for Operation {
         self.company_id = dto.company_id;
         self.operation_name = dto.operation_name;
         self.default_workstation_id = dto.default_workstation_id;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         Ok(self)
     }
 }
@@ -271,4 +266,3 @@ impl backbone_core::ApplyUpdateDto<UpdateOperationDto> for Operation {
 // Add custom DTOs specific to Operation here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

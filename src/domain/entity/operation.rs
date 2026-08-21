@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+
+use super::OperationStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for Operation
@@ -51,7 +53,7 @@ pub struct Operation {
     pub company_id: Uuid,
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
-    pub is_active: bool,
+    pub status: OperationStatus,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -60,17 +62,17 @@ pub struct Operation {
 impl Operation {
     /// Create a builder for Operation
     pub fn builder() -> OperationBuilder {
-        OperationBuilder::default()
+        <OperationBuilder as Default>::default()
     }
 
     /// Create a new Operation with required fields
-    pub fn new(company_id: Uuid, operation_name: String, is_active: bool) -> Self {
+    pub fn new(company_id: Uuid, operation_name: String, status: OperationStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
             operation_name,
             default_workstation_id: None,
-            is_active,
+            status,
             metadata: AuditMetadata::default(),
         }
     }
@@ -125,6 +127,11 @@ impl Operation {
         self.metadata.deleted_by.as_ref()
     }
 
+    /// Get the current status
+    pub fn status(&self) -> &OperationStatus {
+        &self.status
+    }
+
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -153,8 +160,8 @@ impl Operation {
                 "default_workstation_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.default_workstation_id = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -212,6 +219,7 @@ impl backbone_orm::EntityRepoMeta for Operation {
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("default_workstation_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "operation_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -231,7 +239,7 @@ pub struct OperationBuilder {
     company_id: Option<Uuid>,
     operation_name: Option<String>,
     default_workstation_id: Option<Uuid>,
-    is_active: Option<bool>,
+    status: Option<OperationStatus>,
 }
 
 impl OperationBuilder {
@@ -253,9 +261,9 @@ impl OperationBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `OperationStatus::default()`)
+    pub fn status(mut self, value: OperationStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -271,7 +279,7 @@ impl OperationBuilder {
             company_id,
             operation_name,
             default_workstation_id: self.default_workstation_id,
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })
     }

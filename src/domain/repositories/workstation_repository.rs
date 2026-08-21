@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::Workstation;
+use crate::domain::entity::{Workstation, WorkstationStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -46,13 +46,13 @@ pub struct WorkstationPaginatedResult {
 pub struct WorkstationFilter {
     pub company_id: Option<Uuid>,
     pub workstation_name: Option<String>,
-    pub is_active: Option<bool>,
+    pub status: Option<WorkstationStatus>,
 }
 
 impl WorkstationFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.workstation_name.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.workstation_name.is_some() || self.status.is_some()
     }
 }
 

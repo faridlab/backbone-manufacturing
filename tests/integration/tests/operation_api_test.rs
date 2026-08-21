@@ -27,7 +27,7 @@ impl TestDataGenerator for OperationTestData {
             "company_id": Uuid::new_v4().to_string(),
             "operation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "default_workstation_id": null,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }
@@ -39,7 +39,7 @@ impl TestDataGenerator for OperationTestData {
             "company_id": Uuid::new_v4().to_string(),
             "operation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "default_workstation_id": null,
-            "is_active": false,
+            "status": "active",
             "metadata": json!({}),
         })
     }

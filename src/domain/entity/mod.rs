@@ -10,6 +10,9 @@ pub mod bom_operation;
 pub mod work_order;
 pub mod work_order_item;
 pub mod job_card;
+pub mod workstation_status;
+pub mod operation_status;
+pub mod bom_status;
 pub mod work_order_status;
 pub mod job_card_status;
 
@@ -38,6 +41,9 @@ pub use work_order_item::WorkOrderItemId;
 pub use job_card::JobCard;
 pub use job_card::JobCardBuilder;
 pub use job_card::JobCardId;
+pub use workstation_status::WorkstationStatus;
+pub use operation_status::OperationStatus;
+pub use bom_status::BomStatus;
 pub use work_order_status::WorkOrderStatus;
 pub use job_card_status::JobCardStatus;
 

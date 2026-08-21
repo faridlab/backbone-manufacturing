@@ -64,7 +64,7 @@ pub struct BomOperation {
 impl BomOperation {
     /// Create a builder for BomOperation
     pub fn builder() -> BomOperationBuilder {
-        BomOperationBuilder::default()
+        <BomOperationBuilder as Default>::default()
     }
 
     /// Create a new BomOperation with required fields
