@@ -49,3 +49,11 @@ user_owned:
 
   # Hand-authored module documentation.
   - "docs/**"
+
+  # Wipe-class declarations - protected files that would otherwise be wiped during schema regeneration
+  - "migrations/20260722000001_fence_child_tables_company_rls.up.sql"
+  - "migrations/20260722000001_fence_child_tables_company_rls.down.sql"
+  - "migrations/20260821130000_status_lifecycle.up.sql"
+  - "migrations/20260821130000_status_lifecycle.down.sql"
+  - "tests/common/mod.rs"
+  - "src/write_api.rs"

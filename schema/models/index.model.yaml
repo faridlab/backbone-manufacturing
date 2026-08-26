@@ -72,6 +72,40 @@ shared_types:
 
   Metadata: [Timestamps, Actors]
 
+# =============================================================================
+# company_fence (ADR-0014): Multi-tenant row-level security posture
+# -----------------------------------------------------------------------------
+# Posture: strict (all entities require NOT NULL company_id)
+#
+# Per ADR-0014, this declaration governs how the codegen stamps @required company_id
+# and how ADR-0015 enforcement hooks ground the three keys (db/both/service) against
+# the actual DDL. Posture options:
+#   strict        : NOT NULL company_id — every row belongs to exactly one company
+#                   and NULL rows are rejected. Applies to all transactional
+#                   tables and their configuration. This is manufacturing's
+#                   current posture across all 8 entities (workstations, operations,
+#                   boms, bom_items, bom_operations, work_orders, work_order_items,
+#                   job_cards).
+#   shared_blank  : nullable company_id — NULL rows are first-class shared rows
+#                   (the port of Odoo's `[False]` escape). Typically applies to
+#                   MASTER DATA (global reference data like shared Locations or
+#                   global Route templates). Manufacturing has NO shared_blank
+#                   entities at present; the master-data shared_blank-vs-all-strict
+#                   decision is registered for the SC-5 pass (see manufacturing-
+#                   features.md:96-106 for the domain-driven rationale).
+#
+# Posture map (entity -> realized fence, all under this one declaration):
+#   workstations    -> strict (@required company_id)
+#   operations      -> strict (@required company_id)
+#   boms            -> strict (@required company_id)
+#   bom_items       -> strict (@required company_id)
+#   bom_operations  -> strict (@required company_id)
+#   work_orders     -> strict (@required company_id)
+#   work_order_items -> strict (@required company_id)
+#   job_cards        -> strict (@required company_id)
+# -----------------------------------------------------------------------------
+company_fence: strict
+
 # Import each entity model. Replace `example` with your real entities.
 imports:
   - bom.model.yaml

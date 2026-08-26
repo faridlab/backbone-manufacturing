@@ -23,3 +23,8 @@ Thumbs.db
 .claude/
 # graphify knowledge graph (local, not committed)
 graphify-out/
+
+# Local Cargo override — redirects the backbone-accounting git dev-dep to ../backbone-accounting in
+# dev. .cargo/config.toml.example is tracked as the template; the real file stays local.
+.cargo/config.toml
+.cargo/config.toml.quarantined
