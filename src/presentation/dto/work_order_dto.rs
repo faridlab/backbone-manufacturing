@@ -19,7 +19,8 @@ use validator::Validate;
 
 use crate::domain::entity::WorkOrder;
 use crate::domain::entity::AuditMetadata;
-use crate::domain::entity::WorkOrderStatus;
+use crate::domain::entity::ReservationState;
+use crate::domain::entity::WorkOrderState;
 
 // =============================================================================
 // Create DTO
@@ -50,7 +51,11 @@ pub struct CreateWorkOrderDto {
     pub quantity: Decimal,
     #[serde(alias = "produced_qty")]
     pub produced_qty: Decimal,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reservation_state")]
+    pub reservation_state: Option<ReservationState>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
+    pub product_category_id: Option<Uuid>,
     #[serde(alias = "raw_material_cost")]
     pub raw_material_cost: Decimal,
     #[serde(alias = "operating_cost")]
@@ -100,7 +105,11 @@ pub struct UpdateWorkOrderDto {
     pub quantity: Decimal,
     #[serde(alias = "produced_qty")]
     pub produced_qty: Decimal,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reservation_state")]
+    pub reservation_state: Option<ReservationState>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
+    pub product_category_id: Option<Uuid>,
     #[serde(alias = "raw_material_cost")]
     pub raw_material_cost: Decimal,
     #[serde(alias = "operating_cost")]
@@ -152,7 +161,11 @@ pub struct PatchWorkOrderDto {
     #[serde(skip_serializing_if = "Option::is_none", alias = "produced_qty")]
     pub produced_qty: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<WorkOrderStatus>,
+    pub status: Option<WorkOrderState>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "reservation_state")]
+    pub reservation_state: Option<ReservationState>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
+    pub product_category_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "raw_material_cost")]
     pub raw_material_cost: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "operating_cost")]
@@ -176,7 +189,7 @@ pub struct PatchWorkOrderDto {
 impl PatchWorkOrderDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.quantity.is_some() || self.produced_qty.is_some() || self.status.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.planned_start_date.is_some()
+        self.company_id.is_some() || self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.quantity.is_some() || self.produced_qty.is_some() || self.status.is_some() || self.reservation_state.is_some() || self.product_category_id.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.planned_start_date.is_some()
     }
 }
 
@@ -204,7 +217,9 @@ pub struct WorkOrderResponseDto {
     pub bom_id: Uuid,
     pub quantity: Decimal,
     pub produced_qty: Decimal,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
+    pub reservation_state: Option<ReservationState>,
+    pub product_category_id: Option<Uuid>,
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub wip_warehouse_id: Option<Uuid>,
@@ -292,6 +307,8 @@ impl From<WorkOrder> for WorkOrderResponseDto {
             quantity: entity.quantity,
             produced_qty: entity.produced_qty,
             status: entity.status,
+            reservation_state: entity.reservation_state,
+            product_category_id: entity.product_category_id,
             raw_material_cost: entity.raw_material_cost,
             operating_cost: entity.operating_cost,
             wip_warehouse_id: entity.wip_warehouse_id,
@@ -330,6 +347,8 @@ impl From<CreateWorkOrderDto> for WorkOrder {
             quantity: dto.quantity,
             produced_qty: dto.produced_qty,
             status: dto.status,
+            reservation_state: dto.reservation_state,
+            product_category_id: dto.product_category_id,
             raw_material_cost: dto.raw_material_cost,
             operating_cost: dto.operating_cost,
             wip_warehouse_id: dto.wip_warehouse_id,
@@ -355,6 +374,8 @@ impl From<&WorkOrder> for WorkOrderResponseDto {
             quantity: entity.quantity.clone(),
             produced_qty: entity.produced_qty.clone(),
             status: entity.status.clone(),
+            reservation_state: entity.reservation_state.clone(),
+            product_category_id: entity.product_category_id.clone(),
             raw_material_cost: entity.raw_material_cost.clone(),
             operating_cost: entity.operating_cost.clone(),
             wip_warehouse_id: entity.wip_warehouse_id.clone(),
@@ -384,6 +405,8 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkOrderDto> for WorkOrder {
         self.quantity = dto.quantity;
         self.produced_qty = dto.produced_qty;
         self.status = dto.status;
+        self.reservation_state = dto.reservation_state;
+        self.product_category_id = dto.product_category_id;
         self.raw_material_cost = dto.raw_material_cost;
         self.operating_cost = dto.operating_cost;
         self.wip_warehouse_id = dto.wip_warehouse_id;

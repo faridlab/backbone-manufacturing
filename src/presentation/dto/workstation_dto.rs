@@ -34,15 +34,17 @@ use crate::domain::entity::WorkstationStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateWorkstationDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "workstation_name")]
     pub workstation_name: String,
     #[serde(alias = "hour_rate")]
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
+    #[serde(alias = "time_efficiency")]
+    pub time_efficiency: Decimal,
     pub status: WorkstationStatus,
 }
 
@@ -59,15 +61,17 @@ pub struct CreateWorkstationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWorkstationDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "workstation_name")]
     pub workstation_name: String,
     #[serde(alias = "hour_rate")]
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
+    #[serde(alias = "time_efficiency")]
+    pub time_efficiency: Decimal,
     pub status: WorkstationStatus,
 }
 
@@ -84,7 +88,6 @@ pub struct UpdateWorkstationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchWorkstationDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
@@ -94,13 +97,17 @@ pub struct PatchWorkstationDto {
     #[serde(skip_serializing_if = "Option::is_none", alias = "hour_rate")]
     pub hour_rate: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub capacity: Option<Decimal>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "time_efficiency")]
+    pub time_efficiency: Option<Decimal>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<WorkstationStatus>,
 }
 
 impl PatchWorkstationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.workstation_name.is_some() || self.hour_rate.is_some() || self.status.is_some()
+        self.company_id.is_some() || self.workstation_name.is_some() || self.hour_rate.is_some() || self.capacity.is_some() || self.time_efficiency.is_some() || self.status.is_some()
     }
 }
 
@@ -118,11 +125,12 @@ impl PatchWorkstationDto {
 pub struct WorkstationResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub workstation_name: String,
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
+    pub time_efficiency: Decimal,
     pub status: WorkstationStatus,
     pub metadata: AuditMetadata,
 }
@@ -181,7 +189,7 @@ impl WorkstationListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct WorkstationSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
     pub created_at: Option<DateTime<Utc>>,
@@ -198,6 +206,8 @@ impl From<Workstation> for WorkstationResponseDto {
             company_id: entity.company_id,
             workstation_name: entity.workstation_name,
             hour_rate: entity.hour_rate,
+            capacity: entity.capacity,
+            time_efficiency: entity.time_efficiency,
             status: entity.status,
             metadata: entity.metadata,
         }
@@ -224,6 +234,8 @@ impl From<CreateWorkstationDto> for Workstation {
             company_id: dto.company_id,
             workstation_name: dto.workstation_name,
             hour_rate: dto.hour_rate,
+            capacity: dto.capacity,
+            time_efficiency: dto.time_efficiency,
             status: dto.status,
             metadata: AuditMetadata::default(),
         }
@@ -237,6 +249,8 @@ impl From<&Workstation> for WorkstationResponseDto {
             company_id: entity.company_id.clone(),
             workstation_name: entity.workstation_name.clone(),
             hour_rate: entity.hour_rate.clone(),
+            capacity: entity.capacity.clone(),
+            time_efficiency: entity.time_efficiency.clone(),
             status: entity.status.clone(),
             metadata: entity.metadata.clone(),
         }
@@ -254,6 +268,8 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
         self.company_id = dto.company_id;
         self.workstation_name = dto.workstation_name;
         self.hour_rate = dto.hour_rate;
+        self.capacity = dto.capacity;
+        self.time_efficiency = dto.time_efficiency;
         self.status = dto.status;
         Ok(self)
     }

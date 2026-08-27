@@ -2,7 +2,7 @@
 # Domain: Manufacturing — execution (transactional, EMITS GL)
 # Entities: WorkOrder (+ WorkOrderItem) + JobCard
 # Description: The ACT of building. A WorkOrder produces `qty` of an item against a
-# Bom; releasing it explodes the Bom into WorkOrderItems (required materials). Its
+# Bom; confirming it explodes the Bom into WorkOrderItems (required materials). Its
 # lifecycle emits three WIP postings via the AccountingPost seam:
 #   consume  Dr WIP · Cr Raw-Material Stock   (materials issued to WIP)
 #   operate  Dr WIP · Cr Conversion-Applied   (job-card labour/overhead)
@@ -10,6 +10,13 @@
 # so WIP nets to ZERO on completion. Manufacturing owns no stock/ledger — it drives
 # inventory for the physical moves and emits the valuation posts. Accounts +
 # warehouses + item are logical FKs (accounting / inventory / catalog).
+#
+# State vocabulary (converged from the earlier 5-state hand-gated enum):
+#   released   -> confirmed   (the direct confirm write; BOM explosion absorbs here)
+#   in_process -> progress    (derived on first consume)
+#   completed  -> done        (derived on full receipt; the mark-done direct write)
+#   stopped    -> dropped     (was unreachable in code and unreachable in gates)
+#   to_close   -> NEW derived (0 < produced < ordered after a receipt)
 # =============================================================================
 
 models:
@@ -46,9 +53,20 @@ models:
         attributes: ["@default(0)", "@precision(18,4)", "@non_negative"]
         description: "Quantity received as finished goods so far"
       status:
-        type: WorkOrderStatus
+        type: WorkOrderState
         attributes: ["@required", "@default(draft)"]
-        description: "Lifecycle state"
+        lifecycle:
+          shape: hybrid
+          sticky: true
+        description: "Hybrid 6-state lifecycle: exactly three DIRECT writes (confirm draft->confirmed, mark-done ->done, cancel draft|confirmed->cancel); progress (first consume) and to_close (0 < produced < ordered) are derived computes written only by the accumulator gates; done and cancel are terminal"
+      reservation_state:
+        type: ReservationState?
+        lifecycle: projection
+        description: "Component availability projected by inventory (waiting | confirmed | assigned); availability is expressed ONLY here — no field named availability exists in this module"
+      product_category_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The product category whose costing defaults (CategoryCostingDefaults) supply this work order's GL accounts when the per-work-order explicit overrides are unset # logical FK to catalog.ProductCategory.id"
 
       # --- valuation accumulators (filled as the WO progresses) ---
       raw_material_cost:
@@ -61,6 +79,9 @@ models:
         description: "Conversion cost charged to WIP from job cards"
 
       # --- warehouses (inventory seam) + GL accounts (accounting seam), logical FKs ---
+      # The four account columns are EXPLICIT OVERRIDES: when unset, the accounts resolve from
+      # product_category_id's CategoryCostingDefaults row (see costing_defaults.model.yaml);
+      # when both are unset the verb refuses with MissingAccount — never a hardcoded fallback.
       wip_warehouse_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
@@ -72,19 +93,19 @@ models:
       wip_account_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Work-in-progress account # logical FK to accounting.Account.id"
+        description: "Work-in-progress account OVERRIDE # logical FK to accounting.Account.id"
       fg_account_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Finished-goods inventory account # logical FK to accounting.Account.id"
+        description: "Finished-goods inventory account OVERRIDE # logical FK to accounting.Account.id"
       raw_material_account_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Raw-material stock account # logical FK to accounting.Account.id"
+        description: "Raw-material stock account OVERRIDE # logical FK to accounting.Account.id"
       conversion_cost_account_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Conversion-cost-applied account # logical FK to accounting.Account.id"
+        description: "Conversion-cost-applied account OVERRIDE # logical FK to accounting.Account.id"
 
       planned_start_date:
         type: datetime?
@@ -179,9 +200,12 @@ models:
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "total_time_mins / 60 × hour_rate (charged to WIP once)"
       status:
-        type: JobCardStatus
-        attributes: ["@required", "@default(open)"]
-        description: "open → completed (charged to WIP on completion)"
+        type: JobCardState
+        attributes: ["@required", "@default(ready)"]
+        lifecycle:
+          shape: hybrid
+          sticky: true
+        description: "Shop-floor 5-state lifecycle (no 'pending', no 'open'): direct writes start (ready|blocked -> progress), finish (-> done, the once-only operate charge), cancel; ready<->blocked auto-flips derived from the parent work order's reservation_state"
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
@@ -190,27 +214,82 @@ models:
       - type: index
         fields: [work_order_id, status]
 
+  # The idempotency backstop for subcontract receipt events (see manufacturing_subcontract.rs):
+  # one hidden work order per (company, purchase order). A replayed event finds the prior link
+  # and returns the existing work order instead of minting a second one.
+  - name: SubcontractMoLink
+    collection: subcontract_mo_links
+    description: "Links a subcontract purchase order to the hidden manufacturing order its receipt minted (idempotent event handling)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique link id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      purchase_order_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The subcontract purchase order whose receipt minted the work order # logical FK to buying.PurchaseOrder.id"
+      work_order_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(WorkOrder.id)"]
+        description: "The hidden work order minted for the subcontract receipt"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, purchase_order_id]
+        where: "deleted_at IS NULL"
+
 enums:
-  - name: WorkOrderStatus
-    description: "Work order lifecycle"
+  # Hybrid shape (ADR-0016): the enum carries both hand-gated direct writes and derived
+  # accumulator-driven computes. Sticky cancel: once cancelled, no transition out.
+  - name: WorkOrderState
+    description: "Work order lifecycle (hybrid: three direct writes + derived computes)"
     variants:
       - name: draft
-        description: "Created, not released"
+        description: "Created, not confirmed (the only state item_id may change)"
         default: true
-      - name: released
-        description: "Released — materials required, exploded from the BOM"
-      - name: in_process
-        description: "Materials consumed / operations underway (WIP has value)"
-      - name: completed
-        description: "Fully produced — finished goods received, WIP cleared"
-      - name: stopped
-        description: "Halted"
+      - name: confirmed
+        description: "Confirmed — BOM exploded into required materials (direct write: confirm)"
+      - name: progress
+        description: "First consume has issued materials to WIP (derived, written only by the consume gate)"
+      - name: to_close
+        description: "Partially produced (0 < produced < ordered) — awaiting further receipts or close (derived, written only by the receive gate)"
+      - name: done
+        description: "Fully produced — finished goods received, WIP cleared (direct write: mark-done / full receipt)"
+      - name: cancel
+        description: "Cancelled from draft or confirmed only (direct write; terminal and sticky)"
 
-  - name: JobCardStatus
-    description: "Job card lifecycle"
+  - name: ReservationState
+    description: "Projected component availability (inventory-owned value, never hand-set)"
     variants:
-      - name: open
-        description: "Recording time"
+      - name: waiting
+        description: "Components not yet reserved"
+      - name: confirmed
+        description: "Reservation requested / partial"
         default: true
-      - name: completed
-        description: "Finished — conversion cost charged to WIP"
+      - name: assigned
+        description: "All components reserved"
+
+  # Shop-floor 5-state (no pending, no open; default ready). ready<->blocked are derived
+  # from the parent work order's reservation_state; progress/done/cancel are direct writes.
+  - name: JobCardState
+    description: "Job card lifecycle (hybrid: start/finish/cancel direct; ready<->blocked derived)"
+    variants:
+      - name: ready
+        description: "Queued to run (components available)"
+        default: true
+      - name: progress
+        description: "Running (direct write: start)"
+      - name: done
+        description: "Finished — conversion cost charged to WIP once (direct write: finish)"
+      - name: cancel
+        description: "Cancelled (terminal and sticky)"
+      - name: blocked
+        description: "Waiting on components (derived from the parent work order's reservation_state)"

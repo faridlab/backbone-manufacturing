@@ -44,6 +44,7 @@ async fn released_wo(
     let acc = if accounts_present { Some(wo_accounts(&pool, company).await) } else { None };
     let wo = svc
         .create_work_order(NewWorkOrder {
+            product_category_id: None,
             company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
@@ -58,7 +59,7 @@ async fn released_wo(
         })
         .await
         .unwrap();
-    svc.release_work_order(wo, &sink).await.unwrap();
+    svc.confirm_work_order(wo, &sink).await.unwrap();
     (svc, company, wo, raw_wh, inv)
 }
 
@@ -70,7 +71,7 @@ async fn ip1_over_produce_rejected() {
     let sink = LoggingSink;
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
     // Ordered 5; try to receive 6.
-    let err = svc.receive_finished(wo, dec("6"), &inv, &gl, &sink).await.unwrap_err();
+    let err = svc.receive_finished(wo, rcv(dec("6")), &inv, &gl, &sink).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::OverProduce { .. }));
 }
 
@@ -98,9 +99,9 @@ async fn ip3_receive_is_idempotent() {
     let sink = LoggingSink;
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
 
-    let a = svc.receive_finished(wo, dec("1"), &inv, &gl, &sink).await.unwrap();
+    let a = svc.receive_finished(wo, rcv(dec("1")), &inv, &gl, &sink).await.unwrap();
     assert!(a.completed && !a.already);
-    let b = svc.receive_finished(wo, dec("1"), &inv, &gl, &sink).await.unwrap();
+    let b = svc.receive_finished(wo, rcv(dec("1")), &inv, &gl, &sink).await.unwrap();
     assert!(b.already, "second receive short-circuits on completed");
     assert_eq!(gl.count("receive"), 1, "FG received / WIP cleared exactly once");
 }
@@ -148,7 +149,6 @@ async fn ip5_job_card_charges_once() {
 /// and the retry self-concealed with `already:true, finished_value:0`.)
 #[tokio::test]
 async fn ip6_receive_failure_does_not_strand_wip() {
-    use backbone_manufacturing::application::service::manufacturing_gl::GlPostSink;
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let gl = GlAdapter::new(pool.clone()); // REAL ledger, so we can check WIP nets to zero
@@ -175,6 +175,7 @@ async fn ip6_receive_failure_does_not_strand_wip() {
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
+            product_category_id: None,
             company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
@@ -189,20 +190,20 @@ async fn ip6_receive_failure_does_not_strand_wip() {
         })
         .await
         .unwrap();
-    svc.release_work_order(wo, &sink).await.unwrap();
+    svc.confirm_work_order(wo, &sink).await.unwrap();
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
 
     // The inventory receipt fails once.
     inv.fail_next_receives(1);
-    let err = svc.receive_finished(wo, dec("1"), &inv, &gl, &sink).await.unwrap_err();
+    let err = svc.receive_finished(wo, rcv(dec("1")), &inv, &gl, &sink).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::Inventory(_)));
     // WO must NOT be completed (the gate never advanced).
     let status: String = sqlx::query_scalar("SELECT status::text FROM manufacturing.work_orders WHERE id=$1")
         .bind(wo).fetch_one(&pool).await.unwrap();
-    assert_eq!(status, "in_process", "a failed receipt must not mark the WO completed");
+    assert_eq!(status, "progress", "a failed receipt must not mark the WO completed");
 
     // Retry succeeds — WIP clears, FG received once.
-    let r = svc.receive_finished(wo, dec("1"), &inv, &gl, &sink).await.unwrap();
+    let r = svc.receive_finished(wo, rcv(dec("1")), &inv, &gl, &sink).await.unwrap();
     assert!(r.completed && !r.already);
     assert_eq!(balance(&pool, acc.wip).await, dec("0.00"), "WIP nets to zero after the retry");
     assert_eq!(inv.finished_qty(fg_item), dec("1"), "FG received exactly once");

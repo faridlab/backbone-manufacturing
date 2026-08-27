@@ -24,16 +24,18 @@ impl TestDataGenerator for BomTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
+            "company_id": null,
             "item_id": Uuid::new_v4().to_string(),
             "bom_code": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
+            "version": 1,
+            "bom_type": "normal",
             "quantity": 0,
             "uom": null,
             "currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "raw_material_cost": 0,
             "operating_cost": 0,
             "total_cost": 0,
-            "status": "active",
+            "status": "draft",
             "is_default": false,
             "metadata": json!({}),
         })
@@ -43,16 +45,18 @@ impl TestDataGenerator for BomTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
+            "company_id": null,
             "item_id": Uuid::new_v4().to_string(),
             "bom_code": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
+            "version": 1,
+            "bom_type": "normal",
             "quantity": 0,
             "uom": null,
             "currency": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "raw_material_cost": 0,
             "operating_cost": 0,
             "total_cost": 0,
-            "status": "active",
+            "status": "draft",
             "is_default": false,
             "metadata": json!({}),
         })

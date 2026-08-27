@@ -4,6 +4,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
 
+use super::BomType;
 use super::BomStatus;
 use super::AuditMetadata;
 
@@ -51,9 +52,11 @@ impl std::ops::Deref for BomId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Bom {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: String,
+    pub version: i32,
+    pub bom_type: BomType,
     pub quantity: Decimal,
     pub uom: Option<String>,
     pub currency: String,
@@ -74,12 +77,14 @@ impl Bom {
     }
 
     /// Create a new Bom with required fields
-    pub fn new(company_id: Uuid, item_id: Uuid, bom_code: String, quantity: Decimal, currency: String, raw_material_cost: Decimal, operating_cost: Decimal, total_cost: Decimal, status: BomStatus, is_default: bool) -> Self {
+    pub fn new(item_id: Uuid, bom_code: String, version: i32, bom_type: BomType, quantity: Decimal, currency: String, raw_material_cost: Decimal, operating_cost: Decimal, total_cost: Decimal, status: BomStatus, is_default: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: None,
             item_id,
             bom_code,
+            version,
+            bom_type,
             quantity,
             uom: None,
             currency,
@@ -152,6 +157,12 @@ impl Bom {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
+    /// Set the company_id field (chainable)
+    pub fn with_company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
+        self
+    }
+
     /// Set the uom field (chainable)
     pub fn with_uom(mut self, value: String) -> Self {
         self.uom = Some(value);
@@ -174,6 +185,12 @@ impl Bom {
                 }
                 "bom_code" => {
                     if let Ok(v) = serde_json::from_value(value) { self.bom_code = v; }
+                }
+                "version" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.version = v; }
+                }
+                "bom_type" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.bom_type = v; }
                 }
                 "quantity" => {
                     if let Ok(v) = serde_json::from_value(value) { self.quantity = v; }
@@ -255,6 +272,7 @@ impl backbone_orm::EntityRepoMeta for Bom {
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
+        m.insert("bom_type".to_string(), "bom_type".to_string());
         m.insert("status".to_string(), "bom_status".to_string());
         m
     }
@@ -275,6 +293,8 @@ pub struct BomBuilder {
     company_id: Option<Uuid>,
     item_id: Option<Uuid>,
     bom_code: Option<String>,
+    version: Option<i32>,
+    bom_type: Option<BomType>,
     quantity: Option<Decimal>,
     uom: Option<String>,
     currency: Option<String>,
@@ -286,7 +306,7 @@ pub struct BomBuilder {
 }
 
 impl BomBuilder {
-    /// Set the company_id field (required)
+    /// Set the company_id field (optional)
     pub fn company_id(mut self, value: Uuid) -> Self {
         self.company_id = Some(value);
         self
@@ -301,6 +321,18 @@ impl BomBuilder {
     /// Set the bom_code field (required)
     pub fn bom_code(mut self, value: String) -> Self {
         self.bom_code = Some(value);
+        self
+    }
+
+    /// Set the version field (default: `1`)
+    pub fn version(mut self, value: i32) -> Self {
+        self.version = Some(value);
+        self
+    }
+
+    /// Set the bom_type field (default: `BomType::default()`)
+    pub fn bom_type(mut self, value: BomType) -> Self {
+        self.bom_type = Some(value);
         self
     }
 
@@ -356,15 +388,16 @@ impl BomBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Bom, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
         let bom_code = self.bom_code.ok_or_else(|| "bom_code is required".to_string())?;
 
         Ok(Bom {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: self.company_id,
             item_id,
             bom_code,
+            version: self.version.unwrap_or(1),
+            bom_type: self.bom_type.unwrap_or_default(),
             quantity: self.quantity.unwrap_or(Decimal::from(1)),
             uom: self.uom,
             currency: self.currency.unwrap_or("IDR".to_string()),

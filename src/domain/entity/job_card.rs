@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
 
-use super::JobCardStatus;
+use super::JobCardState;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for JobCard
@@ -58,7 +58,7 @@ pub struct JobCard {
     pub total_time_mins: Decimal,
     pub hour_rate: Decimal,
     pub operating_cost: Decimal,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
     #[serde(default)]
     #[sqlx(json)]
     pub metadata: AuditMetadata,
@@ -71,7 +71,7 @@ impl JobCard {
     }
 
     /// Create a new JobCard with required fields
-    pub fn new(company_id: Uuid, work_order_id: Uuid, operation_id: Uuid, workstation_id: Uuid, total_time_mins: Decimal, hour_rate: Decimal, operating_cost: Decimal, status: JobCardStatus) -> Self {
+    pub fn new(company_id: Uuid, work_order_id: Uuid, operation_id: Uuid, workstation_id: Uuid, total_time_mins: Decimal, hour_rate: Decimal, operating_cost: Decimal, status: JobCardState) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -137,7 +137,7 @@ impl JobCard {
     }
 
     /// Get the current status
-    pub fn status(&self) -> &JobCardStatus {
+    pub fn status(&self) -> &JobCardState {
         &self.status
     }
 
@@ -232,7 +232,7 @@ impl backbone_orm::EntityRepoMeta for JobCard {
         m.insert("work_order_id".to_string(), "uuid".to_string());
         m.insert("operation_id".to_string(), "uuid".to_string());
         m.insert("workstation_id".to_string(), "uuid".to_string());
-        m.insert("status".to_string(), "job_card_status".to_string());
+        m.insert("status".to_string(), "job_card_state".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -256,7 +256,7 @@ pub struct JobCardBuilder {
     total_time_mins: Option<Decimal>,
     hour_rate: Option<Decimal>,
     operating_cost: Option<Decimal>,
-    status: Option<JobCardStatus>,
+    status: Option<JobCardState>,
 }
 
 impl JobCardBuilder {
@@ -302,8 +302,8 @@ impl JobCardBuilder {
         self
     }
 
-    /// Set the status field (default: `JobCardStatus::default()`)
-    pub fn status(mut self, value: JobCardStatus) -> Self {
+    /// Set the status field (default: `JobCardState::default()`)
+    pub fn status(mut self, value: JobCardState) -> Self {
         self.status = Some(value);
         self
     }

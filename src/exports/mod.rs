@@ -30,6 +30,12 @@ pub use events::*;
 /// - `WorkstationDto` - Data transfer object for Workstation
 /// - `WorkstationSummary` - Summary view of Workstation
 /// - `WorkstationId` - Type-safe ID wrapper
+/// - `WorkstationLossDto` - Data transfer object for WorkstationLoss
+/// - `WorkstationLossSummary` - Summary view of WorkstationLoss
+/// - `WorkstationLossId` - Type-safe ID wrapper
+/// - `WorkstationProductivityDto` - Data transfer object for WorkstationProductivity
+/// - `WorkstationProductivitySummary` - Summary view of WorkstationProductivity
+/// - `WorkstationProductivityId` - Type-safe ID wrapper
 /// - `OperationDto` - Data transfer object for Operation
 /// - `OperationSummary` - Summary view of Operation
 /// - `OperationId` - Type-safe ID wrapper
@@ -42,6 +48,27 @@ pub use events::*;
 /// - `BomOperationDto` - Data transfer object for BomOperation
 /// - `BomOperationSummary` - Summary view of BomOperation
 /// - `BomOperationId` - Type-safe ID wrapper
+/// - `BomByproductDto` - Data transfer object for BomByproduct
+/// - `BomByproductSummary` - Summary view of BomByproduct
+/// - `BomByproductId` - Type-safe ID wrapper
+/// - `BomSubcontractorDto` - Data transfer object for BomSubcontractor
+/// - `BomSubcontractorSummary` - Summary view of BomSubcontractor
+/// - `BomSubcontractorId` - Type-safe ID wrapper
+/// - `CategoryCostingDefaultsDto` - Data transfer object for CategoryCostingDefaults
+/// - `CategoryCostingDefaultsSummary` - Summary view of CategoryCostingDefaults
+/// - `CategoryCostingDefaultsId` - Type-safe ID wrapper
+/// - `RepairOrderDto` - Data transfer object for RepairOrder
+/// - `RepairOrderSummary` - Summary view of RepairOrder
+/// - `RepairOrderId` - Type-safe ID wrapper
+/// - `RepairPartDto` - Data transfer object for RepairPart
+/// - `RepairPartSummary` - Summary view of RepairPart
+/// - `RepairPartId` - Type-safe ID wrapper
+/// - `RepairTagDto` - Data transfer object for RepairTag
+/// - `RepairTagSummary` - Summary view of RepairTag
+/// - `RepairTagId` - Type-safe ID wrapper
+/// - `UnbuildOrderDto` - Data transfer object for UnbuildOrder
+/// - `UnbuildOrderSummary` - Summary view of UnbuildOrder
+/// - `UnbuildOrderId` - Type-safe ID wrapper
 /// - `WorkOrderDto` - Data transfer object for WorkOrder
 /// - `WorkOrderSummary` - Summary view of WorkOrder
 /// - `WorkOrderId` - Type-safe ID wrapper
@@ -51,11 +78,20 @@ pub use events::*;
 /// - `JobCardDto` - Data transfer object for JobCard
 /// - `JobCardSummary` - Summary view of JobCard
 /// - `JobCardId` - Type-safe ID wrapper
+/// - `SubcontractMoLinkDto` - Data transfer object for SubcontractMoLink
+/// - `SubcontractMoLinkSummary` - Summary view of SubcontractMoLink
+/// - `SubcontractMoLinkId` - Type-safe ID wrapper
 ///
 /// ## Public Events
 /// - `WorkstationCreatedEvent` - Published when Workstation is created
 /// - `WorkstationUpdatedEvent` - Published when Workstation is updated
 /// - `WorkstationDeletedEvent` - Published when Workstation is deleted
+/// - `WorkstationLossCreatedEvent` - Published when WorkstationLoss is created
+/// - `WorkstationLossUpdatedEvent` - Published when WorkstationLoss is updated
+/// - `WorkstationLossDeletedEvent` - Published when WorkstationLoss is deleted
+/// - `WorkstationProductivityCreatedEvent` - Published when WorkstationProductivity is created
+/// - `WorkstationProductivityUpdatedEvent` - Published when WorkstationProductivity is updated
+/// - `WorkstationProductivityDeletedEvent` - Published when WorkstationProductivity is deleted
 /// - `OperationCreatedEvent` - Published when Operation is created
 /// - `OperationUpdatedEvent` - Published when Operation is updated
 /// - `OperationDeletedEvent` - Published when Operation is deleted
@@ -68,6 +104,27 @@ pub use events::*;
 /// - `BomOperationCreatedEvent` - Published when BomOperation is created
 /// - `BomOperationUpdatedEvent` - Published when BomOperation is updated
 /// - `BomOperationDeletedEvent` - Published when BomOperation is deleted
+/// - `BomByproductCreatedEvent` - Published when BomByproduct is created
+/// - `BomByproductUpdatedEvent` - Published when BomByproduct is updated
+/// - `BomByproductDeletedEvent` - Published when BomByproduct is deleted
+/// - `BomSubcontractorCreatedEvent` - Published when BomSubcontractor is created
+/// - `BomSubcontractorUpdatedEvent` - Published when BomSubcontractor is updated
+/// - `BomSubcontractorDeletedEvent` - Published when BomSubcontractor is deleted
+/// - `CategoryCostingDefaultsCreatedEvent` - Published when CategoryCostingDefaults is created
+/// - `CategoryCostingDefaultsUpdatedEvent` - Published when CategoryCostingDefaults is updated
+/// - `CategoryCostingDefaultsDeletedEvent` - Published when CategoryCostingDefaults is deleted
+/// - `RepairOrderCreatedEvent` - Published when RepairOrder is created
+/// - `RepairOrderUpdatedEvent` - Published when RepairOrder is updated
+/// - `RepairOrderDeletedEvent` - Published when RepairOrder is deleted
+/// - `RepairPartCreatedEvent` - Published when RepairPart is created
+/// - `RepairPartUpdatedEvent` - Published when RepairPart is updated
+/// - `RepairPartDeletedEvent` - Published when RepairPart is deleted
+/// - `RepairTagCreatedEvent` - Published when RepairTag is created
+/// - `RepairTagUpdatedEvent` - Published when RepairTag is updated
+/// - `RepairTagDeletedEvent` - Published when RepairTag is deleted
+/// - `UnbuildOrderCreatedEvent` - Published when UnbuildOrder is created
+/// - `UnbuildOrderUpdatedEvent` - Published when UnbuildOrder is updated
+/// - `UnbuildOrderDeletedEvent` - Published when UnbuildOrder is deleted
 /// - `WorkOrderCreatedEvent` - Published when WorkOrder is created
 /// - `WorkOrderUpdatedEvent` - Published when WorkOrder is updated
 /// - `WorkOrderDeletedEvent` - Published when WorkOrder is deleted
@@ -77,4 +134,7 @@ pub use events::*;
 /// - `JobCardCreatedEvent` - Published when JobCard is created
 /// - `JobCardUpdatedEvent` - Published when JobCard is updated
 /// - `JobCardDeletedEvent` - Published when JobCard is deleted
+/// - `SubcontractMoLinkCreatedEvent` - Published when SubcontractMoLink is created
+/// - `SubcontractMoLinkUpdatedEvent` - Published when SubcontractMoLink is updated
+/// - `SubcontractMoLinkDeletedEvent` - Published when SubcontractMoLink is deleted
 pub struct ExportSummary;

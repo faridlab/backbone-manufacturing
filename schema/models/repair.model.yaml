@@ -1,0 +1,156 @@
+# =============================================================================
+# Domain: Manufacturing — repair (transactional, EMITS GL per part leg)
+# Entities: RepairOrder (+ RepairPart) + RepairTag
+# Description: Repair a broken item: add parts (consumed into the repair), remove
+# parts (scrapped to the inventory-LOSS account), recycle parts (recovered to
+# stock). Hand-set state chain draft → confirmed → under_repair → done | cancel,
+# transitions ONLY via the service verbs. The removed part's destination is the
+# inventory-LOSS account — never a Location row (no quarantine location exists).
+# NO fees models — repair billing is not this module's surface. All part legs
+# execute transactionally at end_repair through the InventoryPort, so a cancel
+# before end needs no move cancellation.
+# =============================================================================
+
+models:
+  - name: RepairOrder
+    collection: repair_orders
+    description: "An order to repair an item, with parts added/removed/recycled through stock"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique repair order id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      repair_number:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "Caller-supplied repair number (unique per company; sequence minting stays deferred)"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The item under repair # logical FK to catalog.Product.id"
+      product_category_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "The item's category at creation — selects the costing defaults that resolve the repair-expense / inventory-loss / raw accounts # logical FK to catalog.ProductCategory.id"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity of the item being repaired"
+      status:
+        type: RepairStatus
+        attributes: ["@required", "@default(draft)"]
+        lifecycle:
+          shape: hand_set
+          sticky: false
+        description: "Hand-set chain draft → confirmed → under_repair → done | cancel; transitions ONLY via the service verbs (validate/start/end/cancel); done is uncancelable"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, repair_number]
+        where: "deleted_at IS NULL"
+
+  - name: RepairPart
+    collection: repair_parts
+    description: "One part line of a repair: added (consumed), removed (scrapped to inventory loss), or recycled (recovered to stock)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique part line id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner, denormalized from the parent repair order # logical FK to organization.Company.id"
+      repair_order_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(RepairOrder.id)"]
+        description: "Parent repair order"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The part item # logical FK to catalog.Product.id"
+      warehouse_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Warehouse the part moves from / is recovered into # logical FK to inventory.Warehouse.id"
+      line_type:
+        type: RepairLineType
+        attributes: ["@required"]
+        description: "add = consumed into the repair; remove = scrapped to the inventory-loss account (no Location row); recycle = recovered to stock"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity of the part"
+      rate:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Valuation snapshot, filled at execution from the port's reported value"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [repair_order_id]
+
+  # The family's sole DB-level guard (the upstream source's only SQL constraint too):
+  # unique name per company. Deviation on record: tenant-scoped rather than the
+  # upstream global unique(name) — a cross-tenant global unique would collide.
+  - name: RepairTag
+    collection: repair_tags
+    description: "A categorization tag for repair orders (unique per company)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique tag id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      name:
+        type: string
+        attributes: ["@required", "@max(140)"]
+        description: "Tag name (unique per company)"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, name]
+        where: "deleted_at IS NULL"
+
+enums:
+  - name: RepairStatus
+    description: "Repair order lifecycle (hand-set, verb-driven)"
+    variants:
+      - name: draft
+        description: "Created, parts may still be edited"
+        default: true
+      - name: confirmed
+        description: "Validated (part availability checked through the inventory port)"
+      - name: under_repair
+        description: "Work started"
+      - name: done
+        description: "Ended — all part legs executed transactionally through the port; uncancelable"
+      - name: cancel
+        description: "Cancelled from confirmed or under_repair (done is uncancelable)"
+
+  - name: RepairLineType
+    description: "What a repair part line does to stock"
+    variants:
+      - name: add
+        description: "Consumed into the repair (issued out of stock; Dr Repair-Expense · Cr Raw)"
+        default: true
+      - name: remove
+        description: "Scrapped — leaves for the inventory-LOSS account, never a Location row (Dr Inventory-Loss · Cr Raw)"
+      - name: recycle
+        description: "Recovered back into stock (Dr Raw · Cr Repair-Expense)"

@@ -7,35 +7,38 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "snake_case")]
-#[sqlx(type_name = "job_card_status", rename_all = "snake_case")]
-pub enum JobCardStatus {
-    Open,
-    Completed,
+#[sqlx(type_name = "bom_type", rename_all = "snake_case")]
+pub enum BomType {
+    Normal,
+    Kit,
+    Subcontract,
 }
 
-impl std::fmt::Display for JobCardStatus {
+impl std::fmt::Display for BomType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Open => write!(f, "open"),
-            Self::Completed => write!(f, "completed"),
+            Self::Normal => write!(f, "normal"),
+            Self::Kit => write!(f, "kit"),
+            Self::Subcontract => write!(f, "subcontract"),
         }
     }
 }
 
-impl FromStr for JobCardStatus {
+impl FromStr for BomType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "open" => Ok(Self::Open),
-            "completed" => Ok(Self::Completed),
-            _ => Err(format!("Unknown JobCardStatus variant: {}", s)),
+            "normal" => Ok(Self::Normal),
+            "kit" => Ok(Self::Kit),
+            "subcontract" => Ok(Self::Subcontract),
+            _ => Err(format!("Unknown BomType variant: {}", s)),
         }
     }
 }
 
-impl Default for JobCardStatus {
+impl Default for BomType {
     fn default() -> Self {
-        Self::Open
+        Self::Normal
     }
 }

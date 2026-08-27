@@ -1,12 +1,16 @@
 //! Validated manufacturing write routes — the compiled, invariant-enforcing command surface.
 //!
 //! `ManufacturingModule::all_crud_routes()` (in [`crate`]) mounts *unguarded* generic CRUD on every
-//! entity: it can flip a Work Order to `completed` with zero GL posts, zero material consumption, and
+//! entity: it can flip a Work Order to `done` with zero GL posts, zero material consumption, and
 //! a stranded non-zero WIP balance. That bypasses every manufacturing invariant.
 //!
 //! This module is the honest counterpart: a command router that forwards to
-//! [`ManufacturingWriteService`] — release → consume → operate → receive — so each state transition
-//! emits the WIP/FG postings it must, and WIP nets to zero on completion.
+//! [`ManufacturingWriteService`] — confirm → consume → operate → receive (and the unbuild / repair /
+//! workcenter verbs) — so each state transition emits the WIP/FG postings it must, and WIP nets to
+//! zero on completion.
+//!
+//! No compatibility aliases exist: the old `release` route is GONE, replaced by `confirm` (the
+//! state vocabulary renamed with it). A stale client gets a 404, not a silently-different verb.
 //!
 //! ## The ports are YOURS to supply
 //!
@@ -42,7 +46,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use rust_decimal::Decimal;
@@ -52,9 +56,13 @@ use uuid::Uuid;
 use crate::application::service::{
     manufacturing_events::ManufacturingEventSink,
     manufacturing_gl::GlPostSink,
-    manufacturing_ports::InventoryPort,
-    manufacturing_write_service::{ManufacturingError, ManufacturingWriteService, NewJobCard},
+    manufacturing_ports::{CostPosture, InventoryPort},
+    manufacturing_write_service::{
+        ManufacturingError, ManufacturingWriteService, NewJobCard, NewProductivity, NewRepairOrder,
+        NewRepairPart, NewUnbuild, ReceiveByproductLine, ReceiveFinishedOrder,
+    },
 };
+use crate::domain::entity::{RepairLineType, ReservationState};
 
 /// Caller-supplied dependencies for the validated write router.
 ///
@@ -77,13 +85,29 @@ pub struct ManufacturingWriteDeps {
 /// must not allow directly.
 pub fn create_manufacturing_write_routes() -> Router<ManufacturingWriteDeps> {
     Router::new()
-        // Work-order lifecycle: draft → released → in_process → completed.
-        .route("/work-orders/:id/release", post(release_work_order))
+        // Work-order lifecycle: draft → confirmed → progress → to_close|done, cancel from draft|confirmed.
+        .route("/work-orders/:id/confirm", post(confirm_work_order))
+        .route("/work-orders/:id/cancel", post(cancel_work_order))
+        .route("/work-orders/:id/reservation", post(write_reservation))
         .route("/work-orders/:id/consume", post(consume_materials))
         .route("/work-orders/:id/job-cards", post(add_job_card))
         .route("/work-orders/:id/receive", post(receive_finished))
-        // Job-card completion charges conversion cost to WIP (operate).
+        // Job-card lifecycle: start (ready|blocked → progress), completion charges WIP, cancel.
+        .route("/job-cards/:id/start", post(start_job_card))
         .route("/job-cards/:id/complete", post(complete_job_card))
+        .route("/job-cards/:id/cancel", post(cancel_job_card))
+        // Unbuild: open a draft, then execute the reversal (source WO must be done).
+        .route("/unbuilds", post(create_unbuild))
+        .route("/unbuilds/:id/execute", post(execute_unbuild))
+        // Repair: open with parts, validate (availability probe), start, end (legs move), cancel.
+        .route("/repairs", post(create_repair))
+        .route("/repairs/:id/validate", post(validate_repair))
+        .route("/repairs/:id/start", post(start_repair))
+        .route("/repairs/:id/end", post(end_repair))
+        .route("/repairs/:id/cancel", post(cancel_repair))
+        // Workcenter: book productivity stretches; OEE is a pure read over a window.
+        .route("/workstations/:id/productivity", post(record_productivity))
+        .route("/workstations/:id/oee", get(workstation_oee))
 }
 
 // ---------------------------------------------------------------------------
@@ -91,23 +115,76 @@ pub fn create_manufacturing_write_routes() -> Router<ManufacturingWriteDeps> {
 // ---------------------------------------------------------------------------
 
 #[derive(Serialize)]
-pub struct ReleaseResponse {
+pub struct ConfirmResponse {
     pub work_order_id: Uuid,
-    pub released: bool,
+    pub confirmed: bool,
 }
 
-/// Release a draft Work Order: explode its BOM into required materials (draft → released).
-pub async fn release_work_order(
+/// Confirm a draft Work Order: explode its BOM into required materials (draft → confirmed).
+/// Kit and subcontract BoMs are refused LOUDLY — they never get a hand-minted work order.
+pub async fn confirm_work_order(
     State(deps): State<ManufacturingWriteDeps>,
     Path(id): Path<Uuid>,
-) -> Result<Json<ReleaseResponse>, (StatusCode, String)> {
+) -> Result<Json<ConfirmResponse>, (StatusCode, String)> {
     deps.write_service
-        .release_work_order(id, &*deps.events)
+        .confirm_work_order(id, &*deps.events)
         .await
         .map_err(map_mfg_error)?;
-    Ok(Json(ReleaseResponse {
+    Ok(Json(ConfirmResponse {
         work_order_id: id,
-        released: true,
+        confirmed: true,
+    }))
+}
+
+#[derive(Serialize)]
+pub struct CancelResponse {
+    pub work_order_id: Uuid,
+    pub cancelled: bool,
+}
+
+/// Cancel a Work Order from draft|confirmed only — an order carrying WIP or stock is refused LOUDLY.
+pub async fn cancel_work_order(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CancelResponse>, (StatusCode, String)> {
+    deps.write_service
+        .cancel_work_order(id, &*deps.events)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(CancelResponse {
+        work_order_id: id,
+        cancelled: true,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct ReservationBody {
+    /// Tenant owner of the work order. In production prefer the authenticated principal's company.
+    pub company_id: Uuid,
+    /// waiting | confirmed | assigned — the inventory-side projection of component availability.
+    pub state: ReservationState,
+}
+
+#[derive(Serialize)]
+pub struct ReservationResponse {
+    pub work_order_id: Uuid,
+    pub reservation_state: ReservationState,
+}
+
+/// Write the reservation_state projection — the ONLY surface that may write it. Availability is
+/// expressed ONLY through this projection; no field named `availability` exists in the module.
+pub async fn write_reservation(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ReservationBody>,
+) -> Result<Json<ReservationResponse>, (StatusCode, String)> {
+    deps.write_service
+        .write_reservation(body.company_id, id, body.state)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(ReservationResponse {
+        work_order_id: id,
+        reservation_state: body.state,
     }))
 }
 
@@ -124,7 +201,7 @@ pub struct ConsumeResponse {
     pub already_consumed: bool,
 }
 
-/// Issue all required materials to WIP (released → in_process): Dr WIP · Cr Raw-Material Stock.
+/// Issue all required materials to WIP (confirmed → progress): Dr WIP · Cr Raw-Material Stock.
 pub async fn consume_materials(
     State(deps): State<ManufacturingWriteDeps>,
     Path(id): Path<Uuid>,
@@ -157,7 +234,7 @@ pub struct JobCardResponse {
     pub job_card_id: Uuid,
 }
 
-/// Open a job card for an operation run against this work order.
+/// Open a job card for an operation run against this work order (starts `ready`).
 pub async fn add_job_card(
     State(deps): State<ManufacturingWriteDeps>,
     Path(work_order_id): Path<Uuid>,
@@ -179,12 +256,31 @@ pub async fn add_job_card(
 }
 
 #[derive(Serialize)]
+pub struct StartJobCardResponse {
+    pub job_card_id: Uuid,
+    pub started: bool,
+}
+
+/// Start a job card on the floor (ready|blocked → progress). Starting from `blocked` is allowed —
+/// parts arriving physically is enough.
+pub async fn start_job_card(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<StartJobCardResponse>, (StatusCode, String)> {
+    deps.write_service
+        .start_job_card(id)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(StartJobCardResponse { job_card_id: id, started: true }))
+}
+
+#[derive(Serialize)]
 pub struct CompleteResponse {
     /// Conversion cost charged to WIP (time/60 × hour rate).
     pub operating_cost: Decimal,
 }
 
-/// Complete a job card: charge conversion cost to WIP — Dr WIP · Cr Conversion-Applied.
+/// Complete a job card: charge its conversion cost to WIP — Dr WIP · Cr Conversion-Applied.
 pub async fn complete_job_card(
     State(deps): State<ManufacturingWriteDeps>,
     Path(id): Path<Uuid>,
@@ -197,23 +293,67 @@ pub async fn complete_job_card(
     Ok(Json(CompleteResponse { operating_cost: cost }))
 }
 
+#[derive(Serialize)]
+pub struct CancelJobCardResponse {
+    pub job_card_id: Uuid,
+    pub cancelled: bool,
+}
+
+/// Cancel a job card (ready|blocked|progress → cancel). A done card is refused LOUDLY — its
+/// conversion cost is already in WIP.
+pub async fn cancel_job_card(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CancelJobCardResponse>, (StatusCode, String)> {
+    deps.write_service
+        .cancel_job_card(id)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(CancelJobCardResponse { job_card_id: id, cancelled: true }))
+}
+
+#[derive(Deserialize)]
+pub struct ReceiveByproductBody {
+    pub item_id: Uuid,
+    /// Actual byproduct quantity harvested this batch; the VALUE comes from the BoM cost share.
+    pub quantity: Decimal,
+}
+
 #[derive(Deserialize)]
 pub struct ReceiveBody {
     /// Quantity to receive as finished goods (bounded by the ordered quantity).
     pub quantity: Decimal,
+    /// Byproduct legs harvested alongside; each must have a BoM byproduct row (its cost share
+    /// slices the value; the FG line keeps the remainder).
+    #[serde(default)]
+    pub byproducts: Vec<ReceiveByproductBody>,
+    /// The subcontract extra-cost leg (PO quoted value prorated by receipt share); omit for
+    /// in-house orders.
+    pub extra_cost: Option<Decimal>,
+    /// average (default — actual WIP-derived) or standard (pinned price; the gap posts to the
+    /// cost-variance account, never a silent recompute).
+    #[serde(default)]
+    pub cost_posture: CostPosture,
+    /// Required by the standard posture; ignored by average.
+    pub standard_unit_price: Option<Decimal>,
 }
 
 #[derive(Serialize)]
 pub struct ReceiveResponse {
+    /// Value carried onto the FG line (the remainder after the byproduct shares).
     pub finished_value: Decimal,
+    /// Total value carried off by the byproduct legs.
+    pub byproduct_value: Decimal,
+    /// The subcontract extra-cost leg value.
+    pub extra_cost: Decimal,
     /// true if the work order is now fully produced (WIP nets to zero).
     pub completed: bool,
     /// true if a concurrent receive already won this quantity (idempotent).
     pub already: bool,
 }
 
-/// Receive finished goods into stock at cost (Dr Finished-Goods · Cr WIP); completes the WO on full
-/// receipt, clearing WIP to zero.
+/// Receive finished goods (and byproduct legs) into stock: Dr FG (+ byproducts) · Cr WIP
+/// (+ subcontract interim); completes the WO on full receipt, clearing WIP to zero.
 pub async fn receive_finished(
     State(deps): State<ManufacturingWriteDeps>,
     Path(id): Path<Uuid>,
@@ -221,13 +361,308 @@ pub async fn receive_finished(
 ) -> Result<Json<ReceiveResponse>, (StatusCode, String)> {
     let out = deps
         .write_service
-        .receive_finished(id, body.quantity, &*deps.inventory, &*deps.gl, &*deps.events)
+        .receive_finished(
+            id,
+            ReceiveFinishedOrder {
+                produced_qty: body.quantity,
+                byproducts: body
+                    .byproducts
+                    .into_iter()
+                    .map(|b| ReceiveByproductLine { item_id: b.item_id, quantity: b.quantity })
+                    .collect(),
+                extra_cost: body.extra_cost,
+                cost_posture: body.cost_posture,
+                standard_unit_price: body.standard_unit_price,
+            },
+            &*deps.inventory,
+            &*deps.gl,
+            &*deps.events,
+        )
         .await
         .map_err(map_mfg_error)?;
     Ok(Json(ReceiveResponse {
         finished_value: out.finished_value,
+        byproduct_value: out.byproduct_value,
+        extra_cost: out.extra_cost,
         completed: out.completed,
         already: out.already,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Unbuild
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct CreateUnbuildBody {
+    pub company_id: Uuid,
+    pub unbuild_number: String,
+    pub work_order_id: Uuid,
+    pub item_id: Uuid,
+    pub quantity: Decimal,
+}
+
+#[derive(Serialize)]
+pub struct UnbuildResponse {
+    pub unbuild_order_id: Uuid,
+}
+
+/// Open a draft unbuild order against a (presumably done) work order.
+pub async fn create_unbuild(
+    State(deps): State<ManufacturingWriteDeps>,
+    Json(body): Json<CreateUnbuildBody>,
+) -> Result<Json<UnbuildResponse>, (StatusCode, String)> {
+    let id = deps
+        .write_service
+        .create_unbuild(NewUnbuild {
+            company_id: body.company_id,
+            unbuild_number: body.unbuild_number,
+            work_order_id: body.work_order_id,
+            item_id: body.item_id,
+            quantity: body.quantity,
+        })
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(UnbuildResponse { unbuild_order_id: id }))
+}
+
+#[derive(Deserialize)]
+pub struct ExecuteUnbuildBody {
+    /// Warehouse the components return to.
+    pub raw_warehouse_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub struct ExecuteUnbuildResponse {
+    pub reversed_value: Decimal,
+    pub already: bool,
+}
+
+/// Execute an unbuild: reverse the finished goods back into components (source WO must be `done`;
+/// quantity bounded by what remains producible after other done unbuilds).
+pub async fn execute_unbuild(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ExecuteUnbuildBody>,
+) -> Result<Json<ExecuteUnbuildResponse>, (StatusCode, String)> {
+    let out = deps
+        .write_service
+        .execute_unbuild(id, body.raw_warehouse_id, &*deps.inventory, &*deps.gl, &*deps.events)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(ExecuteUnbuildResponse {
+        reversed_value: out.reversed_value,
+        already: out.already,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Repair
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct RepairPartBody {
+    pub item_id: Uuid,
+    pub warehouse_id: Option<Uuid>,
+    /// add = consumed into the repair; remove = scrapped to the inventory-loss account;
+    /// recycle = recovered back into stock.
+    pub line_type: RepairLineType,
+    pub quantity: Decimal,
+    pub rate: Decimal,
+}
+
+#[derive(Deserialize)]
+pub struct CreateRepairBody {
+    pub company_id: Uuid,
+    pub repair_number: String,
+    pub item_id: Uuid,
+    /// The item's category at creation — selects the costing defaults that resolve the
+    /// repair-expense / inventory-loss / raw accounts at end-of-repair.
+    pub product_category_id: Option<Uuid>,
+    pub quantity: Decimal,
+    #[serde(default)]
+    pub parts: Vec<RepairPartBody>,
+}
+
+/// Open a draft repair order with its part lines. Nothing moves until `end`.
+pub async fn create_repair(
+    State(deps): State<ManufacturingWriteDeps>,
+    Json(body): Json<CreateRepairBody>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let id = deps
+        .write_service
+        .create_repair_order(NewRepairOrder {
+            company_id: body.company_id,
+            repair_number: body.repair_number,
+            item_id: body.item_id,
+            product_category_id: body.product_category_id,
+            quantity: body.quantity,
+            parts: body
+                .parts
+                .into_iter()
+                .map(|p| NewRepairPart {
+                    item_id: p.item_id,
+                    warehouse_id: p.warehouse_id,
+                    line_type: p.line_type,
+                    quantity: p.quantity,
+                    rate: p.rate,
+                })
+                .collect(),
+        })
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(serde_json::json!({ "repair_order_id": id })))
+}
+
+#[derive(Serialize)]
+pub struct RepairVerbResponse {
+    pub repair_order_id: Uuid,
+}
+
+/// Validate a draft: every ADD leg's part must be on hand (read-only probe through the inventory
+/// port) — a shortfall is LOUD. Then draft → confirmed.
+pub async fn validate_repair(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<RepairVerbResponse>, (StatusCode, String)> {
+    deps.write_service
+        .validate_repair(id, &*deps.inventory)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(RepairVerbResponse { repair_order_id: id }))
+}
+
+/// Start the repair (a draft is auto-confirmed first): → under_repair.
+pub async fn start_repair(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<RepairVerbResponse>, (StatusCode, String)> {
+    deps.write_service
+        .start_repair(id)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(RepairVerbResponse { repair_order_id: id }))
+}
+
+#[derive(Serialize)]
+pub struct EndRepairResponse {
+    pub repair_order_id: Uuid,
+    pub parts_moved: usize,
+    pub repair_expense: Decimal,
+    pub inventory_loss: Decimal,
+    pub recovered_value: Decimal,
+}
+
+/// End the repair: EVERY part leg moves in one pass (add → repair expense, remove → inventory
+/// loss, recycle → back to stock), with the grouped GL post. Once-only; `done` is uncancelable.
+pub async fn end_repair(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<EndRepairResponse>, (StatusCode, String)> {
+    let out = deps
+        .write_service
+        .end_repair(id, &*deps.inventory, &*deps.gl, &*deps.events)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(EndRepairResponse {
+        repair_order_id: id,
+        parts_moved: out.parts_moved,
+        repair_expense: out.repair_expense,
+        inventory_loss: out.inventory_loss,
+        recovered_value: out.recovered_value,
+    }))
+}
+
+/// Cancel a repair (draft|confirmed|under_repair → cancel). A done repair is refused LOUDLY.
+pub async fn cancel_repair(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<RepairVerbResponse>, (StatusCode, String)> {
+    deps.write_service
+        .cancel_repair(id)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(RepairVerbResponse { repair_order_id: id }))
+}
+
+// ---------------------------------------------------------------------------
+// Workcenter: productivity + OEE
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct ProductivityBody {
+    pub company_id: Uuid,
+    /// Named loss reason (must exist; its classification feeds the OEE buckets).
+    pub loss_name: String,
+    pub job_card_id: Option<Uuid>,
+    pub date_start: chrono::DateTime<chrono::Utc>,
+    /// May be null — an open stretch counts up to now on the read side.
+    pub date_end: Option<chrono::DateTime<chrono::Utc>>,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ProductivityResponse {
+    pub productivity_id: Uuid,
+}
+
+/// Book a stretch of workstation time against a loss reason. Duration is read-side only — no
+/// stored column, no cron.
+pub async fn record_productivity(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(workstation_id): Path<Uuid>,
+    Json(body): Json<ProductivityBody>,
+) -> Result<Json<ProductivityResponse>, (StatusCode, String)> {
+    let id = deps
+        .write_service
+        .record_productivity(NewProductivity {
+            company_id: body.company_id,
+            workstation_id,
+            job_card_id: body.job_card_id,
+            loss_name: body.loss_name,
+            date_start: body.date_start,
+            date_end: body.date_end,
+            description: body.description,
+        })
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(ProductivityResponse { productivity_id: id }))
+}
+
+#[derive(Deserialize)]
+pub struct OeeQuery {
+    pub company_id: Uuid,
+    pub from: chrono::DateTime<chrono::Utc>,
+    pub to: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Serialize)]
+pub struct OeeResponse {
+    /// Ratios in [0, 1] — multiply by 100 at the presentation edge.
+    pub availability: Decimal,
+    pub performance: Decimal,
+    pub quality: Decimal,
+    pub oee: Decimal,
+    pub total_seconds: Decimal,
+}
+
+/// The on-demand OEE report over a window — a pure read; nothing stored, nothing scheduled.
+pub async fn workstation_oee(
+    State(deps): State<ManufacturingWriteDeps>,
+    Path(workstation_id): Path<Uuid>,
+    axum::extract::Query(q): axum::extract::Query<OeeQuery>,
+) -> Result<Json<OeeResponse>, (StatusCode, String)> {
+    let r = deps
+        .write_service
+        .workstation_oee(q.company_id, workstation_id, q.from, q.to)
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(OeeResponse {
+        availability: r.availability,
+        performance: r.performance,
+        quality: r.quality,
+        oee: r.oee,
+        total_seconds: r.total_seconds,
     }))
 }
 
@@ -239,7 +674,14 @@ fn map_mfg_error(e: ManufacturingError) -> (StatusCode, String) {
     use ManufacturingError::*;
     let status = match &e {
         NotFound(_) => StatusCode::NOT_FOUND,
-        InvalidState(_) | OverProduce { .. } | DuplicateNumber(_) => StatusCode::CONFLICT,
+        InvalidState(_)
+        | RepairInvalidState(_)
+        | OverProduce { .. }
+        | DuplicateNumber(_)
+        | UnbuildSourceNotDone
+        | UnbuildOverRemaining { .. }
+        | CostShareOverflow { .. }
+        | SubcontractKindMismatch(_) => StatusCode::CONFLICT,
         Invalid(_) => StatusCode::BAD_REQUEST,
         Inventory(_) => StatusCode::UNPROCESSABLE_ENTITY,
         // MissingAccount / Gl / Db are server/config faults, not client-correctable.

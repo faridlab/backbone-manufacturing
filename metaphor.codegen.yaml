@@ -22,38 +22,82 @@ user_owned:
   - "src/application/service/manufacturing_work_order.rs"
   - "src/application/service/manufacturing_execution.rs"
   - "src/application/service/manufacturing_job_card.rs"
+  - "src/application/service/manufacturing_unbuild.rs"
+  - "src/application/service/manufacturing_repair.rs"
+  - "src/application/service/manufacturing_workcenter.rs"
+  - "src/application/service/manufacturing_subcontract.rs"
 
-  # The six document repositories own the hand-written manufacturing SQL that the write service
-  # orchestrates (the BOM header+lines inserts, the BOM explosion reads, and the release / consume /
-  # receive / job-card transition gates that are the once-only guards on the WIP posts). Declared
-  # here — not renamed with a `_custom` suffix — so the generator skips them wholesale; this
-  # declaration is what makes editing them legitimate.
+  # The hand-written manufacturing SQL repositories own every hand-written statement (BOM
+  # header+lines inserts, the BOM explosion reads, and the confirm / consume / receive /
+  # job-card / unbuild / repair transition gates that are the once-only guards on the WIP
+  # posts). Declared here — not renamed with a `_custom` suffix — so the generator skips them
+  # wholesale; this declaration is what makes editing them legitimate.
   - "src/infrastructure/persistence/bom_repository.rs"
   - "src/infrastructure/persistence/bom_item_repository.rs"
   - "src/infrastructure/persistence/bom_operation_repository.rs"
+  - "src/infrastructure/persistence/bom_byproduct_repository.rs"
+  - "src/infrastructure/persistence/bom_subcontractor_repository.rs"
   - "src/infrastructure/persistence/work_order_repository.rs"
   - "src/infrastructure/persistence/work_order_item_repository.rs"
   - "src/infrastructure/persistence/job_card_repository.rs"
+  - "src/infrastructure/persistence/unbuild_repository.rs"
+  - "src/infrastructure/persistence/repair_repository.rs"
+  - "src/infrastructure/persistence/workcenter_repository.rs"
+  - "src/infrastructure/persistence/costing_defaults_repository.rs"
+  - "src/infrastructure/persistence/subcontract_link_repository.rs"
   - "tests/integrity_probes.rs"
   - "tests/manufacturing_golden_cases.rs"
   - "tests/plant_to_produce_seam.rs"
+  - "tests/state_convergence_probes.rs"
+  - "tests/unbuild_golden_cases.rs"
+  - "tests/costing_defaults_probes.rs"
+  - "tests/f11_item_immutable.rs"
+  - "tests/fence_shared_blank_probes.rs"
+  - "tests/byproduct_cost_share.rs"
+  - "tests/bom_version_stage.rs"
+  - "tests/workcenter_oee.rs"
+  - "tests/subcontract_golden_cases.rs"
+  - "tests/kit_no_mo.rs"
+  - "tests/repair_lifecycle_probes.rs"
+  - "tests/zero_crons.rs"
+  - "tests/wip_netting.rs"
   - "scripts/**"
   # Hand-authored behavior (services + their HTTP surface). Examples:
   # - "src/application/service/onboarding_service.rs"
   # - "src/presentation/http/guarded_routes.rs"
 
-  # Behavior tests (the golden cases / oracle) + BDD features.
-  - "tests/features/**"
-  # - "tests/*_golden_cases.rs"
-  # - "tests/integrity_probes.rs"
-
   # Hand-authored module documentation.
   - "docs/**"
+
+  # Hand-authored hook register (state machines, guard table, zero scheduled jobs). The hooks
+  # index (schema/hooks/index.hook.yaml) is hand-maintained at the imports list; its
+  # `scheduled_jobs: {}` block is the no-cron verification anchor.
+  - "schema/hooks/manufacturing.hook.yaml"
 
   # Wipe-class declarations - protected files that would otherwise be wiped during schema regeneration
   - "migrations/20260722000001_fence_child_tables_company_rls.up.sql"
   - "migrations/20260722000001_fence_child_tables_company_rls.down.sql"
   - "migrations/20260821130000_status_lifecycle.up.sql"
   - "migrations/20260821130000_status_lifecycle.down.sql"
+  - "migrations/20260901100000_create_workcenter_family.up.sql"
+  - "migrations/20260901100000_create_workcenter_family.down.sql"
+  - "migrations/20260901100100_create_bom_byproduct_subcontractor_tables.up.sql"
+  - "migrations/20260901100100_create_bom_byproduct_subcontractor_tables.down.sql"
+  - "migrations/20260901100200_create_unbuild_orders.up.sql"
+  - "migrations/20260901100200_create_unbuild_orders.down.sql"
+  - "migrations/20260901100300_create_repair_family.up.sql"
+  - "migrations/20260901100300_create_repair_family.down.sql"
+  - "migrations/20260901100400_create_category_costing_defaults.up.sql"
+  - "migrations/20260901100400_create_category_costing_defaults.down.sql"
+  - "migrations/20260901100500_create_subcontract_mo_links.up.sql"
+  - "migrations/20260901100500_create_subcontract_mo_links.down.sql"
+  - "migrations/20260901110000_work_order_state_convergence.up.sql"
+  - "migrations/20260901110000_work_order_state_convergence.down.sql"
+  - "migrations/20260901110100_f11_item_immutable_trigger.up.sql"
+  - "migrations/20260901110100_f11_item_immutable_trigger.down.sql"
+  - "migrations/20260901110200_fence_shared_blank_master_data.up.sql"
+  - "migrations/20260901110200_fence_shared_blank_master_data.down.sql"
+  - "migrations/20260901110300_rls_fence_new_tables.up.sql"
+  - "migrations/20260901110300_rls_fence_new_tables.down.sql"
   - "tests/common/mod.rs"
   - "src/write_api.rs"

@@ -33,13 +33,23 @@ pub use infrastructure::persistence::*;
 
 // Re-exports - Application services
 pub use application::service::WorkstationService;
+pub use application::service::WorkstationLossService;
+pub use application::service::WorkstationProductivityService;
 pub use application::service::OperationService;
 pub use application::service::BomService;
 pub use application::service::BomItemService;
 pub use application::service::BomOperationService;
+pub use application::service::BomByproductService;
+pub use application::service::BomSubcontractorService;
+pub use application::service::CategoryCostingDefaultsService;
+pub use application::service::RepairOrderService;
+pub use application::service::RepairPartService;
+pub use application::service::RepairTagService;
+pub use application::service::UnbuildOrderService;
 pub use application::service::WorkOrderService;
 pub use application::service::WorkOrderItemService;
 pub use application::service::JobCardService;
+pub use application::service::SubcontractMoLinkService;
 
 // Re-exports - Workflows
 pub use application::workflows::*;
@@ -62,13 +72,23 @@ use sqlx::PgPool;
 /// ```
 pub struct ManufacturingModule {
     pub(crate) workstation_service: Arc<WorkstationService>,
+    pub(crate) workstation_loss_service: Arc<WorkstationLossService>,
+    pub(crate) workstation_productivity_service: Arc<WorkstationProductivityService>,
     pub(crate) operation_service: Arc<OperationService>,
     pub(crate) bom_service: Arc<BomService>,
     pub(crate) bom_item_service: Arc<BomItemService>,
     pub(crate) bom_operation_service: Arc<BomOperationService>,
+    pub(crate) bom_byproduct_service: Arc<BomByproductService>,
+    pub(crate) bom_subcontractor_service: Arc<BomSubcontractorService>,
+    pub(crate) category_costing_defaults_service: Arc<CategoryCostingDefaultsService>,
+    pub(crate) repair_order_service: Arc<RepairOrderService>,
+    pub(crate) repair_part_service: Arc<RepairPartService>,
+    pub(crate) repair_tag_service: Arc<RepairTagService>,
+    pub(crate) unbuild_order_service: Arc<UnbuildOrderService>,
     pub(crate) work_order_service: Arc<WorkOrderService>,
     pub(crate) work_order_item_service: Arc<WorkOrderItemService>,
     pub(crate) job_card_service: Arc<JobCardService>,
+    pub(crate) subcontract_mo_link_service: Arc<SubcontractMoLinkService>,
     // <<< CUSTOM FIELDS
     pub(crate) manufacturing_write_service:
         Arc<crate::application::service::ManufacturingWriteService>,
@@ -89,24 +109,44 @@ impl ManufacturingModule {
     pub fn all_crud_routes(&self) -> Router {
         use presentation::http::{
             create_workstation_routes,
+            create_workstation_loss_routes,
+            create_workstation_productivity_routes,
             create_operation_routes,
             create_bom_routes,
             create_bom_item_routes,
             create_bom_operation_routes,
+            create_bom_byproduct_routes,
+            create_bom_subcontractor_routes,
+            create_category_costing_defaults_routes,
+            create_repair_order_routes,
+            create_repair_part_routes,
+            create_repair_tag_routes,
+            create_unbuild_order_routes,
             create_work_order_routes,
             create_work_order_item_routes,
             create_job_card_routes,
+            create_subcontract_mo_link_routes,
         };
 
         Router::new()
             .merge(create_workstation_routes(self.workstation_service.clone()))
+            .merge(create_workstation_loss_routes(self.workstation_loss_service.clone()))
+            .merge(create_workstation_productivity_routes(self.workstation_productivity_service.clone()))
             .merge(create_operation_routes(self.operation_service.clone()))
             .merge(create_bom_routes(self.bom_service.clone()))
             .merge(create_bom_item_routes(self.bom_item_service.clone()))
             .merge(create_bom_operation_routes(self.bom_operation_service.clone()))
+            .merge(create_bom_byproduct_routes(self.bom_byproduct_service.clone()))
+            .merge(create_bom_subcontractor_routes(self.bom_subcontractor_service.clone()))
+            .merge(create_category_costing_defaults_routes(self.category_costing_defaults_service.clone()))
+            .merge(create_repair_order_routes(self.repair_order_service.clone()))
+            .merge(create_repair_part_routes(self.repair_part_service.clone()))
+            .merge(create_repair_tag_routes(self.repair_tag_service.clone()))
+            .merge(create_unbuild_order_routes(self.unbuild_order_service.clone()))
             .merge(create_work_order_routes(self.work_order_service.clone()))
             .merge(create_work_order_item_routes(self.work_order_item_service.clone()))
             .merge(create_job_card_routes(self.job_card_service.clone()))
+            .merge(create_subcontract_mo_link_routes(self.subcontract_mo_link_service.clone()))
     }
 
     /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
@@ -127,24 +167,44 @@ impl ManufacturingModule {
     pub fn readonly_routes(&self) -> Router {
         use presentation::http::{
             create_workstation_read_routes,
+            create_workstation_loss_read_routes,
+            create_workstation_productivity_read_routes,
             create_operation_read_routes,
             create_bom_read_routes,
             create_bom_item_read_routes,
             create_bom_operation_read_routes,
+            create_bom_byproduct_read_routes,
+            create_bom_subcontractor_read_routes,
+            create_category_costing_defaults_read_routes,
+            create_repair_order_read_routes,
+            create_repair_part_read_routes,
+            create_repair_tag_read_routes,
+            create_unbuild_order_read_routes,
             create_work_order_read_routes,
             create_work_order_item_read_routes,
             create_job_card_read_routes,
+            create_subcontract_mo_link_read_routes,
         };
 
         Router::new()
             .merge(create_workstation_read_routes(self.workstation_service.clone()))
+            .merge(create_workstation_loss_read_routes(self.workstation_loss_service.clone()))
+            .merge(create_workstation_productivity_read_routes(self.workstation_productivity_service.clone()))
             .merge(create_operation_read_routes(self.operation_service.clone()))
             .merge(create_bom_read_routes(self.bom_service.clone()))
             .merge(create_bom_item_read_routes(self.bom_item_service.clone()))
             .merge(create_bom_operation_read_routes(self.bom_operation_service.clone()))
+            .merge(create_bom_byproduct_read_routes(self.bom_byproduct_service.clone()))
+            .merge(create_bom_subcontractor_read_routes(self.bom_subcontractor_service.clone()))
+            .merge(create_category_costing_defaults_read_routes(self.category_costing_defaults_service.clone()))
+            .merge(create_repair_order_read_routes(self.repair_order_service.clone()))
+            .merge(create_repair_part_read_routes(self.repair_part_service.clone()))
+            .merge(create_repair_tag_read_routes(self.repair_tag_service.clone()))
+            .merge(create_unbuild_order_read_routes(self.unbuild_order_service.clone()))
             .merge(create_work_order_read_routes(self.work_order_service.clone()))
             .merge(create_work_order_item_read_routes(self.work_order_item_service.clone()))
             .merge(create_job_card_read_routes(self.job_card_service.clone()))
+            .merge(create_subcontract_mo_link_read_routes(self.subcontract_mo_link_service.clone()))
     }
 
     // <<< CUSTOM METHODS
@@ -210,6 +270,14 @@ impl ManufacturingModuleBuilder {
         let workstation_repository = Arc::new(WorkstationRepository::new(db_pool.clone()));
         let workstation_service = Arc::new(WorkstationService::with_repository(workstation_repository.clone()));
 
+        // WorkstationLoss service
+        let workstation_loss_repository = Arc::new(WorkstationLossRepository::new(db_pool.clone()));
+        let workstation_loss_service = Arc::new(WorkstationLossService::with_repository(workstation_loss_repository.clone()));
+
+        // WorkstationProductivity service
+        let workstation_productivity_repository = Arc::new(WorkstationProductivityRepository::new(db_pool.clone()));
+        let workstation_productivity_service = Arc::new(WorkstationProductivityService::with_repository(workstation_productivity_repository.clone()));
+
         // Operation service
         let operation_repository = Arc::new(OperationRepository::new(db_pool.clone()));
         let operation_service = Arc::new(OperationService::with_repository(operation_repository.clone()));
@@ -226,6 +294,34 @@ impl ManufacturingModuleBuilder {
         let bom_operation_repository = Arc::new(BomOperationRepository::new(db_pool.clone()));
         let bom_operation_service = Arc::new(BomOperationService::with_repository(bom_operation_repository.clone()));
 
+        // BomByproduct service
+        let bom_byproduct_repository = Arc::new(BomByproductRepository::new(db_pool.clone()));
+        let bom_byproduct_service = Arc::new(BomByproductService::with_repository(bom_byproduct_repository.clone()));
+
+        // BomSubcontractor service
+        let bom_subcontractor_repository = Arc::new(BomSubcontractorRepository::new(db_pool.clone()));
+        let bom_subcontractor_service = Arc::new(BomSubcontractorService::with_repository(bom_subcontractor_repository.clone()));
+
+        // CategoryCostingDefaults service
+        let category_costing_defaults_repository = Arc::new(CategoryCostingDefaultsRepository::new(db_pool.clone()));
+        let category_costing_defaults_service = Arc::new(CategoryCostingDefaultsService::with_repository(category_costing_defaults_repository.clone()));
+
+        // RepairOrder service
+        let repair_order_repository = Arc::new(RepairOrderRepository::new(db_pool.clone()));
+        let repair_order_service = Arc::new(RepairOrderService::with_repository(repair_order_repository.clone()));
+
+        // RepairPart service
+        let repair_part_repository = Arc::new(RepairPartRepository::new(db_pool.clone()));
+        let repair_part_service = Arc::new(RepairPartService::with_repository(repair_part_repository.clone()));
+
+        // RepairTag service
+        let repair_tag_repository = Arc::new(RepairTagRepository::new(db_pool.clone()));
+        let repair_tag_service = Arc::new(RepairTagService::with_repository(repair_tag_repository.clone()));
+
+        // UnbuildOrder service
+        let unbuild_order_repository = Arc::new(UnbuildOrderRepository::new(db_pool.clone()));
+        let unbuild_order_service = Arc::new(UnbuildOrderService::with_repository(unbuild_order_repository.clone()));
+
         // WorkOrder service
         let work_order_repository = Arc::new(WorkOrderRepository::new(db_pool.clone()));
         let work_order_service = Arc::new(WorkOrderService::with_repository(work_order_repository.clone()));
@@ -238,6 +334,10 @@ impl ManufacturingModuleBuilder {
         let job_card_repository = Arc::new(JobCardRepository::new(db_pool.clone()));
         let job_card_service = Arc::new(JobCardService::with_repository(job_card_repository.clone()));
 
+        // SubcontractMoLink service
+        let subcontract_mo_link_repository = Arc::new(SubcontractMoLinkRepository::new(db_pool.clone()));
+        let subcontract_mo_link_service = Arc::new(SubcontractMoLinkService::with_repository(subcontract_mo_link_repository.clone()));
+
         // <<< CUSTOM
         // The validated execution engine. It shares this module's pool (same RLS connection
         // story as the generic services); the GL/inventory ports are supplied per call by the
@@ -249,13 +349,23 @@ impl ManufacturingModuleBuilder {
 
         Ok(ManufacturingModule {
             workstation_service,
+            workstation_loss_service,
+            workstation_productivity_service,
             operation_service,
             bom_service,
             bom_item_service,
             bom_operation_service,
+            bom_byproduct_service,
+            bom_subcontractor_service,
+            category_costing_defaults_service,
+            repair_order_service,
+            repair_part_service,
+            repair_tag_service,
+            unbuild_order_service,
             work_order_service,
             work_order_item_service,
             job_card_service,
+            subcontract_mo_link_service,
             // <<< CUSTOM
             manufacturing_write_service,
             // END CUSTOM

@@ -36,7 +36,7 @@ impl Seeder for SeedJobCardSeeder {
     }
 
     fn order(&self) -> i32 {
-        8
+        17
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {

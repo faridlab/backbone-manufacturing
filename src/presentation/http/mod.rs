@@ -6,25 +6,45 @@
 //! to provide all 12 standard Backbone CRUD endpoints.
 
 pub mod workstation_handler;
+pub mod workstation_loss_handler;
+pub mod workstation_productivity_handler;
 pub mod operation_handler;
 pub mod bom_handler;
 pub mod bom_item_handler;
 pub mod bom_operation_handler;
+pub mod bom_byproduct_handler;
+pub mod bom_subcontractor_handler;
+pub mod category_costing_defaults_handler;
+pub mod repair_order_handler;
+pub mod repair_part_handler;
+pub mod repair_tag_handler;
+pub mod unbuild_order_handler;
 pub mod work_order_handler;
 pub mod work_order_item_handler;
 pub mod job_card_handler;
+pub mod subcontract_mo_link_handler;
 
 // <<< CUSTOM
 // END CUSTOM
 
 // Re-exports
 pub use workstation_handler::{create_workstation_routes, create_workstation_read_routes, create_workstation_write_routes};
+pub use workstation_loss_handler::{create_workstation_loss_routes, create_workstation_loss_read_routes, create_workstation_loss_write_routes};
+pub use workstation_productivity_handler::{create_workstation_productivity_routes, create_workstation_productivity_read_routes, create_workstation_productivity_write_routes};
 pub use operation_handler::{create_operation_routes, create_operation_read_routes, create_operation_write_routes};
 pub use bom_handler::{create_bom_routes, create_bom_read_routes, create_bom_write_routes};
 pub use bom_item_handler::{create_bom_item_routes, create_bom_item_read_routes, create_bom_item_write_routes};
 pub use bom_operation_handler::{create_bom_operation_routes, create_bom_operation_read_routes, create_bom_operation_write_routes};
+pub use bom_byproduct_handler::{create_bom_byproduct_routes, create_bom_byproduct_read_routes, create_bom_byproduct_write_routes};
+pub use bom_subcontractor_handler::{create_bom_subcontractor_routes, create_bom_subcontractor_read_routes, create_bom_subcontractor_write_routes};
+pub use category_costing_defaults_handler::{create_category_costing_defaults_routes, create_category_costing_defaults_read_routes, create_category_costing_defaults_write_routes};
+pub use repair_order_handler::{create_repair_order_routes, create_repair_order_read_routes, create_repair_order_write_routes};
+pub use repair_part_handler::{create_repair_part_routes, create_repair_part_read_routes, create_repair_part_write_routes};
+pub use repair_tag_handler::{create_repair_tag_routes, create_repair_tag_read_routes, create_repair_tag_write_routes};
+pub use unbuild_order_handler::{create_unbuild_order_routes, create_unbuild_order_read_routes, create_unbuild_order_write_routes};
 pub use work_order_handler::{create_work_order_routes, create_work_order_read_routes, create_work_order_write_routes};
 pub use work_order_item_handler::{create_work_order_item_routes, create_work_order_item_read_routes, create_work_order_item_write_routes};
 pub use job_card_handler::{create_job_card_routes, create_job_card_read_routes, create_job_card_write_routes};
+pub use subcontract_mo_link_handler::{create_subcontract_mo_link_routes, create_subcontract_mo_link_read_routes, create_subcontract_mo_link_write_routes};
 // <<< CUSTOM
 // END CUSTOM

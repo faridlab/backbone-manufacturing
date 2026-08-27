@@ -49,9 +49,11 @@ impl From<WorkstationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkstationDto {
     pub id: WorkstationId,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
+    pub time_efficiency: Decimal,
     pub status: WorkstationStatus,
     pub metadata: serde_json::Value,
 }
@@ -68,6 +70,123 @@ pub struct WorkstationSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkstationRef {
     pub id: WorkstationId,
+}
+
+// ============================================================================
+// WORKSTATIONLOSS TYPES
+// ============================================================================
+
+/// Type-safe ID for WorkstationLoss
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorkstationLossId(pub Uuid);
+
+impl WorkstationLossId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for WorkstationLossId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<WorkstationLossId> for Uuid {
+    fn from(id: WorkstationLossId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for WorkstationLoss
+///
+/// This is the public representation of WorkstationLoss for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossDto {
+    pub id: WorkstationLossId,
+    pub company_id: Option<Uuid>,
+    pub name: String,
+    pub loss_type: LossType,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of WorkstationLoss for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossSummary {
+    pub id: WorkstationLossId,
+    pub name: String,
+}
+
+/// Reference to WorkstationLoss for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossRef {
+    pub id: WorkstationLossId,
+}
+
+// ============================================================================
+// WORKSTATIONPRODUCTIVITY TYPES
+// ============================================================================
+
+/// Type-safe ID for WorkstationProductivity
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorkstationProductivityId(pub Uuid);
+
+impl WorkstationProductivityId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for WorkstationProductivityId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<WorkstationProductivityId> for Uuid {
+    fn from(id: WorkstationProductivityId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for WorkstationProductivity
+///
+/// This is the public representation of WorkstationProductivity for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivityDto {
+    pub id: WorkstationProductivityId,
+    pub company_id: Uuid,
+    pub workstation_id: Uuid,
+    pub job_card_id: Option<Uuid>,
+    pub loss_id: Uuid,
+    pub date_start: DateTime<Utc>,
+    pub date_end: Option<DateTime<Utc>>,
+    pub description: Option<String>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of WorkstationProductivity for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivitySummary {
+    pub id: WorkstationProductivityId,
+}
+
+/// Reference to WorkstationProductivity for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivityRef {
+    pub id: WorkstationProductivityId,
 }
 
 // ============================================================================
@@ -108,7 +227,7 @@ impl From<OperationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationDto {
     pub id: OperationId,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
     pub status: OperationStatus,
@@ -167,9 +286,11 @@ impl From<BomId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomDto {
     pub id: BomId,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: String,
+    pub version: i32,
+    pub bom_type: BomType,
     pub quantity: Decimal,
     pub uom: Option<String>,
     pub currency: String,
@@ -232,7 +353,7 @@ impl From<BomItemId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomItemDto {
     pub id: BomItemId,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -292,7 +413,7 @@ impl From<BomOperationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomOperationDto {
     pub id: BomOperationId,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -312,6 +433,420 @@ pub struct BomOperationSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomOperationRef {
     pub id: BomOperationId,
+}
+
+// ============================================================================
+// BOMBYPRODUCT TYPES
+// ============================================================================
+
+/// Type-safe ID for BomByproduct
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BomByproductId(pub Uuid);
+
+impl BomByproductId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for BomByproductId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<BomByproductId> for Uuid {
+    fn from(id: BomByproductId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for BomByproduct
+///
+/// This is the public representation of BomByproduct for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductDto {
+    pub id: BomByproductId,
+    pub company_id: Option<Uuid>,
+    pub bom_id: Uuid,
+    pub item_id: Uuid,
+    pub product_category_id: Option<Uuid>,
+    pub quantity: Decimal,
+    pub cost_share: Decimal,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of BomByproduct for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductSummary {
+    pub id: BomByproductId,
+}
+
+/// Reference to BomByproduct for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductRef {
+    pub id: BomByproductId,
+}
+
+// ============================================================================
+// BOMSUBCONTRACTOR TYPES
+// ============================================================================
+
+/// Type-safe ID for BomSubcontractor
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BomSubcontractorId(pub Uuid);
+
+impl BomSubcontractorId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for BomSubcontractorId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<BomSubcontractorId> for Uuid {
+    fn from(id: BomSubcontractorId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for BomSubcontractor
+///
+/// This is the public representation of BomSubcontractor for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorDto {
+    pub id: BomSubcontractorId,
+    pub company_id: Option<Uuid>,
+    pub bom_id: Uuid,
+    pub partner_id: Uuid,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of BomSubcontractor for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorSummary {
+    pub id: BomSubcontractorId,
+}
+
+/// Reference to BomSubcontractor for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorRef {
+    pub id: BomSubcontractorId,
+}
+
+// ============================================================================
+// CATEGORYCOSTINGDEFAULTS TYPES
+// ============================================================================
+
+/// Type-safe ID for CategoryCostingDefaults
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsId(pub Uuid);
+
+impl CategoryCostingDefaultsId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for CategoryCostingDefaultsId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<CategoryCostingDefaultsId> for Uuid {
+    fn from(id: CategoryCostingDefaultsId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for CategoryCostingDefaults
+///
+/// This is the public representation of CategoryCostingDefaults for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsDto {
+    pub id: CategoryCostingDefaultsId,
+    pub company_id: Uuid,
+    pub product_category_id: Uuid,
+    pub wip_account_id: Option<Uuid>,
+    pub fg_account_id: Option<Uuid>,
+    pub raw_material_account_id: Option<Uuid>,
+    pub conversion_cost_account_id: Option<Uuid>,
+    pub subcontract_interim_account_id: Option<Uuid>,
+    pub cost_variance_account_id: Option<Uuid>,
+    pub inventory_loss_account_id: Option<Uuid>,
+    pub repair_expense_account_id: Option<Uuid>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of CategoryCostingDefaults for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsSummary {
+    pub id: CategoryCostingDefaultsId,
+}
+
+/// Reference to CategoryCostingDefaults for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsRef {
+    pub id: CategoryCostingDefaultsId,
+}
+
+// ============================================================================
+// REPAIRORDER TYPES
+// ============================================================================
+
+/// Type-safe ID for RepairOrder
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RepairOrderId(pub Uuid);
+
+impl RepairOrderId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for RepairOrderId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<RepairOrderId> for Uuid {
+    fn from(id: RepairOrderId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for RepairOrder
+///
+/// This is the public representation of RepairOrder for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderDto {
+    pub id: RepairOrderId,
+    pub company_id: Uuid,
+    pub repair_number: String,
+    pub item_id: Uuid,
+    pub product_category_id: Option<Uuid>,
+    pub quantity: Decimal,
+    pub status: RepairStatus,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of RepairOrder for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderSummary {
+    pub id: RepairOrderId,
+    pub status: RepairStatus,
+}
+
+/// Reference to RepairOrder for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderRef {
+    pub id: RepairOrderId,
+}
+
+// ============================================================================
+// REPAIRPART TYPES
+// ============================================================================
+
+/// Type-safe ID for RepairPart
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RepairPartId(pub Uuid);
+
+impl RepairPartId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for RepairPartId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<RepairPartId> for Uuid {
+    fn from(id: RepairPartId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for RepairPart
+///
+/// This is the public representation of RepairPart for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartDto {
+    pub id: RepairPartId,
+    pub company_id: Uuid,
+    pub repair_order_id: Uuid,
+    pub item_id: Uuid,
+    pub warehouse_id: Option<Uuid>,
+    pub line_type: RepairLineType,
+    pub quantity: Decimal,
+    pub rate: Decimal,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of RepairPart for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartSummary {
+    pub id: RepairPartId,
+}
+
+/// Reference to RepairPart for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartRef {
+    pub id: RepairPartId,
+}
+
+// ============================================================================
+// REPAIRTAG TYPES
+// ============================================================================
+
+/// Type-safe ID for RepairTag
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RepairTagId(pub Uuid);
+
+impl RepairTagId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for RepairTagId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<RepairTagId> for Uuid {
+    fn from(id: RepairTagId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for RepairTag
+///
+/// This is the public representation of RepairTag for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagDto {
+    pub id: RepairTagId,
+    pub company_id: Uuid,
+    pub name: String,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of RepairTag for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagSummary {
+    pub id: RepairTagId,
+    pub name: String,
+}
+
+/// Reference to RepairTag for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagRef {
+    pub id: RepairTagId,
+}
+
+// ============================================================================
+// UNBUILDORDER TYPES
+// ============================================================================
+
+/// Type-safe ID for UnbuildOrder
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct UnbuildOrderId(pub Uuid);
+
+impl UnbuildOrderId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for UnbuildOrderId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<UnbuildOrderId> for Uuid {
+    fn from(id: UnbuildOrderId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for UnbuildOrder
+///
+/// This is the public representation of UnbuildOrder for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderDto {
+    pub id: UnbuildOrderId,
+    pub company_id: Uuid,
+    pub unbuild_number: String,
+    pub work_order_id: Uuid,
+    pub item_id: Uuid,
+    pub quantity: Decimal,
+    pub status: UnbuildStatus,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of UnbuildOrder for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderSummary {
+    pub id: UnbuildOrderId,
+    pub status: UnbuildStatus,
+}
+
+/// Reference to UnbuildOrder for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderRef {
+    pub id: UnbuildOrderId,
 }
 
 // ============================================================================
@@ -358,7 +893,9 @@ pub struct WorkOrderDto {
     pub bom_id: Uuid,
     pub quantity: Decimal,
     pub produced_qty: Decimal,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
+    pub reservation_state: Option<ReservationState>,
+    pub product_category_id: Option<Uuid>,
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub wip_warehouse_id: Option<Uuid>,
@@ -375,7 +912,7 @@ pub struct WorkOrderDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkOrderSummary {
     pub id: WorkOrderId,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
 }
 
 /// Reference to WorkOrder for foreign key relationships
@@ -488,7 +1025,7 @@ pub struct JobCardDto {
     pub total_time_mins: Decimal,
     pub hour_rate: Decimal,
     pub operating_cost: Decimal,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
     pub metadata: serde_json::Value,
 }
 
@@ -496,13 +1033,69 @@ pub struct JobCardDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobCardSummary {
     pub id: JobCardId,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
 }
 
 /// Reference to JobCard for foreign key relationships
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobCardRef {
     pub id: JobCardId,
+}
+
+// ============================================================================
+// SUBCONTRACTMOLINK TYPES
+// ============================================================================
+
+/// Type-safe ID for SubcontractMoLink
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SubcontractMoLinkId(pub Uuid);
+
+impl SubcontractMoLinkId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for SubcontractMoLinkId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<SubcontractMoLinkId> for Uuid {
+    fn from(id: SubcontractMoLinkId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for SubcontractMoLink
+///
+/// This is the public representation of SubcontractMoLink for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkDto {
+    pub id: SubcontractMoLinkId,
+    pub company_id: Uuid,
+    pub purchase_order_id: Uuid,
+    pub work_order_id: Uuid,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of SubcontractMoLink for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkSummary {
+    pub id: SubcontractMoLinkId,
+}
+
+/// Reference to SubcontractMoLink for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkRef {
+    pub id: SubcontractMoLinkId,
 }
 
 // ============================================================================

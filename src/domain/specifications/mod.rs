@@ -7,13 +7,23 @@
 pub use backbone_core::{Specification, AndSpecification, OrSpecification, NotSpecification};
 
 pub mod workstation_specification;
+pub mod workstation_loss_specification;
+pub mod workstation_productivity_specification;
 pub mod operation_specification;
 pub mod bom_specification;
 pub mod bom_item_specification;
 pub mod bom_operation_specification;
+pub mod bom_byproduct_specification;
+pub mod bom_subcontractor_specification;
+pub mod category_costing_defaults_specification;
+pub mod repair_order_specification;
+pub mod repair_part_specification;
+pub mod repair_tag_specification;
+pub mod unbuild_order_specification;
 pub mod work_order_specification;
 pub mod work_order_item_specification;
 pub mod job_card_specification;
+pub mod subcontract_mo_link_specification;
 
 // <<< CUSTOM
 // END CUSTOM

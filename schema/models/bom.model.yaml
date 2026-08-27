@@ -1,12 +1,18 @@
 # =============================================================================
 # Domain: Manufacturing — product definition (master data, no GL)
-# Entities: Workstation, Operation, Bom (+ BomItem + BomOperation)
+# Entities: Workstation (+ WorkstationLoss + WorkstationProductivity), Operation,
+#           Bom (+ BomItem + BomOperation + BomByproduct + BomSubcontractor)
 # Description: WHAT to build. A Bom is the recipe for one manufactured item: its
-# component materials (BomItem) and the operations that convert them (BomOperation,
-# each on a Workstation at an hourly rate). The Bom's cost rolls up from both —
-# `raw_material_cost` (Σ items) + `operating_cost` (Σ operations) = `total_cost`.
-# Region-neutral, posts NO GL: a Bom only DEFINES cost; the Work Order execution
-# context is what emits WIP/FG postings. Cross-module ids are logical FKs.
+# component materials (BomItem), the operations that convert them (BomOperation,
+# each on a Workstation at an hourly rate), optional byproduct outputs with a
+# cost-share split (BomByproduct), and — for subcontracted recipes — the read-only
+# partner references (BomSubcontractor). The Bom's cost rolls up from components +
+# operations. Region-neutral, posts NO GL: a Bom only DEFINES cost; the Work Order
+# execution context is what emits WIP/FG postings. Cross-module ids are logical FKs.
+#
+# Fence: the master-data family carries nullable company_id (shared_blank) — a NULL
+# company row is a first-class shared recipe/machine visible to every company; the
+# execution side (work_order.model.yaml) stays strict NOT NULL.
 # =============================================================================
 
 models:
@@ -19,9 +25,9 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique workstation id"
       company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company; NULL = shared workstation visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       workstation_name:
         type: string
         attributes: ["@required", "@max(140)"]
@@ -30,10 +36,21 @@ models:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "Conversion cost per hour (labour + overhead)"
+      capacity:
+        type: decimal
+        attributes: ["@default(1)", "@precision(18,4)", "@positive"]
+        description: "Standard output per hour the workstation can produce (planning denominator)"
+      time_efficiency:
+        type: decimal
+        attributes: ["@default(100)", "@precision(5,2)", "@non_negative"]
+        description: "Efficiency factor in percent (100 = nominal speed); scales expected operation time"
       # replaces is_active (boolean flipped to lifecycle enum)
       status:
         type: WorkstationStatus
         attributes: ["@default(active)"]
+        lifecycle:
+          shape: hand_set
+          sticky: false
         description: "Lifecycle (inactive workstations are hidden from new BOM operations; existing BOM lines keep their snapshotted rate)"
       metadata:
         type: Metadata
@@ -42,6 +59,77 @@ models:
     indexes:
       - type: index
         fields: [company_id, status]
+
+  - name: WorkstationLoss
+    collection: workstation_losses
+    description: "A named productivity-loss reason, grouped into an OEE bucket"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique loss id"
+      company_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company; NULL = shared loss reason visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
+      name:
+        type: string
+        attributes: ["@required", "@max(140)"]
+        description: "Human name of the loss reason"
+      loss_type:
+        type: LossType
+        attributes: ["@required"]
+        description: "The OEE bucket the loss counts against: productive | availability | performance | quality"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, name]
+        where: "deleted_at IS NULL"
+
+  - name: WorkstationProductivity
+    collection: workstation_productivity
+    description: "A timed productivity record on a workstation, tagged with its loss reason (the OEE input)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique productivity record id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      workstation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Workstation.id)"]
+        description: "The workstation the time was logged on"
+      job_card_id:
+        type: uuid?
+        attributes: ["@foreign_key(JobCard.id)"]
+        description: "The job card being run while the record was open, if any"
+      loss_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(WorkstationLoss.id)"]
+        description: "The loss reason the recorded duration counts as"
+      date_start:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "When the record opened"
+      date_end:
+        type: datetime?
+        description: "When the record closed (NULL = still running); duration is read-side computed date_end - date_start — no stored column, no cron"
+      description:
+        type: string?
+        description: "Free-text note"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [workstation_id, date_start]
 
   - name: Operation
     collection: operations
@@ -52,9 +140,9 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique operation id"
       company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company; NULL = shared operation visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       operation_name:
         type: string
         attributes: ["@required", "@max(140)"]
@@ -67,6 +155,9 @@ models:
       status:
         type: OperationStatus
         attributes: ["@default(active)"]
+        lifecycle:
+          shape: hand_set
+          sticky: false
         description: "Lifecycle (inactive operations are hidden from new BOM lines; existing lines keep their reference)"
       metadata:
         type: Metadata
@@ -78,16 +169,16 @@ models:
 
   - name: Bom
     collection: boms
-    description: "The recipe for one manufactured item — components + operations, with a cost roll-up"
+    description: "The versioned recipe for one manufactured item — components + operations (+ byproducts + subcontractors), with a cost roll-up"
     fields:
       id:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique BOM id"
       company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company; NULL = shared BOM visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       item_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
@@ -96,6 +187,14 @@ models:
         type: string
         attributes: ["@required", "@max(40)"]
         description: "BOM number (unique per company)"
+      version:
+        type: int
+        attributes: ["@default(1)", "@positive"]
+        description: "Revision number of this recipe for the item; a new revision is a new draft that must be activated to become selectable"
+      bom_type:
+        type: BomType
+        attributes: ["@default(normal)"]
+        description: "normal = manufactured in-house; kit = exploded through to components at demand time and NEVER given its own work order; subcontract = produced by a subcontractor partner against a purchase order"
       quantity:
         type: decimal
         attributes: ["@default(1)", "@precision(18,4)", "@positive"]
@@ -120,11 +219,15 @@ models:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
         description: "raw_material_cost + operating_cost"
-      # replaces is_active (boolean flipped to lifecycle enum)
+      # replaces is_active (boolean flipped to lifecycle enum); draft = staged revision,
+      # not yet selectable for work-order confirmation
       status:
         type: BomStatus
         attributes: ["@default(active)"]
-        description: "Lifecycle (inactive BOMs are hidden from work-order release and cost roll-up)"
+        lifecycle:
+          shape: hand_set
+          sticky: false
+        description: "Lifecycle: draft revisions are not selectable at work-order confirmation; only active BOMs feed confirmation and cost roll-up; inactive BOMs are retired"
       is_default:
         type: bool
         attributes: ["@default(false)"]
@@ -136,6 +239,9 @@ models:
     indexes:
       - type: unique
         fields: [company_id, bom_code]
+        where: "deleted_at IS NULL"
+      - type: unique
+        fields: [company_id, item_id, version]
         where: "deleted_at IS NULL"
       - type: index
         fields: [company_id, item_id, status]
@@ -149,9 +255,9 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
       company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner, denormalized from the parent BOM # logical FK to organization.Company.id"
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -175,7 +281,7 @@ models:
       is_phantom:
         type: bool
         attributes: ["@default(false)"]
-        description: "A phantom sub-assembly — never stocked; at Work Order release it is exploded THROUGH to its own BOM's components (resolved by item_id), not issued as a material."
+        description: "A phantom sub-assembly — never stocked; at Work Order confirmation it is exploded THROUGH to its own BOM's components (resolved by item_id), not issued as a material."
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]
@@ -193,9 +299,9 @@ models:
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
       company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner, denormalized from the parent BOM # logical FK to organization.Company.id"
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -228,6 +334,75 @@ models:
       - type: index
         fields: [bom_id]
 
+  - name: BomByproduct
+    collection: bom_byproducts
+    description: "A secondary item co-produced by the recipe, carrying a share of the cost"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line id"
+      company_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
+      bom_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Bom.id)"]
+        description: "Parent BOM"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The byproduct item # logical FK to catalog.Product.id"
+      product_category_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Category whose costing defaults supply the byproduct's stock account — caller-supplied per the module's no-catalog-edge discipline # logical FK to catalog.ProductCategory.id"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity of the byproduct per BOM base qty"
+      cost_share:
+        type: decimal
+        attributes: ["@default(0)", "@precision(5,2)", "@non_negative"]
+        description: "Percent of the receipt's value allocated to this byproduct (0 <= cost_share <= 100 per row; the sum across the BOM's byproducts is validated <= 100 at authoring)"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: index
+        fields: [bom_id]
+
+  - name: BomSubcontractor
+    collection: bom_subcontractors
+    description: "Read-only reference to a partner who produces this recipe as a subcontractor (no partner write surface in this module)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line id"
+      company_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
+      bom_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Bom.id)"]
+        description: "Parent BOM (a subcontract-type BOM)"
+      partner_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The subcontractor partner # logical FK to party.Party.id"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [bom_id, partner_id]
+        where: "deleted_at IS NULL"
+
 enums:
   - name: WorkstationStatus
     description: "Lifecycle of a workstation"
@@ -248,10 +423,36 @@ enums:
         description: "Hidden from new BOM lines; existing lines keep their reference"
 
   - name: BomStatus
-    description: "Lifecycle of a bill of materials"
+    description: "Lifecycle of a bill of materials (draft revisions stage before activation)"
     variants:
+      - name: draft
+        description: "A staged revision — NOT selectable for work-order confirmation or cost roll-up"
       - name: active
-        description: "Usable for work-order release and cost roll-up"
+        description: "Usable for work-order confirmation and cost roll-up"
         default: true
       - name: inactive
-        description: "Hidden from work-order release and cost roll-up"
+        description: "Retired — hidden from work-order confirmation and cost roll-up"
+
+  - name: LossType
+    description: "The OEE bucket a workstation loss counts against"
+    variants:
+      - name: productive
+        description: "Productive time (the numerator)"
+        default: true
+      - name: availability
+        description: "Downtime counted against availability"
+      - name: performance
+        description: "Speed loss counted against performance"
+      - name: quality
+        description: "Rework/scrap time counted against quality"
+
+  - name: BomType
+    description: "How a recipe is fulfilled"
+    variants:
+      - name: normal
+        description: "Manufactured in-house — its confirmation explodes components onto a work order"
+        default: true
+      - name: kit
+        description: "A phantom kit — exploded through to components at demand time; NEVER given its own work order"
+      - name: subcontract
+        description: "Produced by a subcontractor partner; a receipt event against the purchase order mints a hidden confirmed work order"

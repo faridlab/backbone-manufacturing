@@ -10,13 +10,23 @@ use std::sync::Arc;
 
 // Import all services
 use crate::application::service::WorkstationService;
+use crate::application::service::WorkstationLossService;
+use crate::application::service::WorkstationProductivityService;
 use crate::application::service::OperationService;
 use crate::application::service::BomService;
 use crate::application::service::BomItemService;
 use crate::application::service::BomOperationService;
+use crate::application::service::BomByproductService;
+use crate::application::service::BomSubcontractorService;
+use crate::application::service::CategoryCostingDefaultsService;
+use crate::application::service::RepairOrderService;
+use crate::application::service::RepairPartService;
+use crate::application::service::RepairTagService;
+use crate::application::service::UnbuildOrderService;
 use crate::application::service::WorkOrderService;
 use crate::application::service::WorkOrderItemService;
 use crate::application::service::JobCardService;
+use crate::application::service::SubcontractMoLinkService;
 
 /// Application state for dependency injection.
 ///
@@ -38,6 +48,10 @@ use crate::application::service::JobCardService;
 pub struct AppState {
     /// Workstation service
     pub workstation_service: Arc<WorkstationService>,
+    /// WorkstationLoss service
+    pub workstation_loss_service: Arc<WorkstationLossService>,
+    /// WorkstationProductivity service
+    pub workstation_productivity_service: Arc<WorkstationProductivityService>,
     /// Operation service
     pub operation_service: Arc<OperationService>,
     /// Bom service
@@ -46,35 +60,71 @@ pub struct AppState {
     pub bom_item_service: Arc<BomItemService>,
     /// BomOperation service
     pub bom_operation_service: Arc<BomOperationService>,
+    /// BomByproduct service
+    pub bom_byproduct_service: Arc<BomByproductService>,
+    /// BomSubcontractor service
+    pub bom_subcontractor_service: Arc<BomSubcontractorService>,
+    /// CategoryCostingDefaults service
+    pub category_costing_defaults_service: Arc<CategoryCostingDefaultsService>,
+    /// RepairOrder service
+    pub repair_order_service: Arc<RepairOrderService>,
+    /// RepairPart service
+    pub repair_part_service: Arc<RepairPartService>,
+    /// RepairTag service
+    pub repair_tag_service: Arc<RepairTagService>,
+    /// UnbuildOrder service
+    pub unbuild_order_service: Arc<UnbuildOrderService>,
     /// WorkOrder service
     pub work_order_service: Arc<WorkOrderService>,
     /// WorkOrderItem service
     pub work_order_item_service: Arc<WorkOrderItemService>,
     /// JobCard service
     pub job_card_service: Arc<JobCardService>,
+    /// SubcontractMoLink service
+    pub subcontract_mo_link_service: Arc<SubcontractMoLinkService>,
 }
 
 impl AppState {
     /// Create a new AppState with all services.
     pub fn new(
         workstation_service: Arc<WorkstationService>,
+        workstation_loss_service: Arc<WorkstationLossService>,
+        workstation_productivity_service: Arc<WorkstationProductivityService>,
         operation_service: Arc<OperationService>,
         bom_service: Arc<BomService>,
         bom_item_service: Arc<BomItemService>,
         bom_operation_service: Arc<BomOperationService>,
+        bom_byproduct_service: Arc<BomByproductService>,
+        bom_subcontractor_service: Arc<BomSubcontractorService>,
+        category_costing_defaults_service: Arc<CategoryCostingDefaultsService>,
+        repair_order_service: Arc<RepairOrderService>,
+        repair_part_service: Arc<RepairPartService>,
+        repair_tag_service: Arc<RepairTagService>,
+        unbuild_order_service: Arc<UnbuildOrderService>,
         work_order_service: Arc<WorkOrderService>,
         work_order_item_service: Arc<WorkOrderItemService>,
-        job_card_service: Arc<JobCardService>
+        job_card_service: Arc<JobCardService>,
+        subcontract_mo_link_service: Arc<SubcontractMoLinkService>
     ) -> Self {
         Self {
             workstation_service,
+            workstation_loss_service,
+            workstation_productivity_service,
             operation_service,
             bom_service,
             bom_item_service,
             bom_operation_service,
+            bom_byproduct_service,
+            bom_subcontractor_service,
+            category_costing_defaults_service,
+            repair_order_service,
+            repair_part_service,
+            repair_tag_service,
+            unbuild_order_service,
             work_order_service,
             work_order_item_service,
             job_card_service,
+            subcontract_mo_link_service,
         }
     }
 
@@ -82,13 +132,23 @@ impl AppState {
     pub fn from_module(module: &crate::ManufacturingModule) -> Self {
         Self {
             workstation_service: module.workstation_service.clone(),
+            workstation_loss_service: module.workstation_loss_service.clone(),
+            workstation_productivity_service: module.workstation_productivity_service.clone(),
             operation_service: module.operation_service.clone(),
             bom_service: module.bom_service.clone(),
             bom_item_service: module.bom_item_service.clone(),
             bom_operation_service: module.bom_operation_service.clone(),
+            bom_byproduct_service: module.bom_byproduct_service.clone(),
+            bom_subcontractor_service: module.bom_subcontractor_service.clone(),
+            category_costing_defaults_service: module.category_costing_defaults_service.clone(),
+            repair_order_service: module.repair_order_service.clone(),
+            repair_part_service: module.repair_part_service.clone(),
+            repair_tag_service: module.repair_tag_service.clone(),
+            unbuild_order_service: module.unbuild_order_service.clone(),
             work_order_service: module.work_order_service.clone(),
             work_order_item_service: module.work_order_item_service.clone(),
             job_card_service: module.job_card_service.clone(),
+            subcontract_mo_link_service: module.subcontract_mo_link_service.clone(),
         }
     }
 }
@@ -99,13 +159,23 @@ impl AppState {
 #[derive(Default)]
 pub struct AppStateBuilder {
     workstation_service: Option<Arc<WorkstationService>>,
+    workstation_loss_service: Option<Arc<WorkstationLossService>>,
+    workstation_productivity_service: Option<Arc<WorkstationProductivityService>>,
     operation_service: Option<Arc<OperationService>>,
     bom_service: Option<Arc<BomService>>,
     bom_item_service: Option<Arc<BomItemService>>,
     bom_operation_service: Option<Arc<BomOperationService>>,
+    bom_byproduct_service: Option<Arc<BomByproductService>>,
+    bom_subcontractor_service: Option<Arc<BomSubcontractorService>>,
+    category_costing_defaults_service: Option<Arc<CategoryCostingDefaultsService>>,
+    repair_order_service: Option<Arc<RepairOrderService>>,
+    repair_part_service: Option<Arc<RepairPartService>>,
+    repair_tag_service: Option<Arc<RepairTagService>>,
+    unbuild_order_service: Option<Arc<UnbuildOrderService>>,
     work_order_service: Option<Arc<WorkOrderService>>,
     work_order_item_service: Option<Arc<WorkOrderItemService>>,
     job_card_service: Option<Arc<JobCardService>>,
+    subcontract_mo_link_service: Option<Arc<SubcontractMoLinkService>>,
 }
 
 impl AppStateBuilder {
@@ -117,6 +187,18 @@ impl AppStateBuilder {
     /// Set the Workstation service.
     pub fn with_workstation_service(mut self, service: Arc<WorkstationService>) -> Self {
         self.workstation_service = Some(service);
+        self
+    }
+
+    /// Set the WorkstationLoss service.
+    pub fn with_workstation_loss_service(mut self, service: Arc<WorkstationLossService>) -> Self {
+        self.workstation_loss_service = Some(service);
+        self
+    }
+
+    /// Set the WorkstationProductivity service.
+    pub fn with_workstation_productivity_service(mut self, service: Arc<WorkstationProductivityService>) -> Self {
+        self.workstation_productivity_service = Some(service);
         self
     }
 
@@ -144,6 +226,48 @@ impl AppStateBuilder {
         self
     }
 
+    /// Set the BomByproduct service.
+    pub fn with_bom_byproduct_service(mut self, service: Arc<BomByproductService>) -> Self {
+        self.bom_byproduct_service = Some(service);
+        self
+    }
+
+    /// Set the BomSubcontractor service.
+    pub fn with_bom_subcontractor_service(mut self, service: Arc<BomSubcontractorService>) -> Self {
+        self.bom_subcontractor_service = Some(service);
+        self
+    }
+
+    /// Set the CategoryCostingDefaults service.
+    pub fn with_category_costing_defaults_service(mut self, service: Arc<CategoryCostingDefaultsService>) -> Self {
+        self.category_costing_defaults_service = Some(service);
+        self
+    }
+
+    /// Set the RepairOrder service.
+    pub fn with_repair_order_service(mut self, service: Arc<RepairOrderService>) -> Self {
+        self.repair_order_service = Some(service);
+        self
+    }
+
+    /// Set the RepairPart service.
+    pub fn with_repair_part_service(mut self, service: Arc<RepairPartService>) -> Self {
+        self.repair_part_service = Some(service);
+        self
+    }
+
+    /// Set the RepairTag service.
+    pub fn with_repair_tag_service(mut self, service: Arc<RepairTagService>) -> Self {
+        self.repair_tag_service = Some(service);
+        self
+    }
+
+    /// Set the UnbuildOrder service.
+    pub fn with_unbuild_order_service(mut self, service: Arc<UnbuildOrderService>) -> Self {
+        self.unbuild_order_service = Some(service);
+        self
+    }
+
     /// Set the WorkOrder service.
     pub fn with_work_order_service(mut self, service: Arc<WorkOrderService>) -> Self {
         self.work_order_service = Some(service);
@@ -162,6 +286,12 @@ impl AppStateBuilder {
         self
     }
 
+    /// Set the SubcontractMoLink service.
+    pub fn with_subcontract_mo_link_service(mut self, service: Arc<SubcontractMoLinkService>) -> Self {
+        self.subcontract_mo_link_service = Some(service);
+        self
+    }
+
     /// Build the AppState.
     ///
     /// # Panics
@@ -170,13 +300,23 @@ impl AppStateBuilder {
     pub fn build(self) -> AppState {
         AppState {
             workstation_service: self.workstation_service.expect("workstation_service is required"),
+            workstation_loss_service: self.workstation_loss_service.expect("workstation_loss_service is required"),
+            workstation_productivity_service: self.workstation_productivity_service.expect("workstation_productivity_service is required"),
             operation_service: self.operation_service.expect("operation_service is required"),
             bom_service: self.bom_service.expect("bom_service is required"),
             bom_item_service: self.bom_item_service.expect("bom_item_service is required"),
             bom_operation_service: self.bom_operation_service.expect("bom_operation_service is required"),
+            bom_byproduct_service: self.bom_byproduct_service.expect("bom_byproduct_service is required"),
+            bom_subcontractor_service: self.bom_subcontractor_service.expect("bom_subcontractor_service is required"),
+            category_costing_defaults_service: self.category_costing_defaults_service.expect("category_costing_defaults_service is required"),
+            repair_order_service: self.repair_order_service.expect("repair_order_service is required"),
+            repair_part_service: self.repair_part_service.expect("repair_part_service is required"),
+            repair_tag_service: self.repair_tag_service.expect("repair_tag_service is required"),
+            unbuild_order_service: self.unbuild_order_service.expect("unbuild_order_service is required"),
             work_order_service: self.work_order_service.expect("work_order_service is required"),
             work_order_item_service: self.work_order_item_service.expect("work_order_item_service is required"),
             job_card_service: self.job_card_service.expect("job_card_service is required"),
+            subcontract_mo_link_service: self.subcontract_mo_link_service.expect("subcontract_mo_link_service is required"),
         }
     }
 }

@@ -13,7 +13,6 @@ use backbone_manufacturing::application::service::manufacturing_write_service::{
     ManufacturingWriteService, NewBom, NewBomItem, NewJobCard, NewWorkOrder,
 };
 use common::*;
-use rust_decimal::Decimal;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -54,6 +53,7 @@ async fn ptpseam1_wip_nets_to_zero() {
 
     let wo = svc
         .create_work_order(NewWorkOrder {
+            product_category_id: None,
             company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
@@ -68,7 +68,7 @@ async fn ptpseam1_wip_nets_to_zero() {
         })
         .await
         .unwrap();
-    svc.release_work_order(wo, &sink).await.unwrap();
+    svc.confirm_work_order(wo, &sink).await.unwrap();
 
     // 1) consume: value = 2×500 + 4×250 = 2000. Dr WIP · Cr Raw.
     let c = svc.consume_materials(wo, raw_wh, &*inv_arc(&inv), &*gl, &sink).await.unwrap();
@@ -89,7 +89,7 @@ async fn ptpseam1_wip_nets_to_zero() {
     assert_eq!(svc.complete_job_card(jc, &*gl, &sink).await.unwrap(), dec("60.00"));
 
     // 3) receive: FG value = raw 2000 + operating 60 = 2060. Dr FG · Cr WIP.
-    let r = svc.receive_finished(wo, dec("1"), &*inv_arc(&inv), &*gl, &sink).await.unwrap();
+    let r = svc.receive_finished(wo, rcv(dec("1")), &*inv_arc(&inv), &*gl, &sink).await.unwrap();
     assert_eq!(r.finished_value, dec("2060.00"));
     assert!(r.completed);
 

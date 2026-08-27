@@ -51,9 +51,11 @@ impl std::ops::Deref for WorkstationId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Workstation {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
+    pub time_efficiency: Decimal,
     pub status: WorkstationStatus,
     #[serde(default)]
     #[sqlx(json)]
@@ -67,12 +69,14 @@ impl Workstation {
     }
 
     /// Create a new Workstation with required fields
-    pub fn new(company_id: Uuid, workstation_name: String, hour_rate: Decimal, status: WorkstationStatus) -> Self {
+    pub fn new(workstation_name: String, hour_rate: Decimal, capacity: Decimal, time_efficiency: Decimal, status: WorkstationStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: None,
             workstation_name,
             hour_rate,
+            capacity,
+            time_efficiency,
             status,
             metadata: AuditMetadata::default(),
         }
@@ -135,6 +139,16 @@ impl Workstation {
 
 
     // ==========================================================
+    // Fluent Setters (with_* for optional fields)
+    // ==========================================================
+
+    /// Set the company_id field (chainable)
+    pub fn with_company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
+        self
+    }
+
+    // ==========================================================
     // Partial Update
     // ==========================================================
 
@@ -150,6 +164,12 @@ impl Workstation {
                 }
                 "hour_rate" => {
                     if let Ok(v) = serde_json::from_value(value) { self.hour_rate = v; }
+                }
+                "capacity" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.capacity = v; }
+                }
+                "time_efficiency" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.time_efficiency = v; }
                 }
                 "status" => {
                     if let Ok(v) = serde_json::from_value(value) { self.status = v; }
@@ -229,11 +249,13 @@ pub struct WorkstationBuilder {
     company_id: Option<Uuid>,
     workstation_name: Option<String>,
     hour_rate: Option<Decimal>,
+    capacity: Option<Decimal>,
+    time_efficiency: Option<Decimal>,
     status: Option<WorkstationStatus>,
 }
 
 impl WorkstationBuilder {
-    /// Set the company_id field (required)
+    /// Set the company_id field (optional)
     pub fn company_id(mut self, value: Uuid) -> Self {
         self.company_id = Some(value);
         self
@@ -251,6 +273,18 @@ impl WorkstationBuilder {
         self
     }
 
+    /// Set the capacity field (default: `Decimal::from(1)`)
+    pub fn capacity(mut self, value: Decimal) -> Self {
+        self.capacity = Some(value);
+        self
+    }
+
+    /// Set the time_efficiency field (default: `Decimal::from(100)`)
+    pub fn time_efficiency(mut self, value: Decimal) -> Self {
+        self.time_efficiency = Some(value);
+        self
+    }
+
     /// Set the status field (default: `WorkstationStatus::default()`)
     pub fn status(mut self, value: WorkstationStatus) -> Self {
         self.status = Some(value);
@@ -261,14 +295,15 @@ impl WorkstationBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Workstation, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let workstation_name = self.workstation_name.ok_or_else(|| "workstation_name is required".to_string())?;
 
         Ok(Workstation {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: self.company_id,
             workstation_name,
             hour_rate: self.hour_rate.unwrap_or(Decimal::from(0)),
+            capacity: self.capacity.unwrap_or(Decimal::from(1)),
+            time_efficiency: self.time_efficiency.unwrap_or(Decimal::from(100)),
             status: self.status.unwrap_or_default(),
             metadata: AuditMetadata::default(),
         })

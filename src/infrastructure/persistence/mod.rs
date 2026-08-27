@@ -5,35 +5,82 @@
 //! Uses backbone-orm's `DatabaseOperations<T>` trait.
 
 mod workstation_repository;
+mod workstation_loss_repository;
+mod workstation_productivity_repository;
 mod operation_repository;
 mod bom_repository;
 mod bom_item_repository;
 mod bom_operation_repository;
+mod bom_byproduct_repository;
+mod bom_subcontractor_repository;
+mod category_costing_defaults_repository;
+mod repair_order_repository;
+mod repair_part_repository;
+mod repair_tag_repository;
+mod unbuild_order_repository;
 mod work_order_repository;
 mod work_order_item_repository;
 mod job_card_repository;
+mod subcontract_mo_link_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
+// The hand-written manufacturing SQL repositories (declared `user_owned` in metaphor.codegen.yaml).
+// Each COMBINES several related tables behind the write path's gates (unbuild, repair family,
+// workcenter/OEE family, costing defaults, subcontract links); the per-entity repositories the
+// generator emits above remain the plain CRUD stack. Declared here — inside the marker — so a
+// regen keeps them wired.
+pub mod unbuild_repository;
+pub mod repair_repository;
+pub mod workcenter_repository;
+pub mod costing_defaults_repository;
+pub mod subcontract_link_repository;
+pub use unbuild_repository::UnbuildRepository;
+pub use repair_repository::RepairRepository;
+pub use workcenter_repository::WorkcenterRepository;
+pub use costing_defaults_repository::CostingDefaultsRepository;
+pub use subcontract_link_repository::SubcontractLinkRepository;
+
 // The hand-written manufacturing SQL's parameter/projection types. Their repositories are declared
 // `user_owned` in metaphor.codegen.yaml; these types mirror COLUMNS, not entities.
 pub use bom_repository::NewBomRow;
 pub use bom_item_repository::{BomComponentRow, NewBomItemRow};
 pub use bom_operation_repository::NewBomOperationRow;
-pub use work_order_repository::{NewWorkOrderRow, ReleaseSourceRow, WorkOrderRow};
+pub use work_order_repository::{ConfirmSourceRow, NewWorkOrderRow, WorkOrderRow};
 pub use work_order_item_repository::{NewWorkOrderItemRow, WorkOrderRequirementRow};
 pub use job_card_repository::{JobCardCompletionRow, NewJobCardRow};
+pub use bom_byproduct_repository::{BomByproductRow, NewBomByproductRow};
+pub use bom_subcontractor_repository::NewBomSubcontractorRow;
+pub use unbuild_repository::{NewUnbuildRow, UnbuildExecuteRow};
+pub use repair_repository::{
+    NewRepairOrderRow, NewRepairPartRow, RepairOrderRow, RepairPartRow,
+};
+pub use workcenter_repository::{
+    NewWorkstationLossRow, NewWorkstationProductivityRow, OeeBucketRow,
+};
+pub use costing_defaults_repository::{CostingDefaultsAccounts, NewCostingDefaultsRow};
+pub use subcontract_link_repository::NewSubcontractLinkRow;
 // END CUSTOM
 
 // Re-exports
 pub use workstation_repository::WorkstationRepository;
+pub use workstation_loss_repository::WorkstationLossRepository;
+pub use workstation_productivity_repository::WorkstationProductivityRepository;
 pub use operation_repository::OperationRepository;
 pub use bom_repository::BomRepository;
 pub use bom_item_repository::BomItemRepository;
 pub use bom_operation_repository::BomOperationRepository;
+pub use bom_byproduct_repository::BomByproductRepository;
+pub use bom_subcontractor_repository::BomSubcontractorRepository;
+pub use category_costing_defaults_repository::CategoryCostingDefaultsRepository;
+pub use repair_order_repository::RepairOrderRepository;
+pub use repair_part_repository::RepairPartRepository;
+pub use repair_tag_repository::RepairTagRepository;
+pub use unbuild_order_repository::UnbuildOrderRepository;
 pub use work_order_repository::WorkOrderRepository;
 pub use work_order_item_repository::WorkOrderItemRepository;
 pub use job_card_repository::JobCardRepository;
+pub use subcontract_mo_link_repository::SubcontractMoLinkRepository;
 
 // Re-export backbone-orm types
 pub use backbone_orm::repository::{

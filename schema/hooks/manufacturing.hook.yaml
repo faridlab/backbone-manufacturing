@@ -1,0 +1,143 @@
+# =============================================================================
+# Manufacturing Hooks — state machines, guards, zero scheduled jobs
+# =============================================================================
+# Hand-authored port register (user-owned; declared in metaphor.codegen.yaml). It is the
+# on-record contract for every state machine, every guard, and the no-cron posture:
+#
+# **The load-bearing decision (hybrid state):** WorkOrder.status and JobCard.status are
+# HYBRID — a small set of DIRECT writes (confirm / mark-done / cancel; start / finish /
+# cancel) plus DERIVED writes owned by the accumulator gates (progress on first consume,
+# to_close on partial receive; ready<->blocked from the parent's reservation_state).
+# The derived transitions below document which gate writes them — not a stored transition
+# log. reservation_state (waiting | confirmed | assigned) is THE availability signal —
+# no field named `availability` exists in this module.
+#
+# **ZERO scheduled jobs** (both hook index and source agree): all transitions fire
+# synchronously from the service verbs — no scheduler exists for MO aging, replanning,
+# or any manufacturing concern.
+#
+# Guard register notation: `enforcement:` keys are grounded in actual DDL per ADR-0015 —
+#   db      = a database object (CHECK / unique index / trigger) enforces it on raw SQL too
+#   both    = DB object AND a service-side gate predicate
+#   service = the service verb's gate predicate only (raw SQL can bypass; recorded)
+# =============================================================================
+
+state_machines:
+
+  # ===========================================================================
+  # WorkOrder.status — hybrid 6-state (three direct writes + derived computes)
+  # ===========================================================================
+  - entity: WorkOrder
+    field: status
+    initial: draft
+    shape: hybrid
+    note: "EXACTLY three direct writes: confirm (draft->confirmed, absorbs the BOM explosion), mark-done (->done via the full receipt), cancel (draft|confirmed->cancel, the inverse of confirm). progress and to_close are derived computes written ONLY by the accumulator gates; done and cancel are terminal."
+    states: [draft, confirmed, progress, to_close, done, cancel]
+    transitions:
+      - { id: T1, from: draft,                   to: confirmed, on: confirm,     write: direct,  note: "The sole entry into confirmed. Explodes the BOM into work_order_items (recursing through phantom components; kits get NO work order at all)." }
+      - { id: T2, from: confirmed,               to: progress,  on: consume,     write: derived, note: "First consume gate — materials issued to WIP. Same accumulator update, state via CASE; never written outside gate_consume." }
+      - { id: T3, from: progress,                to: to_close,  on: receive,     write: derived, note: "Partial receive — 0 < produced < ordered after the receipt. Written only by gate_receive's CASE." }
+      - { id: T4, from: [confirmed, progress, to_close], to: done, on: receive,  write: direct,  note: "The full receipt: produced + q >= quantity. THE mark-done write — the WIP-clearing receive post rides it." }
+      - { id: T5, from: [draft, confirmed],      to: cancel,    on: cancel,      write: direct,  note: "The inverse of confirm. ON-RECORD DEVIATION: cancel from progress or to_close (upstream T7's progress->cancel) is NOT ported — cancelling a WIP-carrying work order needs a reversal fabric that does not exist yet; the verb refuses LOUD (InvalidState). Upstream T8's done->cancel is likewise not ported (done is terminal)." }
+
+  # ===========================================================================
+  # JobCard.status — hybrid 5-state shop-floor machine (no pending, no open)
+  # ===========================================================================
+  - entity: JobCard
+    field: status
+    initial: ready
+    shape: hybrid
+    note: "Direct writes: start (ready|blocked -> progress), finish (-> done = the once-only operate charge, idempotency operate:{job_card_id}), cancel. ready<->blocked auto-flips derived from the parent work order's reservation_state. There is NO pending state and NO open state."
+    states: [ready, progress, done, cancel, blocked]
+    transitions:
+      - { id: W1, from: [ready, blocked],        to: progress, on: start,   write: direct,  note: "The operation run begins." }
+      - { id: W2, from: progress,                to: done,     on: finish,  write: direct,  note: "The once-only conversion-cost charge to WIP (operate:{job_card_id} idempotency)." }
+      - { id: W3, from: [ready, blocked, progress], to: cancel, on: cancel, write: direct, note: "Terminal and sticky." }
+      - { id: W4, from: [ready, blocked],        to: [ready, blocked], on: reservation_projection, write: derived, note: "Auto-flip from the parent work order's reservation_state (availability): assigned -> ready, waiting/confirmed -> blocked. A projection write, never hand-set." }
+
+  # ===========================================================================
+  # UnbuildOrder.status — PLAIN 2-state, NOT computed
+  # ===========================================================================
+  - entity: UnbuildOrder
+    field: status
+    initial: draft
+    shape: hand_set
+    note: "Plain draft->done. An unbuild NEVER creates a reverse work order — execute writes reverse stock moves directly through the InventoryPort (FG out, components in) and posts Dr Raw (Σ components) · Cr FG (same Σ). No cancel/return path; done is terminal."
+    states: [draft, done]
+    transitions:
+      - { id: U1, from: draft, to: done, on: execute, write: direct, note: "Guards: source work order state = done; quantity <= remaining producible (produced − Σ prior done unbuilds)." }
+
+  # ===========================================================================
+  # RepairOrder.status — hand-set chain, verb-driven only
+  # ===========================================================================
+  - entity: RepairOrder
+    field: status
+    initial: draft
+    shape: hand_set
+    note: "Hand-set draft -> confirmed -> under_repair -> done | cancel. Transitions happen ONLY via the service verbs; there is no free-form status write on the validated surface. done is uncancelable."
+    states: [draft, confirmed, under_repair, done, cancel]
+    transitions:
+      - { id: R1, from: draft,      to: confirmed,   on: validate, write: direct, note: "Part availability checked through the InventoryPort — a shortfall is a LOUD refusal (the upstream soft wizard is not ported)." }
+      - { id: R2, from: [draft, confirmed], to: under_repair, on: start, write: direct, note: "Auto-confirms a draft first (per the upstream start verb)." }
+      - { id: R3, from: under_repair, to: done,      on: end,      write: direct, note: "ONCE-ONLY; executes ALL part legs in one pass through the port, each idempotent on repair-leg:{repair}:{index} (add: out of stock; remove: to inventory loss; recycle: recovered to stock), then ONE grouped balanced GL post for the leg totals." }
+      - { id: R4, from: [confirmed, under_repair], to: cancel, on: cancel, write: direct, note: "done is uncancelable — LOUD refusal." }
+
+rules:
+
+  # ---------------------------------------------------------------------------
+  # Once-only + ordering guards (the WIP posts' integrity)
+  # ---------------------------------------------------------------------------
+  - { id: G-M1, name: "confirm-once",            when: "confirm_work_order",      entity: WorkOrder,   assert: "status = 'draft' (the in-transaction gate predicate)", error_code: InvalidState,    enforcement: both,    note: "gate_confirm's status='draft' predicate IS the once-only guard; the explosion writes exactly once." }
+  - { id: G-M2, name: "consume-once",            when: "consume_materials",       entity: WorkOrder,   assert: "status = 'confirmed' (gate_consume predicate)",         error_code: InvalidState,    enforcement: both,    note: "A repeat consume is an idempotent no-op, never a second issue." }
+  - { id: G-M3, name: "over-produce-bound",      when: "receive_finished",        entity: WorkOrder,   assert: "produced_qty + q <= quantity (IN gate_receive, enforced at the DB under concurrency)", error_code: OverProduce, enforcement: both, note: "The bound is a gate predicate, not only a service pre-check." }
+  - { id: G-M4, name: "job-card-charge-once",    when: "complete_job_card",       entity: JobCard,     assert: "status = 'progress' (gate_complete predicate) + operate:{job_card_id} GL idempotency", error_code: InvalidState, enforcement: both, note: "The once-only conversion charge." }
+  - { id: G-M5, name: "wip-ordering",            when: "receive_finished",        entity: WorkOrder,   assert: "status = 'progress' at the gate — a receive from confirmed is structurally impossible (WIP must carry value before FG can absorb it)", error_code: InvalidState, enforcement: both, note: "The receive gate predicate still requires progress-with-WIP; the derived-state CASE never admits a receive from confirmed." }
+  - { id: G-M6, name: "phantom-cycle-depth-cap", when: "explode_bom",             entity: Bom,         assert: "phantom nesting depth <= 8 (refusal beyond)",          error_code: Invalid,          enforcement: service, note: "A mis-authored phantom cycle refuses LOUD at depth 8." }
+
+  # ---------------------------------------------------------------------------
+  # BoM integrity guards
+  # ---------------------------------------------------------------------------
+  - { id: G-B4, name: "byproduct-cost-share",    when: "BomByproduct create/write", entity: BomByproduct, assert: "0 <= cost_share <= 100 per row; Σ cost_share across the BOM's byproducts <= 100", error_code: CostShareOverflow, enforcement: both, note: "Row bound is a DB CHECK; the Σ<=100 sum half is enforced at BoM authoring in the service. Never clamped — refused LOUD." }
+
+  # ---------------------------------------------------------------------------
+  # Lifecycle guards
+  # ---------------------------------------------------------------------------
+  - { id: G-L4, name: "product-immutable-after-draft", when: "work_orders UPDATE item_id", entity: WorkOrder, assert: "NEW.item_id = OLD.item_id OR OLD.status = 'draft' — otherwise the trigger RAISES", error_code: item_immutable, enforcement: db, note: "A BEFORE UPDATE trigger backstops the service verb. ON-RECORD DEVIATION from upstream: the source silently POPS product_id on a non-draft write; this port refuses LOUD — a silent drop is a data lie." }
+
+  # ---------------------------------------------------------------------------
+  # Unbuild guards
+  # ---------------------------------------------------------------------------
+  - { id: G-U1, name: "unbuild-from-done-and-bounded", when: "execute_unbuild", entity: UnbuildOrder, assert: "source work order status = 'done' AND quantity <= produced_qty − Σ(done unbuilds of that work order)", error_code: UnbuildSourceNotDone | UnbuildOverRemaining, enforcement: both, note: "A reverse work order is NEVER an acceptable workaround." }
+
+  # ---------------------------------------------------------------------------
+  # Repair guards
+  # ---------------------------------------------------------------------------
+  - { id: G-R1, name: "repair-transition-table", when: "validate/start/end/cancel verbs", entity: RepairOrder, assert: "only the R1–R4 transitions above; done is uncancelable", error_code: RepairInvalidState, enforcement: both, note: "The hand-set chain is verb-gated; there is no free-form status write on the validated surface." }
+  - { id: G-MEX7, name: "repair-tag-name-unique", when: "repair_tags INSERT/UPDATE", entity: RepairTag, assert: "unique (company_id, name) partial WHERE deleted_at IS NULL", error_code: duplicate_tag, enforcement: db, note: "The family's sole DB-level guard. ON-RECORD DEVIATION: tenant-scoped unique rather than the upstream GLOBAL unique(name) — a cross-tenant global unique would collide." }
+
+  # ---------------------------------------------------------------------------
+  # Workcenter guards
+  # ---------------------------------------------------------------------------
+  - { id: G-X3, name: "capacity-positive",       when: "workstations INSERT/UPDATE capacity", entity: Workstation, assert: "capacity > 0 (DB CHECK)", error_code: check_violation, enforcement: db, note: "Column CHECK on the capacity column." }
+
+  # ---------------------------------------------------------------------------
+  # Guards examined and deliberately NOT ported (silence is not deferral — these
+  # are the on-record notes):
+  #   G-L2 unlink-guard     — no soft-delete trigger added (not plan-named).
+  #   G-L3 cancel-locked    — depends on the is_locked soft toggle, which is NOT
+  #                           ported (done/cancel are terminal here).
+  #   G-B5 kit-no-orderpoint — no orderpoints in this module.
+  #   G-B6/B7 batch-size / outdated-flag — no batch-size or outdated surfaces.
+  #   G-X2 SN-unique        — no lot/serial surfaces in this module.
+  #   G-X4 capacity-unique  — no per-product capacity rows (capacity is a simple
+  #                           workstation column, positive-checked by G-X3).
+  #   G-P1 stock-rule       — no pull/procurement engine here.
+  #   G-C1..C3 consumption-policy — consume issues exactly the remaining qty;
+  #                           over-consume is structurally impossible, so the
+  #                           policy axis is not ported.
+  # ---------------------------------------------------------------------------
+
+scheduled_jobs: {}
+# ZERO scheduled jobs — the anchor this module's no-cron posture is verified against
+# (the hooks index carries the same empty map, and no scheduler code exists in src/).
+# Event-driven recurrence stays; every transition fires synchronously from a verb.

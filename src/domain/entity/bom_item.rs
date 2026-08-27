@@ -49,7 +49,7 @@ impl std::ops::Deref for BomItemId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BomItem {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -68,10 +68,10 @@ impl BomItem {
     }
 
     /// Create a new BomItem with required fields
-    pub fn new(company_id: Uuid, bom_id: Uuid, item_id: Uuid, quantity: Decimal, rate: Decimal, amount: Decimal, is_phantom: bool) -> Self {
+    pub fn new(bom_id: Uuid, item_id: Uuid, quantity: Decimal, rate: Decimal, amount: Decimal, is_phantom: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: None,
             bom_id,
             item_id,
             quantity,
@@ -132,6 +132,16 @@ impl BomItem {
         self.metadata.deleted_by.as_ref()
     }
 
+
+    // ==========================================================
+    // Fluent Setters (with_* for optional fields)
+    // ==========================================================
+
+    /// Set the company_id field (chainable)
+    pub fn with_company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
+        self
+    }
 
     // ==========================================================
     // Partial Update
@@ -245,7 +255,7 @@ pub struct BomItemBuilder {
 }
 
 impl BomItemBuilder {
-    /// Set the company_id field (required)
+    /// Set the company_id field (optional)
     pub fn company_id(mut self, value: Uuid) -> Self {
         self.company_id = Some(value);
         self
@@ -291,14 +301,13 @@ impl BomItemBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<BomItem, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let bom_id = self.bom_id.ok_or_else(|| "bom_id is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
         let quantity = self.quantity.ok_or_else(|| "quantity is required".to_string())?;
 
         Ok(BomItem {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: self.company_id,
             bom_id,
             item_id,
             quantity,

@@ -15,8 +15,10 @@ use backbone_manufacturing::application::service::manufacturing_gl::{
     AccountingPostEnvelope, GlPostAck, GlPostRejected, GlPostSink,
 };
 use backbone_manufacturing::application::service::manufacturing_ports::{
-    FinishedReceipt, InventoryPort, InventoryRejected, IssueAck, IssuedLineValue, MaterialIssue,
+    CostPosture, FinishedReceipt, InventoryPort, InventoryRejected, IssueAck, IssuedLineValue,
+    MaterialIssue, RepairAvailability, RepairLeg, UnbuildReversal,
 };
+use backbone_manufacturing::application::service::manufacturing_write_service::ReceiveFinishedOrder;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -34,8 +36,20 @@ pub fn dec(s: &str) -> Decimal {
 pub fn today() -> chrono::NaiveDate {
     chrono::Utc::now().date_naive()
 }
+/// A minimal average-posture receipt request (no byproducts, no extra cost).
+pub fn rcv(q: Decimal) -> ReceiveFinishedOrder {
+    ReceiveFinishedOrder {
+        produced_qty: q,
+        byproducts: vec![],
+        extra_cost: None,
+        cost_posture: CostPosture::default(),
+        standard_unit_price: None,
+    }
+}
 
 /// Seed a detail account and return its id. `atype`/`normal` are the accounting enum values.
+/// Idempotent per (company, account number): a code already seeded for the company returns the
+/// existing account's id instead of colliding on the unique index.
 pub async fn account(
     pool: &PgPool,
     company: Uuid,
@@ -45,7 +59,7 @@ pub async fn account(
     normal: &str,
 ) -> Uuid {
     let id = Uuid::new_v4();
-    sqlx::query(
+    let inserted = sqlx::query(
         r#"INSERT INTO accounting.accounts
              (id, company_id, account_number, account_code, name, account_type, account_subtype,
               normal_balance, is_header, is_detail, status)
@@ -61,9 +75,21 @@ pub async fn account(
     .bind(subtype)
     .bind(normal)
     .execute(pool)
-    .await
-    .expect("seed account");
-    id
+    .await;
+    match inserted {
+        Ok(_) => id,
+        Err(e) if matches!(&e, sqlx::Error::Database(db) if db.code().as_deref() == Some("23505")) => {
+            sqlx::query_scalar(
+                "SELECT id FROM accounting.accounts WHERE company_id=$1 AND account_number=$2",
+            )
+            .bind(company)
+            .bind(code)
+            .fetch_one(pool)
+            .await
+            .expect("load already-seeded account")
+        }
+        Err(e) => panic!("seed account: {e}"),
+    }
 }
 
 /// Ledger balance (debit − credit) for an account.
@@ -156,19 +182,24 @@ impl GlPostSink for CountingGl {
 
 /// A faithful in-test inventory: valued stock, insufficient-stock rejection, **idempotent** issue/receive
 /// (a repeated `idempotency_key` never moves stock twice), plus an optional one-shot receive failure to
-/// exercise the crash-between-side-effect-and-gate window.
+/// exercise the crash-between-side-effect-and-gate window. Also implements the reversal / repair-leg /
+/// availability surface, and records byproduct + extra-cost legs for assertions.
 #[derive(Clone, Default)]
 pub struct FakeInventory {
     /// item_id → (on_hand_qty, valuation_rate)
     pub raw: Arc<Mutex<HashMap<Uuid, (Decimal, Decimal)>>>,
-    /// item_id → received finished (qty, total_value)
+    /// item_id → received finished (qty, total_value) — FG AND byproducts land here
     pub finished: Arc<Mutex<HashMap<Uuid, (Decimal, Decimal)>>>,
     /// idempotency_key → prior IssueAck (dedup)
     issued: Arc<Mutex<HashMap<String, IssueAck>>>,
-    /// idempotency_keys of receipts already applied
+    /// idempotency_keys of receipts/reversals/legs already applied
     received: Arc<Mutex<std::collections::HashSet<String>>>,
     /// when > 0, the next N `receive_finished` calls fail transiently (then succeed)
     fail_receive: Arc<Mutex<u32>>,
+    /// every extra-cost leg carried by receipts, in order
+    pub extra_costs: Arc<Mutex<Vec<Decimal>>>,
+    /// executed repair legs (line_type, item_id, quantity, rate), in order
+    pub repair_legs: Arc<Mutex<Vec<(String, Uuid, Decimal, Decimal)>>>,
 }
 impl FakeInventory {
     pub fn new() -> Self {
@@ -234,6 +265,139 @@ impl InventoryPort for FakeInventory {
         let e = fin.entry(req.item_id).or_insert((Decimal::ZERO, Decimal::ZERO));
         e.0 += req.quantity;
         e.1 += req.value;
+        // Byproducts land in the finished estate too, each at its split value.
+        for b in &req.byproducts {
+            let be = fin.entry(b.item_id).or_insert((Decimal::ZERO, Decimal::ZERO));
+            be.0 += b.quantity;
+            be.1 += b.value;
+        }
+        if let Some(extra) = req.extra_cost {
+            if extra > Decimal::ZERO {
+                self.extra_costs.lock().unwrap().push(extra);
+            }
+        }
         Ok(())
     }
+    async fn reverse_production(&self, req: &UnbuildReversal) -> Result<(), InventoryRejected> {
+        if !self.received.lock().unwrap().insert(req.idempotency_key.clone()) {
+            return Ok(());
+        }
+        let mut fin = self.finished.lock().unwrap();
+        let (qty, value) = fin.get(&req.item_id).copied().unwrap_or((Decimal::ZERO, Decimal::ZERO));
+        if req.quantity > qty {
+            return Err(InventoryRejected {
+                code: "insufficient_stock".into(),
+                message: format!("finished stock of {} is {}", req.item_id, qty),
+            });
+        }
+        // Reverse off at the estate's average rate; the recovered value rides the components.
+        let _rate = if qty > Decimal::ZERO { value / qty } else { Decimal::ZERO };
+        fin.insert(req.item_id, (qty - req.quantity, value - req.value));
+        drop(fin);
+        // Components return to raw stock: quantity back, value spread by the request's shares.
+        let mut raw = self.raw.lock().unwrap();
+        let total_comp_qty: Decimal = req.components.iter().map(|c| c.quantity).sum();
+        for c in &req.components {
+            let (q, r) = raw.get(&c.item_id).copied().unwrap_or((Decimal::ZERO, Decimal::ZERO));
+            let share = if total_comp_qty > Decimal::ZERO {
+                req.value * c.quantity / total_comp_qty
+            } else {
+                Decimal::ZERO
+            };
+            let new_rate = if q + c.quantity > Decimal::ZERO {
+                (r * q + share) / (q + c.quantity)
+            } else {
+                r
+            };
+            raw.insert(c.item_id, (q + c.quantity, new_rate));
+        }
+        Ok(())
+    }
+    async fn execute_repair_leg(&self, req: &RepairLeg) -> Result<(), InventoryRejected> {
+        // Idempotent per key — but a key is claimed ONLY when the leg actually moves stock: a
+        // failed attempt must not consume the key, or the ruled retry would silently no-op.
+        if self.received.lock().unwrap().contains(&req.idempotency_key) {
+            return Ok(());
+        }
+        let mut raw = self.raw.lock().unwrap();
+        match req.line_type.as_str() {
+            "add" | "remove" => {
+                let (qty, rate) = raw.get(&req.item_id).copied().unwrap_or((Decimal::ZERO, Decimal::ZERO));
+                if req.quantity > qty {
+                    return Err(InventoryRejected {
+                        code: "insufficient_stock".into(),
+                        message: format!("stock of {} is {}", req.item_id, qty),
+                    });
+                }
+                raw.insert(req.item_id, (qty - req.quantity, rate));
+            }
+            "recycle" => {
+                let (qty, rate) = raw.get(&req.item_id).copied().unwrap_or((Decimal::ZERO, Decimal::ZERO));
+                raw.insert(req.item_id, (qty + req.quantity, rate));
+            }
+            other => {
+                return Err(InventoryRejected { code: "bad_line_type".into(), message: other.into() });
+            }
+        }
+        drop(raw);
+        self.received.lock().unwrap().insert(req.idempotency_key.clone());
+        self.repair_legs
+            .lock()
+            .unwrap()
+            .push((req.line_type.clone(), req.item_id, req.quantity, req.rate));
+        Ok(())
+    }
+    async fn check_repair_availability(&self, req: &RepairAvailability) -> Result<(), InventoryRejected> {
+        let qty = self
+            .raw
+            .lock()
+            .unwrap()
+            .get(&req.item_id)
+            .map(|(q, _)| *q)
+            .unwrap_or(Decimal::ZERO);
+        if req.quantity > qty {
+            return Err(InventoryRejected {
+                code: "insufficient_stock".into(),
+                message: format!("{} short of {}", qty, req.quantity),
+            });
+        }
+        Ok(())
+    }
+}
+
+/// Seed a category's costing-defaults row (the account-resolution chain's middle hop).
+#[allow(clippy::too_many_arguments)]
+pub async fn seed_costing_defaults(
+    pool: &PgPool,
+    company: Uuid,
+    category: Uuid,
+    wip: Option<Uuid>,
+    fg: Option<Uuid>,
+    raw: Option<Uuid>,
+    conversion: Option<Uuid>,
+    interim: Option<Uuid>,
+    variance: Option<Uuid>,
+    inventory_loss: Option<Uuid>,
+    repair_expense: Option<Uuid>,
+) {
+    use backbone_manufacturing::infrastructure::persistence::{CostingDefaultsRepository, NewCostingDefaultsRow};
+    CostingDefaultsRepository::new(pool.clone())
+        .insert_defaults(
+            pool,
+            &NewCostingDefaultsRow {
+                id: Uuid::new_v4(),
+                company_id: company,
+                product_category_id: category,
+                wip_account_id: wip,
+                fg_account_id: fg,
+                raw_material_account_id: raw,
+                conversion_cost_account_id: conversion,
+                subcontract_interim_account_id: interim,
+                cost_variance_account_id: variance,
+                inventory_loss_account_id: inventory_loss,
+                repair_expense_account_id: repair_expense,
+            },
+        )
+        .await
+        .expect("seed costing defaults");
 }

@@ -7,13 +7,23 @@
 
 
 pub mod workstation_repository;
+pub mod workstation_loss_repository;
+pub mod workstation_productivity_repository;
 pub mod operation_repository;
 pub mod bom_repository;
 pub mod bom_item_repository;
 pub mod bom_operation_repository;
+pub mod bom_byproduct_repository;
+pub mod bom_subcontractor_repository;
+pub mod category_costing_defaults_repository;
+pub mod repair_order_repository;
+pub mod repair_part_repository;
+pub mod repair_tag_repository;
+pub mod unbuild_order_repository;
 pub mod work_order_repository;
 pub mod work_order_item_repository;
 pub mod job_card_repository;
+pub mod subcontract_mo_link_repository;
 
 // Re-exports
 pub use workstation_repository::{
@@ -21,6 +31,18 @@ pub use workstation_repository::{
     WorkstationPaginationParams,
     WorkstationPaginatedResult,
     WorkstationFilter,
+};
+pub use workstation_loss_repository::{
+    WorkstationLossRepository,
+    WorkstationLossPaginationParams,
+    WorkstationLossPaginatedResult,
+    WorkstationLossFilter,
+};
+pub use workstation_productivity_repository::{
+    WorkstationProductivityRepository,
+    WorkstationProductivityPaginationParams,
+    WorkstationProductivityPaginatedResult,
+    WorkstationProductivityFilter,
 };
 pub use operation_repository::{
     OperationRepository,
@@ -46,6 +68,48 @@ pub use bom_operation_repository::{
     BomOperationPaginatedResult,
     BomOperationFilter,
 };
+pub use bom_byproduct_repository::{
+    BomByproductRepository,
+    BomByproductPaginationParams,
+    BomByproductPaginatedResult,
+    BomByproductFilter,
+};
+pub use bom_subcontractor_repository::{
+    BomSubcontractorRepository,
+    BomSubcontractorPaginationParams,
+    BomSubcontractorPaginatedResult,
+    BomSubcontractorFilter,
+};
+pub use category_costing_defaults_repository::{
+    CategoryCostingDefaultsRepository,
+    CategoryCostingDefaultsPaginationParams,
+    CategoryCostingDefaultsPaginatedResult,
+    CategoryCostingDefaultsFilter,
+};
+pub use repair_order_repository::{
+    RepairOrderRepository,
+    RepairOrderPaginationParams,
+    RepairOrderPaginatedResult,
+    RepairOrderFilter,
+};
+pub use repair_part_repository::{
+    RepairPartRepository,
+    RepairPartPaginationParams,
+    RepairPartPaginatedResult,
+    RepairPartFilter,
+};
+pub use repair_tag_repository::{
+    RepairTagRepository,
+    RepairTagPaginationParams,
+    RepairTagPaginatedResult,
+    RepairTagFilter,
+};
+pub use unbuild_order_repository::{
+    UnbuildOrderRepository,
+    UnbuildOrderPaginationParams,
+    UnbuildOrderPaginatedResult,
+    UnbuildOrderFilter,
+};
 pub use work_order_repository::{
     WorkOrderRepository,
     WorkOrderPaginationParams,
@@ -63,4 +127,10 @@ pub use job_card_repository::{
     JobCardPaginationParams,
     JobCardPaginatedResult,
     JobCardFilter,
+};
+pub use subcontract_mo_link_repository::{
+    SubcontractMoLinkRepository,
+    SubcontractMoLinkPaginationParams,
+    SubcontractMoLinkPaginatedResult,
+    SubcontractMoLinkFilter,
 };

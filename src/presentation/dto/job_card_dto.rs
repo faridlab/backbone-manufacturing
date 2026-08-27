@@ -19,7 +19,7 @@ use validator::Validate;
 
 use crate::domain::entity::JobCard;
 use crate::domain::entity::AuditMetadata;
-use crate::domain::entity::JobCardStatus;
+use crate::domain::entity::JobCardState;
 
 // =============================================================================
 // Create DTO
@@ -52,7 +52,7 @@ pub struct CreateJobCardDto {
     pub hour_rate: Decimal,
     #[serde(alias = "operating_cost")]
     pub operating_cost: Decimal,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
 }
 
 // =============================================================================
@@ -86,7 +86,7 @@ pub struct UpdateJobCardDto {
     pub hour_rate: Decimal,
     #[serde(alias = "operating_cost")]
     pub operating_cost: Decimal,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
 }
 
 // =============================================================================
@@ -121,7 +121,7 @@ pub struct PatchJobCardDto {
     #[serde(skip_serializing_if = "Option::is_none", alias = "operating_cost")]
     pub operating_cost: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<JobCardStatus>,
+    pub status: Option<JobCardState>,
 }
 
 impl PatchJobCardDto {
@@ -156,7 +156,7 @@ pub struct JobCardResponseDto {
     pub total_time_mins: Decimal,
     pub hour_rate: Decimal,
     pub operating_cost: Decimal,
-    pub status: JobCardStatus,
+    pub status: JobCardState,
     pub metadata: AuditMetadata,
 }
 

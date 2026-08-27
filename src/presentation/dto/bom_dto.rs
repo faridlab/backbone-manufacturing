@@ -20,6 +20,7 @@ use validator::Validate;
 use crate::domain::entity::Bom;
 use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::BomStatus;
+use crate::domain::entity::BomType;
 
 // =============================================================================
 // Create DTO
@@ -34,9 +35,8 @@ use crate::domain::entity::BomStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBomDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
@@ -44,6 +44,10 @@ pub struct CreateBomDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "bom_code")]
     pub bom_code: String,
+    #[cfg_attr(feature = "openapi", schema(example = 42))]
+    pub version: i32,
+    #[serde(alias = "bom_type")]
+    pub bom_type: BomType,
     pub quantity: Decimal,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -75,9 +79,8 @@ pub struct CreateBomDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBomDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
@@ -85,6 +88,10 @@ pub struct UpdateBomDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "bom_code")]
     pub bom_code: String,
+    #[cfg_attr(feature = "openapi", schema(example = 42))]
+    pub version: i32,
+    #[serde(alias = "bom_type")]
+    pub bom_type: BomType,
     pub quantity: Decimal,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -116,7 +123,6 @@ pub struct UpdateBomDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchBomDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -126,6 +132,11 @@ pub struct PatchBomDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "bom_code")]
     pub bom_code: Option<String>,
+    #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "bom_type")]
+    pub bom_type: Option<BomType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -150,7 +161,7 @@ pub struct PatchBomDto {
 impl PatchBomDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.status.is_some() || self.is_default.is_some()
+        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.version.is_some() || self.bom_type.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.status.is_some() || self.is_default.is_some()
     }
 }
 
@@ -168,12 +179,14 @@ impl PatchBomDto {
 pub struct BomResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub item_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub bom_code: String,
+    #[cfg_attr(feature = "openapi", schema(example = 42))]
+    pub version: i32,
+    pub bom_type: BomType,
     pub quantity: Decimal,
     pub uom: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -241,7 +254,7 @@ impl BomListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct BomSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: String,
     pub created_at: Option<DateTime<Utc>>,
@@ -258,6 +271,8 @@ impl From<Bom> for BomResponseDto {
             company_id: entity.company_id,
             item_id: entity.item_id,
             bom_code: entity.bom_code,
+            version: entity.version,
+            bom_type: entity.bom_type,
             quantity: entity.quantity,
             uom: entity.uom,
             currency: entity.currency,
@@ -291,6 +306,8 @@ impl From<CreateBomDto> for Bom {
             company_id: dto.company_id,
             item_id: dto.item_id,
             bom_code: dto.bom_code,
+            version: dto.version,
+            bom_type: dto.bom_type,
             quantity: dto.quantity,
             uom: dto.uom,
             currency: dto.currency,
@@ -311,6 +328,8 @@ impl From<&Bom> for BomResponseDto {
             company_id: entity.company_id.clone(),
             item_id: entity.item_id.clone(),
             bom_code: entity.bom_code.clone(),
+            version: entity.version.clone(),
+            bom_type: entity.bom_type.clone(),
             quantity: entity.quantity.clone(),
             uom: entity.uom.clone(),
             currency: entity.currency.clone(),
@@ -335,6 +354,8 @@ impl backbone_core::ApplyUpdateDto<UpdateBomDto> for Bom {
         self.company_id = dto.company_id;
         self.item_id = dto.item_id;
         self.bom_code = dto.bom_code;
+        self.version = dto.version;
+        self.bom_type = dto.bom_type;
         self.quantity = dto.quantity;
         self.uom = dto.uom;
         self.currency = dto.currency;

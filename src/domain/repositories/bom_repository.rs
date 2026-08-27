@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::{Bom, BomStatus};
+use crate::domain::entity::{Bom, BomStatus, BomType};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -47,6 +47,7 @@ pub struct BomFilter {
     pub company_id: Option<Uuid>,
     pub item_id: Option<Uuid>,
     pub bom_code: Option<String>,
+    pub bom_type: Option<BomType>,
     pub uom: Option<String>,
     pub currency: Option<String>,
     pub status: Option<BomStatus>,
@@ -56,7 +57,7 @@ pub struct BomFilter {
 impl BomFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.uom.is_some() || self.currency.is_some() || self.status.is_some() || self.is_default.is_some()
+        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.bom_type.is_some() || self.uom.is_some() || self.currency.is_some() || self.status.is_some() || self.is_default.is_some()
     }
 }
 

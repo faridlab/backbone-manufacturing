@@ -49,7 +49,7 @@ impl std::ops::Deref for BomOperationId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BomOperation {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -68,10 +68,10 @@ impl BomOperation {
     }
 
     /// Create a new BomOperation with required fields
-    pub fn new(company_id: Uuid, bom_id: Uuid, operation_id: Uuid, workstation_id: Uuid, time_in_mins: Decimal, hour_rate: Decimal, operating_cost: Decimal) -> Self {
+    pub fn new(bom_id: Uuid, operation_id: Uuid, workstation_id: Uuid, time_in_mins: Decimal, hour_rate: Decimal, operating_cost: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: None,
             bom_id,
             operation_id,
             workstation_id,
@@ -132,6 +132,16 @@ impl BomOperation {
         self.metadata.deleted_by.as_ref()
     }
 
+
+    // ==========================================================
+    // Fluent Setters (with_* for optional fields)
+    // ==========================================================
+
+    /// Set the company_id field (chainable)
+    pub fn with_company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
+        self
+    }
 
     // ==========================================================
     // Partial Update
@@ -246,7 +256,7 @@ pub struct BomOperationBuilder {
 }
 
 impl BomOperationBuilder {
-    /// Set the company_id field (required)
+    /// Set the company_id field (optional)
     pub fn company_id(mut self, value: Uuid) -> Self {
         self.company_id = Some(value);
         self
@@ -292,7 +302,6 @@ impl BomOperationBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<BomOperation, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let bom_id = self.bom_id.ok_or_else(|| "bom_id is required".to_string())?;
         let operation_id = self.operation_id.ok_or_else(|| "operation_id is required".to_string())?;
         let workstation_id = self.workstation_id.ok_or_else(|| "workstation_id is required".to_string())?;
@@ -300,7 +309,7 @@ impl BomOperationBuilder {
 
         Ok(BomOperation {
             id: Uuid::new_v4(),
-            company_id,
+            company_id: self.company_id,
             bom_id,
             operation_id,
             workstation_id,

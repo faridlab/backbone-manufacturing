@@ -15,3 +15,15 @@
 - work_order_seed
 - work_order_item_seed
 - job_card_seed
+
+# Newly added seeds (preserve manual order above):
+- repair_tag_seed
+- repair_order_seed
+- unbuild_order_seed
+- workstation_productivity_seed
+- workstation_loss_seed
+- category_costing_defaults_seed
+- bom_byproduct_seed
+- bom_subcontractor_seed
+- repair_part_seed
+- subcontract_mo_link_seed

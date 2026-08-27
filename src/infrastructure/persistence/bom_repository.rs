@@ -43,11 +43,13 @@ impl BomRepository {
 /// The exact row a BOM-header insert writes.
 ///
 /// Mirrors the raw column shape rather than the `Bom` entity: the three cost columns are already
-/// rolled up server-side by the write service, and `currency` / `status` / `is_default` are pinned
-/// by the statement (`'IDR'`, `'active'`, `false`) rather than passed.
+/// rolled up server-side by the write service, and `currency` / `status` / `is_default` /
+/// `version` / `bom_type` are pinned by the statement (`'IDR'`, `'active'`, `false`, `1`,
+/// `'normal'`) rather than passed. `company_id` is nullable: a NULL company is shared master
+/// data, visible to every company session (the shared_blank fence, ADR-0014).
 pub struct NewBomRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
+    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: &'a str,
     pub quantity: Decimal,
@@ -77,8 +79,9 @@ impl BomRepository {
         sqlx::query(
             r#"INSERT INTO manufacturing.boms
                  (id, company_id, item_id, bom_code, quantity, uom, currency,
-                  raw_material_cost, operating_cost, total_cost, status, is_default)
-               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,'active',false)"#,
+                  raw_material_cost, operating_cost, total_cost, status, is_default,
+                  version, bom_type)
+               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,'active',false,1,'normal'::bom_type)"#,
         )
         .bind(b.id).bind(b.company_id).bind(b.item_id).bind(b.bom_code).bind(b.quantity)
         .bind(b.uom).bind(b.raw_material_cost).bind(b.operating_cost).bind(b.total_cost)
@@ -107,11 +110,50 @@ impl BomRepository {
         ).await
     }
 
-    /// Resolve the BOM to explode a phantom component through: its item's active BOM, default first,
-    /// oldest as the tiebreak (a deterministic pick — the explosion must not vary run to run).
+    /// Read a BOM's owning company (NULL = a shared master-data row). Byproduct authoring
+    /// mirrors this onto the child row so a byproduct rides its BoM's fence posture.
+    pub async fn fetch_company_id(
+        &self,
+        pool: &PgPool,
+        bom_id: Uuid,
+    ) -> Result<Option<Option<Uuid>>, sqlx::Error> {
+        company_scope::fetch_optional_scalar_scoped(
+            pool,
+            sqlx::query_scalar(
+                r#"SELECT company_id FROM manufacturing.boms
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(bom_id),
+        ).await
+    }
+
+    /// Read a BOM's type (normal / kit / subcontract).
     ///
-    /// Same scoping as [`Self::fetch_output_quantity`]; the explicit `company_id=$1` filter stays as
-    /// defense-in-depth.
+    /// The confirm verb refuses kit and subcontract BoMs LOUDLY: a phantom KIT never gets its own
+    /// work order (it explodes through to components at demand time), and a SUBCONTRACT order is
+    /// minted only by the subcontract receipt event — hidden and directly in `confirmed`.
+    pub async fn fetch_bom_type(
+        &self,
+        pool: &PgPool,
+        bom_id: Uuid,
+    ) -> Result<Option<String>, sqlx::Error> {
+        company_scope::fetch_optional_scalar_scoped(
+            pool,
+            sqlx::query_scalar(
+                r#"SELECT bom_type::text FROM manufacturing.boms
+                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(bom_id),
+        ).await
+    }
+
+    /// Resolve the BOM to explode a phantom component through: its item's active BOM, company-owned
+    /// before shared, default first, oldest as the tiebreak (a deterministic pick — the explosion
+    /// must not vary run to run).
+    ///
+    /// The `OR company_id IS NULL` arm is the shared_blank master-data read (ADR-0014): a recipe
+    /// authored once as shared master data resolves for every company, while a company-owned BoM of
+    /// the same item still wins. Same scoping as [`Self::fetch_output_quantity`].
     pub async fn find_active_bom_for_item(
         &self,
         pool: &PgPool,
@@ -122,9 +164,10 @@ impl BomRepository {
             pool,
             sqlx::query_scalar(
                 r#"SELECT id FROM manufacturing.boms
-                   WHERE company_id=$1 AND item_id=$2 AND status='active'
+                   WHERE (company_id=$1 OR company_id IS NULL) AND item_id=$2 AND status='active'
                      AND (metadata->>'deleted_at') IS NULL
-                   ORDER BY is_default DESC, (metadata->>'created_at') ASC LIMIT 1"#,
+                   ORDER BY (company_id IS NULL) ASC, is_default DESC,
+                            (metadata->>'created_at') ASC LIMIT 1"#,
             )
             .bind(company_id)
             .bind(item_id),

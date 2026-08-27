@@ -76,6 +76,7 @@ async fn mgc2_work_order_explosion() {
 
     let wo = svc
         .create_work_order(NewWorkOrder {
+            product_category_id: None,
             company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: item,
@@ -90,7 +91,7 @@ async fn mgc2_work_order_explosion() {
         })
         .await
         .unwrap();
-    svc.release_work_order(wo, &sink).await.unwrap();
+    svc.confirm_work_order(wo, &sink).await.unwrap();
 
     // required = component qty (2) × WO qty (5) / BOM qty (1) = 10
     let required: Decimal = sqlx::query_scalar(
@@ -127,6 +128,7 @@ async fn mgc3_validation() {
     let bom = a_bom(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     let bad_qty = svc
         .create_work_order(NewWorkOrder {
+            product_category_id: None,
             company_id: company,
             work_order_number: "WO-BAD".into(),
             item_id: item,
@@ -179,12 +181,13 @@ async fn mgc4_phantom_bom_explodes_through() {
     }).await.unwrap();
 
     let wo = svc.create_work_order(NewWorkOrder {
+            product_category_id: None,
         company_id: company, work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
         item_id: chair, bom_id: chair_bom, quantity: dec("2"),
         wip_warehouse_id: None, fg_warehouse_id: None, wip_account_id: None, fg_account_id: None,
         raw_material_account_id: None, conversion_cost_account_id: None,
     }).await.unwrap();
-    svc.release_work_order(wo, &sink).await.unwrap();
+    svc.confirm_work_order(wo, &sink).await.unwrap();
 
     let req = |item: Uuid| {
         let pool = pool.clone();

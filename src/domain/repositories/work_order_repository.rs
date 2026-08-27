@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::{WorkOrder, WorkOrderStatus};
+use crate::domain::entity::{WorkOrder, ReservationState, WorkOrderState};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -48,7 +48,9 @@ pub struct WorkOrderFilter {
     pub work_order_number: Option<String>,
     pub item_id: Option<Uuid>,
     pub bom_id: Option<Uuid>,
-    pub status: Option<WorkOrderStatus>,
+    pub status: Option<WorkOrderState>,
+    pub reservation_state: Option<ReservationState>,
+    pub product_category_id: Option<Uuid>,
     pub wip_warehouse_id: Option<Uuid>,
     pub fg_warehouse_id: Option<Uuid>,
     pub wip_account_id: Option<Uuid>,
@@ -60,7 +62,7 @@ pub struct WorkOrderFilter {
 impl WorkOrderFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.status.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some()
+        self.company_id.is_some() || self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.status.is_some() || self.reservation_state.is_some() || self.product_category_id.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some()
     }
 }
 

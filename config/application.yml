@@ -76,6 +76,76 @@ entities:
     pagination:
       default_limit: 20
       max_limit: 100
+  workstation_loss:
+    collection: workstation_losses
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  workstation_productivity:
+    collection: workstation_productivity
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  bom_byproduct:
+    collection: bom_byproducts
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  bom_subcontractor:
+    collection: bom_subcontractors
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  category_costing_defaults:
+    collection: category_costing_defaults
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  repair_order:
+    collection: repair_orders
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  repair_part:
+    collection: repair_parts
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  repair_tag:
+    collection: repair_tags
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  unbuild_order:
+    collection: unbuild_orders
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  subcontract_mo_link:
+    collection: subcontract_mo_links
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
 tracing:
   enabled: true
   exporter: otlp

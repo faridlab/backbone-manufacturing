@@ -38,6 +38,60 @@ pub struct WorkstationDeletedEvent {
 }
 
 // ============================================================================
+// WORKSTATIONLOSS EVENTS
+// ============================================================================
+
+/// Event published when a WorkstationLoss is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossCreatedEvent {
+    pub id: WorkstationLossId,
+    pub data: WorkstationLossDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a WorkstationLoss is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossUpdatedEvent {
+    pub id: WorkstationLossId,
+    pub data: WorkstationLossDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a WorkstationLoss is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationLossDeletedEvent {
+    pub id: WorkstationLossId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// WORKSTATIONPRODUCTIVITY EVENTS
+// ============================================================================
+
+/// Event published when a WorkstationProductivity is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivityCreatedEvent {
+    pub id: WorkstationProductivityId,
+    pub data: WorkstationProductivityDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a WorkstationProductivity is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivityUpdatedEvent {
+    pub id: WorkstationProductivityId,
+    pub data: WorkstationProductivityDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a WorkstationProductivity is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkstationProductivityDeletedEvent {
+    pub id: WorkstationProductivityId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
 // OPERATION EVENTS
 // ============================================================================
 
@@ -146,6 +200,195 @@ pub struct BomOperationDeletedEvent {
 }
 
 // ============================================================================
+// BOMBYPRODUCT EVENTS
+// ============================================================================
+
+/// Event published when a BomByproduct is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductCreatedEvent {
+    pub id: BomByproductId,
+    pub data: BomByproductDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BomByproduct is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductUpdatedEvent {
+    pub id: BomByproductId,
+    pub data: BomByproductDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BomByproduct is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomByproductDeletedEvent {
+    pub id: BomByproductId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// BOMSUBCONTRACTOR EVENTS
+// ============================================================================
+
+/// Event published when a BomSubcontractor is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorCreatedEvent {
+    pub id: BomSubcontractorId,
+    pub data: BomSubcontractorDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BomSubcontractor is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorUpdatedEvent {
+    pub id: BomSubcontractorId,
+    pub data: BomSubcontractorDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BomSubcontractor is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BomSubcontractorDeletedEvent {
+    pub id: BomSubcontractorId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// CATEGORYCOSTINGDEFAULTS EVENTS
+// ============================================================================
+
+/// Event published when a CategoryCostingDefaults is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsCreatedEvent {
+    pub id: CategoryCostingDefaultsId,
+    pub data: CategoryCostingDefaultsDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a CategoryCostingDefaults is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsUpdatedEvent {
+    pub id: CategoryCostingDefaultsId,
+    pub data: CategoryCostingDefaultsDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a CategoryCostingDefaults is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCostingDefaultsDeletedEvent {
+    pub id: CategoryCostingDefaultsId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// REPAIRORDER EVENTS
+// ============================================================================
+
+/// Event published when a RepairOrder is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderCreatedEvent {
+    pub id: RepairOrderId,
+    pub data: RepairOrderDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairOrder is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderUpdatedEvent {
+    pub id: RepairOrderId,
+    pub data: RepairOrderDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairOrder is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairOrderDeletedEvent {
+    pub id: RepairOrderId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// REPAIRPART EVENTS
+// ============================================================================
+
+/// Event published when a RepairPart is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartCreatedEvent {
+    pub id: RepairPartId,
+    pub data: RepairPartDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairPart is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartUpdatedEvent {
+    pub id: RepairPartId,
+    pub data: RepairPartDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairPart is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairPartDeletedEvent {
+    pub id: RepairPartId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// REPAIRTAG EVENTS
+// ============================================================================
+
+/// Event published when a RepairTag is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagCreatedEvent {
+    pub id: RepairTagId,
+    pub data: RepairTagDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairTag is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagUpdatedEvent {
+    pub id: RepairTagId,
+    pub data: RepairTagDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a RepairTag is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepairTagDeletedEvent {
+    pub id: RepairTagId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// UNBUILDORDER EVENTS
+// ============================================================================
+
+/// Event published when a UnbuildOrder is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderCreatedEvent {
+    pub id: UnbuildOrderId,
+    pub data: UnbuildOrderDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a UnbuildOrder is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderUpdatedEvent {
+    pub id: UnbuildOrderId,
+    pub data: UnbuildOrderDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a UnbuildOrder is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnbuildOrderDeletedEvent {
+    pub id: UnbuildOrderId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
 // WORKORDER EVENTS
 // ============================================================================
 
@@ -227,6 +470,33 @@ pub struct JobCardDeletedEvent {
 }
 
 // ============================================================================
+// SUBCONTRACTMOLINK EVENTS
+// ============================================================================
+
+/// Event published when a SubcontractMoLink is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkCreatedEvent {
+    pub id: SubcontractMoLinkId,
+    pub data: SubcontractMoLinkDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a SubcontractMoLink is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkUpdatedEvent {
+    pub id: SubcontractMoLinkId,
+    pub data: SubcontractMoLinkDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a SubcontractMoLink is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubcontractMoLinkDeletedEvent {
+    pub id: SubcontractMoLinkId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
 // MODULE EVENT ENUM
 // ============================================================================
 
@@ -237,6 +507,12 @@ pub enum ManufacturingEvent {
     WorkstationCreated(WorkstationCreatedEvent),
     WorkstationUpdated(WorkstationUpdatedEvent),
     WorkstationDeleted(WorkstationDeletedEvent),
+    WorkstationLossCreated(WorkstationLossCreatedEvent),
+    WorkstationLossUpdated(WorkstationLossUpdatedEvent),
+    WorkstationLossDeleted(WorkstationLossDeletedEvent),
+    WorkstationProductivityCreated(WorkstationProductivityCreatedEvent),
+    WorkstationProductivityUpdated(WorkstationProductivityUpdatedEvent),
+    WorkstationProductivityDeleted(WorkstationProductivityDeletedEvent),
     OperationCreated(OperationCreatedEvent),
     OperationUpdated(OperationUpdatedEvent),
     OperationDeleted(OperationDeletedEvent),
@@ -249,6 +525,27 @@ pub enum ManufacturingEvent {
     BomOperationCreated(BomOperationCreatedEvent),
     BomOperationUpdated(BomOperationUpdatedEvent),
     BomOperationDeleted(BomOperationDeletedEvent),
+    BomByproductCreated(BomByproductCreatedEvent),
+    BomByproductUpdated(BomByproductUpdatedEvent),
+    BomByproductDeleted(BomByproductDeletedEvent),
+    BomSubcontractorCreated(BomSubcontractorCreatedEvent),
+    BomSubcontractorUpdated(BomSubcontractorUpdatedEvent),
+    BomSubcontractorDeleted(BomSubcontractorDeletedEvent),
+    CategoryCostingDefaultsCreated(CategoryCostingDefaultsCreatedEvent),
+    CategoryCostingDefaultsUpdated(CategoryCostingDefaultsUpdatedEvent),
+    CategoryCostingDefaultsDeleted(CategoryCostingDefaultsDeletedEvent),
+    RepairOrderCreated(RepairOrderCreatedEvent),
+    RepairOrderUpdated(RepairOrderUpdatedEvent),
+    RepairOrderDeleted(RepairOrderDeletedEvent),
+    RepairPartCreated(RepairPartCreatedEvent),
+    RepairPartUpdated(RepairPartUpdatedEvent),
+    RepairPartDeleted(RepairPartDeletedEvent),
+    RepairTagCreated(RepairTagCreatedEvent),
+    RepairTagUpdated(RepairTagUpdatedEvent),
+    RepairTagDeleted(RepairTagDeletedEvent),
+    UnbuildOrderCreated(UnbuildOrderCreatedEvent),
+    UnbuildOrderUpdated(UnbuildOrderUpdatedEvent),
+    UnbuildOrderDeleted(UnbuildOrderDeletedEvent),
     WorkOrderCreated(WorkOrderCreatedEvent),
     WorkOrderUpdated(WorkOrderUpdatedEvent),
     WorkOrderDeleted(WorkOrderDeletedEvent),
@@ -258,6 +555,9 @@ pub enum ManufacturingEvent {
     JobCardCreated(JobCardCreatedEvent),
     JobCardUpdated(JobCardUpdatedEvent),
     JobCardDeleted(JobCardDeletedEvent),
+    SubcontractMoLinkCreated(SubcontractMoLinkCreatedEvent),
+    SubcontractMoLinkUpdated(SubcontractMoLinkUpdatedEvent),
+    SubcontractMoLinkDeleted(SubcontractMoLinkDeletedEvent),
 }
 
 /// Metadata for module events

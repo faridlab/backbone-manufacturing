@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::{JobCard, JobCardStatus};
+use crate::domain::entity::{JobCard, JobCardState};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -48,7 +48,7 @@ pub struct JobCardFilter {
     pub work_order_id: Option<Uuid>,
     pub operation_id: Option<Uuid>,
     pub workstation_id: Option<Uuid>,
-    pub status: Option<JobCardStatus>,
+    pub status: Option<JobCardState>,
 }
 
 impl JobCardFilter {

@@ -10,36 +10,66 @@ use std::sync::Arc;
 
 use super::{
     workstation_handler::create_workstation_routes,
+    workstation_loss_handler::create_workstation_loss_routes,
+    workstation_productivity_handler::create_workstation_productivity_routes,
     operation_handler::create_operation_routes,
     bom_handler::create_bom_routes,
     bom_item_handler::create_bom_item_routes,
     bom_operation_handler::create_bom_operation_routes,
+    bom_byproduct_handler::create_bom_byproduct_routes,
+    bom_subcontractor_handler::create_bom_subcontractor_routes,
+    category_costing_defaults_handler::create_category_costing_defaults_routes,
+    repair_order_handler::create_repair_order_routes,
+    repair_part_handler::create_repair_part_routes,
+    repair_tag_handler::create_repair_tag_routes,
+    unbuild_order_handler::create_unbuild_order_routes,
     work_order_handler::create_work_order_routes,
     work_order_item_handler::create_work_order_item_routes,
     job_card_handler::create_job_card_routes,
+    subcontract_mo_link_handler::create_subcontract_mo_link_routes,
 };
 
 use crate::application::service::{
     WorkstationService,
+    WorkstationLossService,
+    WorkstationProductivityService,
     OperationService,
     BomService,
     BomItemService,
     BomOperationService,
+    BomByproductService,
+    BomSubcontractorService,
+    CategoryCostingDefaultsService,
+    RepairOrderService,
+    RepairPartService,
+    RepairTagService,
+    UnbuildOrderService,
     WorkOrderService,
     WorkOrderItemService,
     JobCardService,
+    SubcontractMoLinkService,
 };
 
 /// Services collection for all CRUD endpoints
 pub struct HttpServices {
     pub workstation: Arc<WorkstationService>,
+    pub workstation_loss: Arc<WorkstationLossService>,
+    pub workstation_productivity: Arc<WorkstationProductivityService>,
     pub operation: Arc<OperationService>,
     pub bom: Arc<BomService>,
     pub bom_item: Arc<BomItemService>,
     pub bom_operation: Arc<BomOperationService>,
+    pub bom_byproduct: Arc<BomByproductService>,
+    pub bom_subcontractor: Arc<BomSubcontractorService>,
+    pub category_costing_defaults: Arc<CategoryCostingDefaultsService>,
+    pub repair_order: Arc<RepairOrderService>,
+    pub repair_part: Arc<RepairPartService>,
+    pub repair_tag: Arc<RepairTagService>,
+    pub unbuild_order: Arc<UnbuildOrderService>,
     pub work_order: Arc<WorkOrderService>,
     pub work_order_item: Arc<WorkOrderItemService>,
     pub job_card: Arc<JobCardService>,
+    pub subcontract_mo_link: Arc<SubcontractMoLinkService>,
 }
 
 /// Configure all HTTP routes for this module using Axum and BackboneCrudHandler.
@@ -61,6 +91,10 @@ pub fn configure_routes(services: HttpServices) -> Router {
     Router::new()
         // Workstation routes (12 Backbone endpoints)
         .merge(create_workstation_routes(services.workstation))
+        // WorkstationLoss routes (12 Backbone endpoints)
+        .merge(create_workstation_loss_routes(services.workstation_loss))
+        // WorkstationProductivity routes (12 Backbone endpoints)
+        .merge(create_workstation_productivity_routes(services.workstation_productivity))
         // Operation routes (12 Backbone endpoints)
         .merge(create_operation_routes(services.operation))
         // Bom routes (12 Backbone endpoints)
@@ -69,12 +103,28 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_bom_item_routes(services.bom_item))
         // BomOperation routes (12 Backbone endpoints)
         .merge(create_bom_operation_routes(services.bom_operation))
+        // BomByproduct routes (12 Backbone endpoints)
+        .merge(create_bom_byproduct_routes(services.bom_byproduct))
+        // BomSubcontractor routes (12 Backbone endpoints)
+        .merge(create_bom_subcontractor_routes(services.bom_subcontractor))
+        // CategoryCostingDefaults routes (12 Backbone endpoints)
+        .merge(create_category_costing_defaults_routes(services.category_costing_defaults))
+        // RepairOrder routes (12 Backbone endpoints)
+        .merge(create_repair_order_routes(services.repair_order))
+        // RepairPart routes (12 Backbone endpoints)
+        .merge(create_repair_part_routes(services.repair_part))
+        // RepairTag routes (12 Backbone endpoints)
+        .merge(create_repair_tag_routes(services.repair_tag))
+        // UnbuildOrder routes (12 Backbone endpoints)
+        .merge(create_unbuild_order_routes(services.unbuild_order))
         // WorkOrder routes (12 Backbone endpoints)
         .merge(create_work_order_routes(services.work_order))
         // WorkOrderItem routes (12 Backbone endpoints)
         .merge(create_work_order_item_routes(services.work_order_item))
         // JobCard routes (12 Backbone endpoints)
         .merge(create_job_card_routes(services.job_card))
+        // SubcontractMoLink routes (12 Backbone endpoints)
+        .merge(create_subcontract_mo_link_routes(services.subcontract_mo_link))
 }
 
 /// Create an individual entity's routes (for modular configuration)
@@ -83,6 +133,14 @@ pub mod individual {
 
     pub fn workstation_routes(service: Arc<WorkstationService>) -> Router {
         create_workstation_routes(service)
+    }
+
+    pub fn workstation_loss_routes(service: Arc<WorkstationLossService>) -> Router {
+        create_workstation_loss_routes(service)
+    }
+
+    pub fn workstation_productivity_routes(service: Arc<WorkstationProductivityService>) -> Router {
+        create_workstation_productivity_routes(service)
     }
 
     pub fn operation_routes(service: Arc<OperationService>) -> Router {
@@ -101,6 +159,34 @@ pub mod individual {
         create_bom_operation_routes(service)
     }
 
+    pub fn bom_byproduct_routes(service: Arc<BomByproductService>) -> Router {
+        create_bom_byproduct_routes(service)
+    }
+
+    pub fn bom_subcontractor_routes(service: Arc<BomSubcontractorService>) -> Router {
+        create_bom_subcontractor_routes(service)
+    }
+
+    pub fn category_costing_defaults_routes(service: Arc<CategoryCostingDefaultsService>) -> Router {
+        create_category_costing_defaults_routes(service)
+    }
+
+    pub fn repair_order_routes(service: Arc<RepairOrderService>) -> Router {
+        create_repair_order_routes(service)
+    }
+
+    pub fn repair_part_routes(service: Arc<RepairPartService>) -> Router {
+        create_repair_part_routes(service)
+    }
+
+    pub fn repair_tag_routes(service: Arc<RepairTagService>) -> Router {
+        create_repair_tag_routes(service)
+    }
+
+    pub fn unbuild_order_routes(service: Arc<UnbuildOrderService>) -> Router {
+        create_unbuild_order_routes(service)
+    }
+
     pub fn work_order_routes(service: Arc<WorkOrderService>) -> Router {
         create_work_order_routes(service)
     }
@@ -111,6 +197,10 @@ pub mod individual {
 
     pub fn job_card_routes(service: Arc<JobCardService>) -> Router {
         create_job_card_routes(service)
+    }
+
+    pub fn subcontract_mo_link_routes(service: Arc<SubcontractMoLinkService>) -> Router {
+        create_subcontract_mo_link_routes(service)
     }
 
 }

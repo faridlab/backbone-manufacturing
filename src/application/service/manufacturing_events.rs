@@ -2,18 +2,29 @@
 //!
 //! The Work Order lifecycle publishes these as it charges and clears WIP. A consumer (costing
 //! analytics, a production dashboard) subscribes without calling back into manufacturing.
+//!
+//! State vocabulary note: the confirm verb (and its `WorkOrderConfirmed` event) replaced the old
+//! release wording — `confirmed` is one of the three hand-gated direct writes; `progress` /
+//! `to_close` / `done` are derived by the consume / receive gates.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// A Work Order was released — its BOM was exploded into required materials.
+/// A Work Order was confirmed — its BOM was exploded into required materials.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct WorkOrderReleased {
+pub struct WorkOrderConfirmed {
     pub work_order_id: Uuid,
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
+}
+
+/// A Work Order was cancelled (from draft or confirmed — before any WIP existed).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkOrderCancelled {
+    pub work_order_id: Uuid,
+    pub company_id: Uuid,
 }
 
 /// Materials were issued to WIP (the consume post: Dr WIP · Cr Raw-Material Stock).
@@ -51,15 +62,52 @@ pub struct WorkOrderCompleted {
     pub total_cost: Decimal,
 }
 
+/// A done order's output was disassembled back into components (the unbuild reversal).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UnbuildExecuted {
+    pub unbuild_order_id: Uuid,
+    pub source_work_order_id: Uuid,
+    pub company_id: Uuid,
+    pub item_id: Uuid,
+    pub quantity: Decimal,
+    pub reversed_value: Decimal,
+}
+
+/// A repair order ended — its part legs settled and the asset's stock restored.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RepairCompleted {
+    pub repair_order_id: Uuid,
+    pub company_id: Uuid,
+    pub item_id: Uuid,
+    pub repair_expense: Decimal,
+    pub inventory_loss: Decimal,
+    pub recovered_value: Decimal,
+}
+
+/// A subcontract receipt minted its hidden manufacturing order (directly in `confirmed`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SubcontractMoMinted {
+    pub work_order_id: Uuid,
+    pub company_id: Uuid,
+    pub purchase_order_id: Uuid,
+    pub supplier_id: Uuid,
+    pub item_id: Uuid,
+    pub quantity: Decimal,
+}
+
 /// The manufacturing domain-event union.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum ManufacturingEvent {
-    WorkOrderReleased(WorkOrderReleased),
+    WorkOrderConfirmed(WorkOrderConfirmed),
+    WorkOrderCancelled(WorkOrderCancelled),
     MaterialsConsumed(MaterialsConsumed),
     ConversionCharged(ConversionCharged),
     FinishedGoodsReceived(FinishedGoodsReceived),
     WorkOrderCompleted(WorkOrderCompleted),
+    UnbuildExecuted(UnbuildExecuted),
+    RepairCompleted(RepairCompleted),
+    SubcontractMoMinted(SubcontractMoMinted),
 }
 
 /// Sink the write path publishes to. A consuming service supplies its own (bus, outbox, …).

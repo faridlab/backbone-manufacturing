@@ -1,0 +1,67 @@
+# =============================================================================
+# Domain: Manufacturing — product-category costing defaults (transactional config)
+# Entity: CategoryCostingDefaults
+# Description: Per-company, per-product-category account defaults for manufacturing
+# postings. Resolution order everywhere: per-work-order / per-repair explicit
+# override → category default → MissingAccount refusal. Never a hardcoded fallback
+# account and never a silently skipped post. Defaults are company decisions, so
+# company_id is strict NOT NULL.
+# =============================================================================
+
+models:
+  - name: CategoryCostingDefaults
+    collection: category_costing_defaults
+    description: "Per-company GL account defaults for a product category's manufacturing postings"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique defaults row id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner (defaults are company decisions) # logical FK to organization.Company.id"
+      product_category_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The category these defaults apply to # logical FK to catalog.ProductCategory.id"
+      wip_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Work-in-progress account # logical FK to accounting.Account.id"
+      fg_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Finished-goods inventory account # logical FK to accounting.Account.id"
+      raw_material_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Raw-material stock account # logical FK to accounting.Account.id"
+      conversion_cost_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Conversion-cost-applied account # logical FK to accounting.Account.id"
+      subcontract_interim_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Subcontract-interim account (clears the purchase order's value leg) # logical FK to accounting.Account.id"
+      cost_variance_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Standard-cost variance plug account (required when a nonzero plug would post) # logical FK to accounting.Account.id"
+      inventory_loss_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Inventory-loss account (destination of removed repair parts) # logical FK to accounting.Account.id"
+      repair_expense_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Repair-expense account (charged by added / recycled repair parts) # logical FK to accounting.Account.id"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, product_category_id]
+        where: "deleted_at IS NULL"

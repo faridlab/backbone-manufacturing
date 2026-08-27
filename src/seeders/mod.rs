@@ -10,22 +10,42 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 
 mod workstation_seeder;
+mod workstation_loss_seeder;
+mod workstation_productivity_seeder;
 mod operation_seeder;
 mod bom_seeder;
 mod bom_item_seeder;
 mod bom_operation_seeder;
+mod bom_byproduct_seeder;
+mod bom_subcontractor_seeder;
+mod category_costing_defaults_seeder;
+mod repair_order_seeder;
+mod repair_part_seeder;
+mod repair_tag_seeder;
+mod unbuild_order_seeder;
 mod work_order_seeder;
 mod work_order_item_seeder;
 mod job_card_seeder;
+mod subcontract_mo_link_seeder;
 
 pub use workstation_seeder::SeedWorkstationSeeder;
+pub use workstation_loss_seeder::SeedWorkstationLossSeeder;
+pub use workstation_productivity_seeder::SeedWorkstationProductivitySeeder;
 pub use operation_seeder::SeedOperationSeeder;
 pub use bom_seeder::SeedBomSeeder;
 pub use bom_item_seeder::SeedBomItemSeeder;
 pub use bom_operation_seeder::SeedBomOperationSeeder;
+pub use bom_byproduct_seeder::SeedBomByproductSeeder;
+pub use bom_subcontractor_seeder::SeedBomSubcontractorSeeder;
+pub use category_costing_defaults_seeder::SeedCategoryCostingDefaultsSeeder;
+pub use repair_order_seeder::SeedRepairOrderSeeder;
+pub use repair_part_seeder::SeedRepairPartSeeder;
+pub use repair_tag_seeder::SeedRepairTagSeeder;
+pub use unbuild_order_seeder::SeedUnbuildOrderSeeder;
 pub use work_order_seeder::SeedWorkOrderSeeder;
 pub use work_order_item_seeder::SeedWorkOrderItemSeeder;
 pub use job_card_seeder::SeedJobCardSeeder;
+pub use subcontract_mo_link_seeder::SeedSubcontractMoLinkSeeder;
 
 // ============================================================================
 // SEEDER TRAIT

@@ -75,38 +75,56 @@ shared_types:
 # =============================================================================
 # company_fence (ADR-0014): Multi-tenant row-level security posture
 # -----------------------------------------------------------------------------
-# Posture: strict (all entities require NOT NULL company_id)
+# Posture: shared_blank — nullable company_id on MASTER DATA, NOT NULL on
+# TRANSACTIONS (the fence vocabulary inventory established).
 #
 # Per ADR-0014, this declaration governs how the codegen stamps @required company_id
 # and how ADR-0015 enforcement hooks ground the three keys (db/both/service) against
 # the actual DDL. Posture options:
-#   strict        : NOT NULL company_id — every row belongs to exactly one company
-#                   and NULL rows are rejected. Applies to all transactional
-#                   tables and their configuration. This is manufacturing's
-#                   current posture across all 8 entities (workstations, operations,
-#                   boms, bom_items, bom_operations, work_orders, work_order_items,
-#                   job_cards).
 #   shared_blank  : nullable company_id — NULL rows are first-class shared rows
-#                   (the port of Odoo's `[False]` escape). Typically applies to
-#                   MASTER DATA (global reference data like shared Locations or
-#                   global Route templates). Manufacturing has NO shared_blank
-#                   entities at present; the master-data shared_blank-vs-all-strict
-#                   decision is registered for the SC-5 pass (see manufacturing-
-#                   features.md:96-106 for the domain-driven rationale).
+#                   (the port of Odoo's `[False]` escape). Applies to MASTER DATA:
+#                   the product-definition family, which is reference data a
+#                   multi-company group shares (a machine or a recipe is not a
+#                   bookkeeping event).
+#   strict        : NOT NULL company_id — every row belongs to exactly one company
+#                   and NULL rows are rejected. The `company_id IS NULL` arm of the
+#                   shared_blank RLS predicate is dead on these tables, making them
+#                   behaviorally strict. Applies to TRANSACTIONS and their
+#                   configuration: everything that emits or can emit a posting.
+#
+# LANDED DECISION (the earlier all-strict declaration carried the master-data
+# question as open; it is decided now): master data escapes the fence with shared
+# NULL rows; transactions stay strict. A NULL-company BOM or workstation is visible
+# to every company session; a work order never can be.
 #
 # Posture map (entity -> realized fence, all under this one declaration):
-#   workstations    -> strict (@required company_id)
-#   operations      -> strict (@required company_id)
-#   boms            -> strict (@required company_id)
-#   bom_items       -> strict (@required company_id)
-#   bom_operations  -> strict (@required company_id)
-#   work_orders     -> strict (@required company_id)
-#   work_order_items -> strict (@required company_id)
-#   job_cards        -> strict (@required company_id)
+#   MASTER DATA (shared_blank — nullable company_id, NULL = shared row):
+#     workstations          -> shared_blank
+#     workstation_losses    -> shared_blank
+#     operations            -> shared_blank
+#     boms                  -> shared_blank
+#     bom_items             -> shared_blank
+#     bom_operations        -> shared_blank
+#     bom_byproducts        -> shared_blank
+#     bom_subcontractors    -> shared_blank
+#   TRANSACTIONS (strict — @required company_id, the IS NULL arm is dead):
+#     work_orders           -> strict
+#     work_order_items      -> strict
+#     job_cards             -> strict
+#     workstation_productivity -> strict
+#     unbuild_orders        -> strict
+#     repair_orders         -> strict
+#     repair_parts          -> strict
+#     repair_tags           -> strict
+#     category_costing_defaults -> strict (defaults are company decisions)
+#     subcontract_mo_links  -> strict
 # -----------------------------------------------------------------------------
-company_fence: strict
+company_fence: shared_blank
 
 # Import each entity model. Replace `example` with your real entities.
 imports:
   - bom.model.yaml
   - work_order.model.yaml
+  - unbuild.model.yaml
+  - repair.model.yaml
+  - costing_defaults.model.yaml

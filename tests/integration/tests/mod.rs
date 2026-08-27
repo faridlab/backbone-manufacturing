@@ -7,21 +7,41 @@
 pub mod crud_test_base;
 
 pub mod workstation_api_test;
+pub mod workstation_loss_api_test;
+pub mod workstation_productivity_api_test;
 pub mod operation_api_test;
 pub mod bom_api_test;
 pub mod bom_item_api_test;
 pub mod bom_operation_api_test;
+pub mod bom_byproduct_api_test;
+pub mod bom_subcontractor_api_test;
+pub mod category_costing_defaults_api_test;
+pub mod repair_order_api_test;
+pub mod repair_part_api_test;
+pub mod repair_tag_api_test;
+pub mod unbuild_order_api_test;
 pub mod work_order_api_test;
 pub mod work_order_item_api_test;
 pub mod job_card_api_test;
+pub mod subcontract_mo_link_api_test;
 
 // Re-exports for convenience
 pub use crud_test_base::*;
 pub use workstation_api_test::*;
+pub use workstation_loss_api_test::*;
+pub use workstation_productivity_api_test::*;
 pub use operation_api_test::*;
 pub use bom_api_test::*;
 pub use bom_item_api_test::*;
 pub use bom_operation_api_test::*;
+pub use bom_byproduct_api_test::*;
+pub use bom_subcontractor_api_test::*;
+pub use category_costing_defaults_api_test::*;
+pub use repair_order_api_test::*;
+pub use repair_part_api_test::*;
+pub use repair_tag_api_test::*;
+pub use unbuild_order_api_test::*;
 pub use work_order_api_test::*;
 pub use work_order_item_api_test::*;
 pub use job_card_api_test::*;
+pub use subcontract_mo_link_api_test::*;

@@ -13,13 +13,23 @@ use std::env;
 
 // Import seeders
 use backbone_manufacturing::seeders::SeedWorkstationSeeder;
+use backbone_manufacturing::seeders::SeedWorkstationLossSeeder;
+use backbone_manufacturing::seeders::SeedWorkstationProductivitySeeder;
 use backbone_manufacturing::seeders::SeedOperationSeeder;
 use backbone_manufacturing::seeders::SeedBomSeeder;
 use backbone_manufacturing::seeders::SeedBomItemSeeder;
 use backbone_manufacturing::seeders::SeedBomOperationSeeder;
+use backbone_manufacturing::seeders::SeedBomByproductSeeder;
+use backbone_manufacturing::seeders::SeedBomSubcontractorSeeder;
+use backbone_manufacturing::seeders::SeedCategoryCostingDefaultsSeeder;
+use backbone_manufacturing::seeders::SeedRepairOrderSeeder;
+use backbone_manufacturing::seeders::SeedRepairPartSeeder;
+use backbone_manufacturing::seeders::SeedRepairTagSeeder;
+use backbone_manufacturing::seeders::SeedUnbuildOrderSeeder;
 use backbone_manufacturing::seeders::SeedWorkOrderSeeder;
 use backbone_manufacturing::seeders::SeedWorkOrderItemSeeder;
 use backbone_manufacturing::seeders::SeedJobCardSeeder;
+use backbone_manufacturing::seeders::SeedSubcontractMoLinkSeeder;
 use backbone_manufacturing::seeders::Seeder;
 
 #[tokio::main]
@@ -49,13 +59,23 @@ async fn main() -> Result<()> {
     // Register seeders in order
     let mut seeders: Vec<Box<dyn Seeder + Send + Sync>> = Vec::new();
     seeders.push(Box::new(SeedWorkstationSeeder::new()));
+    seeders.push(Box::new(SeedWorkstationLossSeeder::new()));
+    seeders.push(Box::new(SeedWorkstationProductivitySeeder::new()));
     seeders.push(Box::new(SeedOperationSeeder::new()));
     seeders.push(Box::new(SeedBomSeeder::new()));
     seeders.push(Box::new(SeedBomItemSeeder::new()));
     seeders.push(Box::new(SeedBomOperationSeeder::new()));
+    seeders.push(Box::new(SeedBomByproductSeeder::new()));
+    seeders.push(Box::new(SeedBomSubcontractorSeeder::new()));
+    seeders.push(Box::new(SeedCategoryCostingDefaultsSeeder::new()));
+    seeders.push(Box::new(SeedRepairOrderSeeder::new()));
+    seeders.push(Box::new(SeedRepairPartSeeder::new()));
+    seeders.push(Box::new(SeedRepairTagSeeder::new()));
+    seeders.push(Box::new(SeedUnbuildOrderSeeder::new()));
     seeders.push(Box::new(SeedWorkOrderSeeder::new()));
     seeders.push(Box::new(SeedWorkOrderItemSeeder::new()));
     seeders.push(Box::new(SeedJobCardSeeder::new()));
+    seeders.push(Box::new(SeedSubcontractMoLinkSeeder::new()));
 
     // Sort by order
     seeders.sort_by_key(|s| s.order());

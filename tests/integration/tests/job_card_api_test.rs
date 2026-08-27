@@ -31,7 +31,7 @@ impl TestDataGenerator for JobCardTestData {
             "total_time_mins": 0,
             "hour_rate": 0,
             "operating_cost": 0,
-            "status": "open",
+            "status": "ready",
             "metadata": json!({}),
         })
     }
@@ -47,7 +47,7 @@ impl TestDataGenerator for JobCardTestData {
             "total_time_mins": 0,
             "hour_rate": 0,
             "operating_cost": 0,
-            "status": "open",
+            "status": "ready",
             "metadata": json!({}),
         })
     }

@@ -4,7 +4,8 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
 
-use super::WorkOrderStatus;
+use super::WorkOrderState;
+use super::ReservationState;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for WorkOrder
@@ -57,7 +58,9 @@ pub struct WorkOrder {
     pub bom_id: Uuid,
     pub quantity: Decimal,
     pub produced_qty: Decimal,
-    pub status: WorkOrderStatus,
+    pub status: WorkOrderState,
+    pub reservation_state: Option<ReservationState>,
+    pub product_category_id: Option<Uuid>,
     pub raw_material_cost: Decimal,
     pub operating_cost: Decimal,
     pub wip_warehouse_id: Option<Uuid>,
@@ -79,7 +82,7 @@ impl WorkOrder {
     }
 
     /// Create a new WorkOrder with required fields
-    pub fn new(company_id: Uuid, work_order_number: String, item_id: Uuid, bom_id: Uuid, quantity: Decimal, produced_qty: Decimal, status: WorkOrderStatus, raw_material_cost: Decimal, operating_cost: Decimal) -> Self {
+    pub fn new(company_id: Uuid, work_order_number: String, item_id: Uuid, bom_id: Uuid, quantity: Decimal, produced_qty: Decimal, status: WorkOrderState, raw_material_cost: Decimal, operating_cost: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -89,6 +92,8 @@ impl WorkOrder {
             quantity,
             produced_qty,
             status,
+            reservation_state: None,
+            product_category_id: None,
             raw_material_cost,
             operating_cost,
             wip_warehouse_id: None,
@@ -153,7 +158,7 @@ impl WorkOrder {
     }
 
     /// Get the current status
-    pub fn status(&self) -> &WorkOrderStatus {
+    pub fn status(&self) -> &WorkOrderState {
         &self.status
     }
 
@@ -161,6 +166,18 @@ impl WorkOrder {
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
+
+    /// Set the reservation_state field (chainable)
+    pub fn with_reservation_state(mut self, value: ReservationState) -> Self {
+        self.reservation_state = Some(value);
+        self
+    }
+
+    /// Set the product_category_id field (chainable)
+    pub fn with_product_category_id(mut self, value: Uuid) -> Self {
+        self.product_category_id = Some(value);
+        self
+    }
 
     /// Set the wip_warehouse_id field (chainable)
     pub fn with_wip_warehouse_id(mut self, value: Uuid) -> Self {
@@ -232,6 +249,12 @@ impl WorkOrder {
                 }
                 "status" => {
                     if let Ok(v) = serde_json::from_value(value) { self.status = v; }
+                }
+                "reservation_state" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.reservation_state = v; }
+                }
+                "product_category_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.product_category_id = v; }
                 }
                 "raw_material_cost" => {
                     if let Ok(v) = serde_json::from_value(value) { self.raw_material_cost = v; }
@@ -317,13 +340,15 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m.insert("bom_id".to_string(), "uuid".to_string());
+        m.insert("product_category_id".to_string(), "uuid".to_string());
         m.insert("wip_warehouse_id".to_string(), "uuid".to_string());
         m.insert("fg_warehouse_id".to_string(), "uuid".to_string());
         m.insert("wip_account_id".to_string(), "uuid".to_string());
         m.insert("fg_account_id".to_string(), "uuid".to_string());
         m.insert("raw_material_account_id".to_string(), "uuid".to_string());
         m.insert("conversion_cost_account_id".to_string(), "uuid".to_string());
-        m.insert("status".to_string(), "work_order_status".to_string());
+        m.insert("status".to_string(), "work_order_state".to_string());
+        m.insert("reservation_state".to_string(), "reservation_state".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -346,7 +371,9 @@ pub struct WorkOrderBuilder {
     bom_id: Option<Uuid>,
     quantity: Option<Decimal>,
     produced_qty: Option<Decimal>,
-    status: Option<WorkOrderStatus>,
+    status: Option<WorkOrderState>,
+    reservation_state: Option<ReservationState>,
+    product_category_id: Option<Uuid>,
     raw_material_cost: Option<Decimal>,
     operating_cost: Option<Decimal>,
     wip_warehouse_id: Option<Uuid>,
@@ -395,9 +422,21 @@ impl WorkOrderBuilder {
         self
     }
 
-    /// Set the status field (default: `WorkOrderStatus::default()`)
-    pub fn status(mut self, value: WorkOrderStatus) -> Self {
+    /// Set the status field (default: `WorkOrderState::default()`)
+    pub fn status(mut self, value: WorkOrderState) -> Self {
         self.status = Some(value);
+        self
+    }
+
+    /// Set the reservation_state field (optional)
+    pub fn reservation_state(mut self, value: ReservationState) -> Self {
+        self.reservation_state = Some(value);
+        self
+    }
+
+    /// Set the product_category_id field (optional)
+    pub fn product_category_id(mut self, value: Uuid) -> Self {
+        self.product_category_id = Some(value);
         self
     }
 
@@ -474,6 +513,8 @@ impl WorkOrderBuilder {
             quantity,
             produced_qty: self.produced_qty.unwrap_or(Decimal::from(0)),
             status: self.status.unwrap_or_default(),
+            reservation_state: self.reservation_state,
+            product_category_id: self.product_category_id,
             raw_material_cost: self.raw_material_cost.unwrap_or(Decimal::from(0)),
             operating_cost: self.operating_cost.unwrap_or(Decimal::from(0)),
             wip_warehouse_id: self.wip_warehouse_id,

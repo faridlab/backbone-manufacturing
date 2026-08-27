@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "bom_status", rename_all = "snake_case")]
 pub enum BomStatus {
+    Draft,
     Active,
     Inactive,
 }
@@ -16,6 +17,7 @@ pub enum BomStatus {
 impl std::fmt::Display for BomStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Draft => write!(f, "draft"),
             Self::Active => write!(f, "active"),
             Self::Inactive => write!(f, "inactive"),
         }
@@ -27,6 +29,7 @@ impl FromStr for BomStatus {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
+            "draft" => Ok(Self::Draft),
             "active" => Ok(Self::Active),
             "inactive" => Ok(Self::Inactive),
             _ => Err(format!("Unknown BomStatus variant: {}", s)),

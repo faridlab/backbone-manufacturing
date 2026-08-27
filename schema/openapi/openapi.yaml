@@ -13,6 +13,10 @@ servers:
 tags:
   - name: Workstations
     description: Workstation management endpoints
+  - name: WorkstationLosses
+    description: WorkstationLoss management endpoints
+  - name: WorkstationProductivities
+    description: WorkstationProductivity management endpoints
   - name: Operations
     description: Operation management endpoints
   - name: Boms
@@ -21,12 +25,28 @@ tags:
     description: BomItem management endpoints
   - name: BomOperations
     description: BomOperation management endpoints
+  - name: BomByproducts
+    description: BomByproduct management endpoints
+  - name: BomSubcontractors
+    description: BomSubcontractor management endpoints
+  - name: CategoryCostingDefaultses
+    description: CategoryCostingDefaults management endpoints
+  - name: RepairOrders
+    description: RepairOrder management endpoints
+  - name: RepairParts
+    description: RepairPart management endpoints
+  - name: RepairTags
+    description: RepairTag management endpoints
+  - name: UnbuildOrders
+    description: UnbuildOrder management endpoints
   - name: WorkOrders
     description: WorkOrder management endpoints
   - name: WorkOrderItems
     description: WorkOrderItem management endpoints
   - name: JobCards
     description: JobCard management endpoints
+  - name: SubcontractMoLinks
+    description: SubcontractMoLink management endpoints
 
 paths:
   /api/v1/workstations:
@@ -381,6 +401,738 @@ paths:
         - Workstations
       summary: Bulk permanently-delete Workstations from trash by ids (atomic)
       operationId: bulkPermanentDeleteWorkstations
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_losses:
+    get:
+      tags:
+        - WorkstationLosses
+      summary: List WorkstationLosses
+      description: Get a paginated list of WorkstationLosses with optional filtering and sorting
+      operationId: listWorkstationLosses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLossList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Create WorkstationLoss
+      description: Create a new WorkstationLoss
+      operationId: createWorkstationLoss
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkstationLossRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workstation_losses/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - WorkstationLosses
+      summary: Get WorkstationLoss by ID
+      operationId: getWorkstationLoss
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - WorkstationLosses
+      summary: Update WorkstationLoss (full)
+      operationId: updateWorkstationLoss
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkstationLossRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - WorkstationLosses
+      summary: Update WorkstationLoss (partial)
+      operationId: patchWorkstationLoss
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWorkstationLossRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - WorkstationLosses
+      summary: Delete WorkstationLoss (soft)
+      operationId: deleteWorkstationLoss
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workstation_losses/bulk:
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Bulk create WorkstationLosses
+      operationId: bulkCreateWorkstationLosses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateWorkstationLossRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkstationLoss'
+    put:
+      tags:
+        - WorkstationLosses
+      summary: Bulk update WorkstationLosses (full, atomic)
+      operationId: bulkUpdateWorkstationLosses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateWorkstationLossRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLossBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - WorkstationLosses
+      summary: Bulk partial-update WorkstationLosses (atomic)
+      operationId: bulkPatchWorkstationLosses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLossBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_losses/upsert:
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Upsert WorkstationLoss
+      operationId: upsertWorkstationLoss
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkstationLossRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+
+  /api/v1/workstation_losses/trash:
+    get:
+      tags:
+        - WorkstationLosses
+      summary: List deleted WorkstationLosses
+      operationId: listDeletedWorkstationLosses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLossList'
+
+  /api/v1/workstation_losses/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Restore deleted WorkstationLoss
+      operationId: restoreWorkstationLoss
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLoss'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workstation_losses/empty:
+    delete:
+      tags:
+        - WorkstationLosses
+      summary: Empty trash for WorkstationLosses
+      operationId: emptyTrashWorkstationLosses
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/workstation_losses/delete/bulk:
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Bulk soft-delete WorkstationLosses by ids (atomic)
+      operationId: bulkDeleteWorkstationLosses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_losses/restore/bulk:
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Bulk restore WorkstationLosses by ids (atomic)
+      operationId: bulkRestoreWorkstationLosses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationLossBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_losses/restore/all:
+    post:
+      tags:
+        - WorkstationLosses
+      summary: Restore all soft-deleted WorkstationLosses
+      operationId: restoreAllWorkstationLosses
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/workstation_losses/trash/bulk:
+    delete:
+      tags:
+        - WorkstationLosses
+      summary: Bulk permanently-delete WorkstationLosses from trash by ids (atomic)
+      operationId: bulkPermanentDeleteWorkstationLosses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_productivities:
+    get:
+      tags:
+        - WorkstationProductivities
+      summary: List WorkstationProductivities
+      description: Get a paginated list of WorkstationProductivities with optional filtering and sorting
+      operationId: listWorkstationProductivities
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivityList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Create WorkstationProductivity
+      description: Create a new WorkstationProductivity
+      operationId: createWorkstationProductivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkstationProductivityRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workstation_productivities/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - WorkstationProductivities
+      summary: Get WorkstationProductivity by ID
+      operationId: getWorkstationProductivity
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - WorkstationProductivities
+      summary: Update WorkstationProductivity (full)
+      operationId: updateWorkstationProductivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkstationProductivityRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - WorkstationProductivities
+      summary: Update WorkstationProductivity (partial)
+      operationId: patchWorkstationProductivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWorkstationProductivityRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - WorkstationProductivities
+      summary: Delete WorkstationProductivity (soft)
+      operationId: deleteWorkstationProductivity
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workstation_productivities/bulk:
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk create WorkstationProductivities
+      operationId: bulkCreateWorkstationProductivities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateWorkstationProductivityRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkstationProductivity'
+    put:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk update WorkstationProductivities (full, atomic)
+      operationId: bulkUpdateWorkstationProductivities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateWorkstationProductivityRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivityBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk partial-update WorkstationProductivities (atomic)
+      operationId: bulkPatchWorkstationProductivities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivityBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_productivities/upsert:
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Upsert WorkstationProductivity
+      operationId: upsertWorkstationProductivity
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkstationProductivityRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+
+  /api/v1/workstation_productivities/trash:
+    get:
+      tags:
+        - WorkstationProductivities
+      summary: List deleted WorkstationProductivities
+      operationId: listDeletedWorkstationProductivities
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivityList'
+
+  /api/v1/workstation_productivities/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Restore deleted WorkstationProductivity
+      operationId: restoreWorkstationProductivity
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workstation_productivities/empty:
+    delete:
+      tags:
+        - WorkstationProductivities
+      summary: Empty trash for WorkstationProductivities
+      operationId: emptyTrashWorkstationProductivities
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/workstation_productivities/delete/bulk:
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk soft-delete WorkstationProductivities by ids (atomic)
+      operationId: bulkDeleteWorkstationProductivities
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_productivities/restore/bulk:
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk restore WorkstationProductivities by ids (atomic)
+      operationId: bulkRestoreWorkstationProductivities
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkstationProductivityBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workstation_productivities/restore/all:
+    post:
+      tags:
+        - WorkstationProductivities
+      summary: Restore all soft-deleted WorkstationProductivities
+      operationId: restoreAllWorkstationProductivities
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/workstation_productivities/trash/bulk:
+    delete:
+      tags:
+        - WorkstationProductivities
+      summary: Bulk permanently-delete WorkstationProductivities from trash by ids (atomic)
+      operationId: bulkPermanentDeleteWorkstationProductivities
       requestBody:
         $ref: '#/components/requestBodies/BatchIds'
       responses:
@@ -1859,6 +2611,2568 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /api/v1/bom_byproducts:
+    get:
+      tags:
+        - BomByproducts
+      summary: List BomByproducts
+      description: Get a paginated list of BomByproducts with optional filtering and sorting
+      operationId: listBomByproducts
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproductList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - BomByproducts
+      summary: Create BomByproduct
+      description: Create a new BomByproduct
+      operationId: createBomByproduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBomByproductRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/bom_byproducts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - BomByproducts
+      summary: Get BomByproduct by ID
+      operationId: getBomByproduct
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - BomByproducts
+      summary: Update BomByproduct (full)
+      operationId: updateBomByproduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBomByproductRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - BomByproducts
+      summary: Update BomByproduct (partial)
+      operationId: patchBomByproduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBomByproductRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - BomByproducts
+      summary: Delete BomByproduct (soft)
+      operationId: deleteBomByproduct
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bom_byproducts/bulk:
+    post:
+      tags:
+        - BomByproducts
+      summary: Bulk create BomByproducts
+      operationId: bulkCreateBomByproducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateBomByproductRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BomByproduct'
+    put:
+      tags:
+        - BomByproducts
+      summary: Bulk update BomByproducts (full, atomic)
+      operationId: bulkUpdateBomByproducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateBomByproductRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproductBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - BomByproducts
+      summary: Bulk partial-update BomByproducts (atomic)
+      operationId: bulkPatchBomByproducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproductBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_byproducts/upsert:
+    post:
+      tags:
+        - BomByproducts
+      summary: Upsert BomByproduct
+      operationId: upsertBomByproduct
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBomByproductRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+
+  /api/v1/bom_byproducts/trash:
+    get:
+      tags:
+        - BomByproducts
+      summary: List deleted BomByproducts
+      operationId: listDeletedBomByproducts
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproductList'
+
+  /api/v1/bom_byproducts/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - BomByproducts
+      summary: Restore deleted BomByproduct
+      operationId: restoreBomByproduct
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproduct'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bom_byproducts/empty:
+    delete:
+      tags:
+        - BomByproducts
+      summary: Empty trash for BomByproducts
+      operationId: emptyTrashBomByproducts
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/bom_byproducts/delete/bulk:
+    post:
+      tags:
+        - BomByproducts
+      summary: Bulk soft-delete BomByproducts by ids (atomic)
+      operationId: bulkDeleteBomByproducts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_byproducts/restore/bulk:
+    post:
+      tags:
+        - BomByproducts
+      summary: Bulk restore BomByproducts by ids (atomic)
+      operationId: bulkRestoreBomByproducts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomByproductBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_byproducts/restore/all:
+    post:
+      tags:
+        - BomByproducts
+      summary: Restore all soft-deleted BomByproducts
+      operationId: restoreAllBomByproducts
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/bom_byproducts/trash/bulk:
+    delete:
+      tags:
+        - BomByproducts
+      summary: Bulk permanently-delete BomByproducts from trash by ids (atomic)
+      operationId: bulkPermanentDeleteBomByproducts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_subcontractors:
+    get:
+      tags:
+        - BomSubcontractors
+      summary: List BomSubcontractors
+      description: Get a paginated list of BomSubcontractors with optional filtering and sorting
+      operationId: listBomSubcontractors
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractorList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Create BomSubcontractor
+      description: Create a new BomSubcontractor
+      operationId: createBomSubcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBomSubcontractorRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/bom_subcontractors/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - BomSubcontractors
+      summary: Get BomSubcontractor by ID
+      operationId: getBomSubcontractor
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - BomSubcontractors
+      summary: Update BomSubcontractor (full)
+      operationId: updateBomSubcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBomSubcontractorRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - BomSubcontractors
+      summary: Update BomSubcontractor (partial)
+      operationId: patchBomSubcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBomSubcontractorRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - BomSubcontractors
+      summary: Delete BomSubcontractor (soft)
+      operationId: deleteBomSubcontractor
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bom_subcontractors/bulk:
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Bulk create BomSubcontractors
+      operationId: bulkCreateBomSubcontractors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateBomSubcontractorRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BomSubcontractor'
+    put:
+      tags:
+        - BomSubcontractors
+      summary: Bulk update BomSubcontractors (full, atomic)
+      operationId: bulkUpdateBomSubcontractors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateBomSubcontractorRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractorBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - BomSubcontractors
+      summary: Bulk partial-update BomSubcontractors (atomic)
+      operationId: bulkPatchBomSubcontractors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractorBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_subcontractors/upsert:
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Upsert BomSubcontractor
+      operationId: upsertBomSubcontractor
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBomSubcontractorRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+
+  /api/v1/bom_subcontractors/trash:
+    get:
+      tags:
+        - BomSubcontractors
+      summary: List deleted BomSubcontractors
+      operationId: listDeletedBomSubcontractors
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractorList'
+
+  /api/v1/bom_subcontractors/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Restore deleted BomSubcontractor
+      operationId: restoreBomSubcontractor
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractor'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bom_subcontractors/empty:
+    delete:
+      tags:
+        - BomSubcontractors
+      summary: Empty trash for BomSubcontractors
+      operationId: emptyTrashBomSubcontractors
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/bom_subcontractors/delete/bulk:
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Bulk soft-delete BomSubcontractors by ids (atomic)
+      operationId: bulkDeleteBomSubcontractors
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_subcontractors/restore/bulk:
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Bulk restore BomSubcontractors by ids (atomic)
+      operationId: bulkRestoreBomSubcontractors
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BomSubcontractorBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bom_subcontractors/restore/all:
+    post:
+      tags:
+        - BomSubcontractors
+      summary: Restore all soft-deleted BomSubcontractors
+      operationId: restoreAllBomSubcontractors
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/bom_subcontractors/trash/bulk:
+    delete:
+      tags:
+        - BomSubcontractors
+      summary: Bulk permanently-delete BomSubcontractors from trash by ids (atomic)
+      operationId: bulkPermanentDeleteBomSubcontractors
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/category_costing_defaultses:
+    get:
+      tags:
+        - CategoryCostingDefaultses
+      summary: List CategoryCostingDefaultses
+      description: Get a paginated list of CategoryCostingDefaultses with optional filtering and sorting
+      operationId: listCategoryCostingDefaultses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaultsList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Create CategoryCostingDefaults
+      description: Create a new CategoryCostingDefaults
+      operationId: createCategoryCostingDefaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryCostingDefaultsRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/category_costing_defaultses/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Get CategoryCostingDefaults by ID
+      operationId: getCategoryCostingDefaults
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Update CategoryCostingDefaults (full)
+      operationId: updateCategoryCostingDefaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryCostingDefaultsRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Update CategoryCostingDefaults (partial)
+      operationId: patchCategoryCostingDefaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchCategoryCostingDefaultsRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Delete CategoryCostingDefaults (soft)
+      operationId: deleteCategoryCostingDefaults
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/category_costing_defaultses/bulk:
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk create CategoryCostingDefaultses
+      operationId: bulkCreateCategoryCostingDefaultses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateCategoryCostingDefaultsRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryCostingDefaults'
+    put:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk update CategoryCostingDefaultses (full, atomic)
+      operationId: bulkUpdateCategoryCostingDefaultses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateCategoryCostingDefaultsRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaultsBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk partial-update CategoryCostingDefaultses (atomic)
+      operationId: bulkPatchCategoryCostingDefaultses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaultsBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/category_costing_defaultses/upsert:
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Upsert CategoryCostingDefaults
+      operationId: upsertCategoryCostingDefaults
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryCostingDefaultsRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+
+  /api/v1/category_costing_defaultses/trash:
+    get:
+      tags:
+        - CategoryCostingDefaultses
+      summary: List deleted CategoryCostingDefaultses
+      operationId: listDeletedCategoryCostingDefaultses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaultsList'
+
+  /api/v1/category_costing_defaultses/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Restore deleted CategoryCostingDefaults
+      operationId: restoreCategoryCostingDefaults
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaults'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/category_costing_defaultses/empty:
+    delete:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Empty trash for CategoryCostingDefaultses
+      operationId: emptyTrashCategoryCostingDefaultses
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/category_costing_defaultses/delete/bulk:
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk soft-delete CategoryCostingDefaultses by ids (atomic)
+      operationId: bulkDeleteCategoryCostingDefaultses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/category_costing_defaultses/restore/bulk:
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk restore CategoryCostingDefaultses by ids (atomic)
+      operationId: bulkRestoreCategoryCostingDefaultses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryCostingDefaultsBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/category_costing_defaultses/restore/all:
+    post:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Restore all soft-deleted CategoryCostingDefaultses
+      operationId: restoreAllCategoryCostingDefaultses
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/category_costing_defaultses/trash/bulk:
+    delete:
+      tags:
+        - CategoryCostingDefaultses
+      summary: Bulk permanently-delete CategoryCostingDefaultses from trash by ids (atomic)
+      operationId: bulkPermanentDeleteCategoryCostingDefaultses
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_orders:
+    get:
+      tags:
+        - RepairOrders
+      summary: List RepairOrders
+      description: Get a paginated list of RepairOrders with optional filtering and sorting
+      operationId: listRepairOrders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrderList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - RepairOrders
+      summary: Create RepairOrder
+      description: Create a new RepairOrder
+      operationId: createRepairOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepairOrderRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/repair_orders/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - RepairOrders
+      summary: Get RepairOrder by ID
+      operationId: getRepairOrder
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - RepairOrders
+      summary: Update RepairOrder (full)
+      operationId: updateRepairOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - RepairOrders
+      summary: Update RepairOrder (partial)
+      operationId: patchRepairOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRepairOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - RepairOrders
+      summary: Delete RepairOrder (soft)
+      operationId: deleteRepairOrder
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_orders/bulk:
+    post:
+      tags:
+        - RepairOrders
+      summary: Bulk create RepairOrders
+      operationId: bulkCreateRepairOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateRepairOrderRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepairOrder'
+    put:
+      tags:
+        - RepairOrders
+      summary: Bulk update RepairOrders (full, atomic)
+      operationId: bulkUpdateRepairOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateRepairOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - RepairOrders
+      summary: Bulk partial-update RepairOrders (atomic)
+      operationId: bulkPatchRepairOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_orders/upsert:
+    post:
+      tags:
+        - RepairOrders
+      summary: Upsert RepairOrder
+      operationId: upsertRepairOrder
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairOrderRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+
+  /api/v1/repair_orders/trash:
+    get:
+      tags:
+        - RepairOrders
+      summary: List deleted RepairOrders
+      operationId: listDeletedRepairOrders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrderList'
+
+  /api/v1/repair_orders/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - RepairOrders
+      summary: Restore deleted RepairOrder
+      operationId: restoreRepairOrder
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_orders/empty:
+    delete:
+      tags:
+        - RepairOrders
+      summary: Empty trash for RepairOrders
+      operationId: emptyTrashRepairOrders
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/repair_orders/delete/bulk:
+    post:
+      tags:
+        - RepairOrders
+      summary: Bulk soft-delete RepairOrders by ids (atomic)
+      operationId: bulkDeleteRepairOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_orders/restore/bulk:
+    post:
+      tags:
+        - RepairOrders
+      summary: Bulk restore RepairOrders by ids (atomic)
+      operationId: bulkRestoreRepairOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_orders/restore/all:
+    post:
+      tags:
+        - RepairOrders
+      summary: Restore all soft-deleted RepairOrders
+      operationId: restoreAllRepairOrders
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/repair_orders/trash/bulk:
+    delete:
+      tags:
+        - RepairOrders
+      summary: Bulk permanently-delete RepairOrders from trash by ids (atomic)
+      operationId: bulkPermanentDeleteRepairOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_parts:
+    get:
+      tags:
+        - RepairParts
+      summary: List RepairParts
+      description: Get a paginated list of RepairParts with optional filtering and sorting
+      operationId: listRepairParts
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPartList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - RepairParts
+      summary: Create RepairPart
+      description: Create a new RepairPart
+      operationId: createRepairPart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepairPartRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/repair_parts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - RepairParts
+      summary: Get RepairPart by ID
+      operationId: getRepairPart
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - RepairParts
+      summary: Update RepairPart (full)
+      operationId: updateRepairPart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairPartRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - RepairParts
+      summary: Update RepairPart (partial)
+      operationId: patchRepairPart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRepairPartRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - RepairParts
+      summary: Delete RepairPart (soft)
+      operationId: deleteRepairPart
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_parts/bulk:
+    post:
+      tags:
+        - RepairParts
+      summary: Bulk create RepairParts
+      operationId: bulkCreateRepairParts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateRepairPartRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepairPart'
+    put:
+      tags:
+        - RepairParts
+      summary: Bulk update RepairParts (full, atomic)
+      operationId: bulkUpdateRepairParts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateRepairPartRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPartBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - RepairParts
+      summary: Bulk partial-update RepairParts (atomic)
+      operationId: bulkPatchRepairParts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPartBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_parts/upsert:
+    post:
+      tags:
+        - RepairParts
+      summary: Upsert RepairPart
+      operationId: upsertRepairPart
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairPartRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+
+  /api/v1/repair_parts/trash:
+    get:
+      tags:
+        - RepairParts
+      summary: List deleted RepairParts
+      operationId: listDeletedRepairParts
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPartList'
+
+  /api/v1/repair_parts/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - RepairParts
+      summary: Restore deleted RepairPart
+      operationId: restoreRepairPart
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_parts/empty:
+    delete:
+      tags:
+        - RepairParts
+      summary: Empty trash for RepairParts
+      operationId: emptyTrashRepairParts
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/repair_parts/delete/bulk:
+    post:
+      tags:
+        - RepairParts
+      summary: Bulk soft-delete RepairParts by ids (atomic)
+      operationId: bulkDeleteRepairParts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_parts/restore/bulk:
+    post:
+      tags:
+        - RepairParts
+      summary: Bulk restore RepairParts by ids (atomic)
+      operationId: bulkRestoreRepairParts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairPartBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_parts/restore/all:
+    post:
+      tags:
+        - RepairParts
+      summary: Restore all soft-deleted RepairParts
+      operationId: restoreAllRepairParts
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/repair_parts/trash/bulk:
+    delete:
+      tags:
+        - RepairParts
+      summary: Bulk permanently-delete RepairParts from trash by ids (atomic)
+      operationId: bulkPermanentDeleteRepairParts
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_tags:
+    get:
+      tags:
+        - RepairTags
+      summary: List RepairTags
+      description: Get a paginated list of RepairTags with optional filtering and sorting
+      operationId: listRepairTags
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTagList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - RepairTags
+      summary: Create RepairTag
+      description: Create a new RepairTag
+      operationId: createRepairTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepairTagRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/repair_tags/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - RepairTags
+      summary: Get RepairTag by ID
+      operationId: getRepairTag
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - RepairTags
+      summary: Update RepairTag (full)
+      operationId: updateRepairTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairTagRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - RepairTags
+      summary: Update RepairTag (partial)
+      operationId: patchRepairTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRepairTagRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - RepairTags
+      summary: Delete RepairTag (soft)
+      operationId: deleteRepairTag
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_tags/bulk:
+    post:
+      tags:
+        - RepairTags
+      summary: Bulk create RepairTags
+      operationId: bulkCreateRepairTags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateRepairTagRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RepairTag'
+    put:
+      tags:
+        - RepairTags
+      summary: Bulk update RepairTags (full, atomic)
+      operationId: bulkUpdateRepairTags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateRepairTagRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTagBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - RepairTags
+      summary: Bulk partial-update RepairTags (atomic)
+      operationId: bulkPatchRepairTags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTagBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_tags/upsert:
+    post:
+      tags:
+        - RepairTags
+      summary: Upsert RepairTag
+      operationId: upsertRepairTag
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepairTagRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+
+  /api/v1/repair_tags/trash:
+    get:
+      tags:
+        - RepairTags
+      summary: List deleted RepairTags
+      operationId: listDeletedRepairTags
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTagList'
+
+  /api/v1/repair_tags/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - RepairTags
+      summary: Restore deleted RepairTag
+      operationId: restoreRepairTag
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/repair_tags/empty:
+    delete:
+      tags:
+        - RepairTags
+      summary: Empty trash for RepairTags
+      operationId: emptyTrashRepairTags
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/repair_tags/delete/bulk:
+    post:
+      tags:
+        - RepairTags
+      summary: Bulk soft-delete RepairTags by ids (atomic)
+      operationId: bulkDeleteRepairTags
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_tags/restore/bulk:
+    post:
+      tags:
+        - RepairTags
+      summary: Bulk restore RepairTags by ids (atomic)
+      operationId: bulkRestoreRepairTags
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepairTagBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/repair_tags/restore/all:
+    post:
+      tags:
+        - RepairTags
+      summary: Restore all soft-deleted RepairTags
+      operationId: restoreAllRepairTags
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/repair_tags/trash/bulk:
+    delete:
+      tags:
+        - RepairTags
+      summary: Bulk permanently-delete RepairTags from trash by ids (atomic)
+      operationId: bulkPermanentDeleteRepairTags
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/unbuild_orders:
+    get:
+      tags:
+        - UnbuildOrders
+      summary: List UnbuildOrders
+      description: Get a paginated list of UnbuildOrders with optional filtering and sorting
+      operationId: listUnbuildOrders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrderList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Create UnbuildOrder
+      description: Create a new UnbuildOrder
+      operationId: createUnbuildOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUnbuildOrderRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/unbuild_orders/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - UnbuildOrders
+      summary: Get UnbuildOrder by ID
+      operationId: getUnbuildOrder
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - UnbuildOrders
+      summary: Update UnbuildOrder (full)
+      operationId: updateUnbuildOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - UnbuildOrders
+      summary: Update UnbuildOrder (partial)
+      operationId: patchUnbuildOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchUnbuildOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - UnbuildOrders
+      summary: Delete UnbuildOrder (soft)
+      operationId: deleteUnbuildOrder
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/unbuild_orders/bulk:
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Bulk create UnbuildOrders
+      operationId: bulkCreateUnbuildOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateUnbuildOrderRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnbuildOrder'
+    put:
+      tags:
+        - UnbuildOrders
+      summary: Bulk update UnbuildOrders (full, atomic)
+      operationId: bulkUpdateUnbuildOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - UnbuildOrders
+      summary: Bulk partial-update UnbuildOrders (atomic)
+      operationId: bulkPatchUnbuildOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/unbuild_orders/upsert:
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Upsert UnbuildOrder
+      operationId: upsertUnbuildOrder
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+
+  /api/v1/unbuild_orders/trash:
+    get:
+      tags:
+        - UnbuildOrders
+      summary: List deleted UnbuildOrders
+      operationId: listDeletedUnbuildOrders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrderList'
+
+  /api/v1/unbuild_orders/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Restore deleted UnbuildOrder
+      operationId: restoreUnbuildOrder
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/unbuild_orders/empty:
+    delete:
+      tags:
+        - UnbuildOrders
+      summary: Empty trash for UnbuildOrders
+      operationId: emptyTrashUnbuildOrders
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/unbuild_orders/delete/bulk:
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Bulk soft-delete UnbuildOrders by ids (atomic)
+      operationId: bulkDeleteUnbuildOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/unbuild_orders/restore/bulk:
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Bulk restore UnbuildOrders by ids (atomic)
+      operationId: bulkRestoreUnbuildOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnbuildOrderBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/unbuild_orders/restore/all:
+    post:
+      tags:
+        - UnbuildOrders
+      summary: Restore all soft-deleted UnbuildOrders
+      operationId: restoreAllUnbuildOrders
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/unbuild_orders/trash/bulk:
+    delete:
+      tags:
+        - UnbuildOrders
+      summary: Bulk permanently-delete UnbuildOrders from trash by ids (atomic)
+      operationId: bulkPermanentDeleteUnbuildOrders
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /api/v1/work_orders:
     get:
       tags:
@@ -2957,15 +6271,382 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /api/v1/subcontract_mo_links:
+    get:
+      tags:
+        - SubcontractMoLinks
+      summary: List SubcontractMoLinks
+      description: Get a paginated list of SubcontractMoLinks with optional filtering and sorting
+      operationId: listSubcontractMoLinks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLinkList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Create SubcontractMoLink
+      description: Create a new SubcontractMoLink
+      operationId: createSubcontractMoLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubcontractMoLinkRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/subcontract_mo_links/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - SubcontractMoLinks
+      summary: Get SubcontractMoLink by ID
+      operationId: getSubcontractMoLink
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - SubcontractMoLinks
+      summary: Update SubcontractMoLink (full)
+      operationId: updateSubcontractMoLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubcontractMoLinkRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - SubcontractMoLinks
+      summary: Update SubcontractMoLink (partial)
+      operationId: patchSubcontractMoLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchSubcontractMoLinkRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - SubcontractMoLinks
+      summary: Delete SubcontractMoLink (soft)
+      operationId: deleteSubcontractMoLink
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/subcontract_mo_links/bulk:
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk create SubcontractMoLinks
+      operationId: bulkCreateSubcontractMoLinks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateSubcontractMoLinkRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcontractMoLink'
+    put:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk update SubcontractMoLinks (full, atomic)
+      operationId: bulkUpdateSubcontractMoLinks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateSubcontractMoLinkRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLinkBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk partial-update SubcontractMoLinks (atomic)
+      operationId: bulkPatchSubcontractMoLinks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLinkBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/subcontract_mo_links/upsert:
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Upsert SubcontractMoLink
+      operationId: upsertSubcontractMoLink
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubcontractMoLinkRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+
+  /api/v1/subcontract_mo_links/trash:
+    get:
+      tags:
+        - SubcontractMoLinks
+      summary: List deleted SubcontractMoLinks
+      operationId: listDeletedSubcontractMoLinks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLinkList'
+
+  /api/v1/subcontract_mo_links/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Restore deleted SubcontractMoLink
+      operationId: restoreSubcontractMoLink
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/subcontract_mo_links/empty:
+    delete:
+      tags:
+        - SubcontractMoLinks
+      summary: Empty trash for SubcontractMoLinks
+      operationId: emptyTrashSubcontractMoLinks
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/subcontract_mo_links/delete/bulk:
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk soft-delete SubcontractMoLinks by ids (atomic)
+      operationId: bulkDeleteSubcontractMoLinks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/subcontract_mo_links/restore/bulk:
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk restore SubcontractMoLinks by ids (atomic)
+      operationId: bulkRestoreSubcontractMoLinks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubcontractMoLinkBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/subcontract_mo_links/restore/all:
+    post:
+      tags:
+        - SubcontractMoLinks
+      summary: Restore all soft-deleted SubcontractMoLinks
+      operationId: restoreAllSubcontractMoLinks
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/subcontract_mo_links/trash/bulk:
+    delete:
+      tags:
+        - SubcontractMoLinks
+      summary: Bulk permanently-delete SubcontractMoLinks from trash by ids (atomic)
+      operationId: bulkPermanentDeleteSubcontractMoLinks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
 components:
   schemas:
     Workstation:
       type: object
       required:
         - id
-        - company_id
         - workstation_name
         - hour_rate
+        - capacity
+        - time_efficiency
         - status
         - metadata
       properties:
@@ -2973,12 +6654,17 @@ components:
           type: string
           format: uuid
         company_id:
+          nullable: true
           type: string
           format: uuid
         workstation_name:
           type: string
           maxLength: 140
         hour_rate:
+          type: string
+        capacity:
+          type: string
+        time_efficiency:
           type: string
         status:
           type: string
@@ -3001,19 +6687,25 @@ components:
     CreateWorkstationRequest:
       type: object
       required:
-        - company_id
         - workstation_name
         - hour_rate
+        - capacity
+        - time_efficiency
         - status
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         workstation_name:
           type: string
           maxLength: 140
         hour_rate:
+          type: string
+        capacity:
+          type: string
+        time_efficiency:
           type: string
         status:
           type: string
@@ -3023,19 +6715,25 @@ components:
     UpdateWorkstationRequest:
       type: object
       required:
-        - company_id
         - workstation_name
         - hour_rate
+        - capacity
+        - time_efficiency
         - status
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         workstation_name:
           type: string
           maxLength: 140
         hour_rate:
+          type: string
+        capacity:
+          type: string
+        time_efficiency:
           type: string
         status:
           type: string
@@ -3046,12 +6744,17 @@ components:
       type: object
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         workstation_name:
           type: string
           maxLength: 140
         hour_rate:
+          type: string
+        capacity:
+          type: string
+        time_efficiency:
           type: string
         status:
           type: string
@@ -3068,11 +6771,270 @@ components:
         meta:
           $ref: '#/components/schemas/PaginationMeta'
 
-    Operation:
+    WorkstationLoss:
+      type: object
+      required:
+        - id
+        - name
+        - loss_type
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        loss_type:
+          type: string
+        metadata:
+          type: object
+
+    WorkstationLossBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkstationLoss'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateWorkstationLossRequest:
+      type: object
+      required:
+        - name
+        - loss_type
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        loss_type:
+          type: string
+        metadata:
+          type: object
+
+    UpdateWorkstationLossRequest:
+      type: object
+      required:
+        - name
+        - loss_type
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        loss_type:
+          type: string
+        metadata:
+          type: object
+
+    PatchWorkstationLossRequest:
+      type: object
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        loss_type:
+          type: string
+        metadata:
+          type: object
+
+    WorkstationLossList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkstationLoss'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    WorkstationProductivity:
       type: object
       required:
         - id
         - company_id
+        - workstation_id
+        - loss_id
+        - date_start
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        workstation_id:
+          type: string
+          format: uuid
+        job_card_id:
+          nullable: true
+          type: string
+          format: uuid
+        loss_id:
+          type: string
+          format: uuid
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          nullable: true
+          type: string
+          format: date-time
+        description:
+          nullable: true
+          type: string
+        metadata:
+          type: object
+
+    WorkstationProductivityBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkstationProductivity'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateWorkstationProductivityRequest:
+      type: object
+      required:
+        - company_id
+        - workstation_id
+        - loss_id
+        - date_start
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        workstation_id:
+          type: string
+          format: uuid
+        job_card_id:
+          nullable: true
+          type: string
+          format: uuid
+        loss_id:
+          type: string
+          format: uuid
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          nullable: true
+          type: string
+          format: date-time
+        description:
+          nullable: true
+          type: string
+        metadata:
+          type: object
+
+    UpdateWorkstationProductivityRequest:
+      type: object
+      required:
+        - company_id
+        - workstation_id
+        - loss_id
+        - date_start
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        workstation_id:
+          type: string
+          format: uuid
+        job_card_id:
+          nullable: true
+          type: string
+          format: uuid
+        loss_id:
+          type: string
+          format: uuid
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          nullable: true
+          type: string
+          format: date-time
+        description:
+          nullable: true
+          type: string
+        metadata:
+          type: object
+
+    PatchWorkstationProductivityRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        workstation_id:
+          type: string
+          format: uuid
+        job_card_id:
+          nullable: true
+          type: string
+          format: uuid
+        loss_id:
+          type: string
+          format: uuid
+        date_start:
+          type: string
+          format: date-time
+        date_end:
+          nullable: true
+          type: string
+          format: date-time
+        description:
+          nullable: true
+          type: string
+        metadata:
+          type: object
+
+    WorkstationProductivityList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkstationProductivity'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    Operation:
+      type: object
+      required:
+        - id
         - operation_name
         - status
         - metadata
@@ -3081,6 +7043,7 @@ components:
           type: string
           format: uuid
         company_id:
+          nullable: true
           type: string
           format: uuid
         operation_name:
@@ -3111,12 +7074,12 @@ components:
     CreateOperationRequest:
       type: object
       required:
-        - company_id
         - operation_name
         - status
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         operation_name:
@@ -3134,12 +7097,12 @@ components:
     UpdateOperationRequest:
       type: object
       required:
-        - company_id
         - operation_name
         - status
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         operation_name:
@@ -3158,6 +7121,7 @@ components:
       type: object
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         operation_name:
@@ -3186,9 +7150,10 @@ components:
       type: object
       required:
         - id
-        - company_id
         - item_id
         - bom_code
+        - version
+        - bom_type
         - quantity
         - currency
         - raw_material_cost
@@ -3202,6 +7167,7 @@ components:
           type: string
           format: uuid
         company_id:
+          nullable: true
           type: string
           format: uuid
         item_id:
@@ -3210,6 +7176,11 @@ components:
         bom_code:
           type: string
           maxLength: 40
+        version:
+          type: integer
+          format: int32
+        bom_type:
+          type: string
         quantity:
           type: string
         uom:
@@ -3247,9 +7218,10 @@ components:
     CreateBomRequest:
       type: object
       required:
-        - company_id
         - item_id
         - bom_code
+        - version
+        - bom_type
         - quantity
         - currency
         - raw_material_cost
@@ -3260,6 +7232,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         item_id:
@@ -3268,6 +7241,11 @@ components:
         bom_code:
           type: string
           maxLength: 40
+        version:
+          type: integer
+          format: int32
+        bom_type:
+          type: string
         quantity:
           type: string
         uom:
@@ -3292,9 +7270,10 @@ components:
     UpdateBomRequest:
       type: object
       required:
-        - company_id
         - item_id
         - bom_code
+        - version
+        - bom_type
         - quantity
         - currency
         - raw_material_cost
@@ -3305,6 +7284,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         item_id:
@@ -3313,6 +7293,11 @@ components:
         bom_code:
           type: string
           maxLength: 40
+        version:
+          type: integer
+          format: int32
+        bom_type:
+          type: string
         quantity:
           type: string
         uom:
@@ -3338,6 +7323,7 @@ components:
       type: object
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         item_id:
@@ -3346,6 +7332,11 @@ components:
         bom_code:
           type: string
           maxLength: 40
+        version:
+          type: integer
+          format: int32
+        bom_type:
+          type: string
         quantity:
           type: string
         uom:
@@ -3381,7 +7372,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3394,6 +7384,7 @@ components:
           type: string
           format: uuid
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3429,7 +7420,6 @@ components:
     CreateBomItemRequest:
       type: object
       required:
-        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3439,6 +7429,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3461,7 +7452,6 @@ components:
     UpdateBomItemRequest:
       type: object
       required:
-        - company_id
         - bom_id
         - item_id
         - quantity
@@ -3471,6 +7461,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3494,6 +7485,7 @@ components:
       type: object
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3527,7 +7519,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3540,6 +7531,7 @@ components:
           type: string
           format: uuid
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3576,7 +7568,6 @@ components:
     CreateBomOperationRequest:
       type: object
       required:
-        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3586,6 +7577,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3609,7 +7601,6 @@ components:
     UpdateBomOperationRequest:
       type: object
       required:
-        - company_id
         - bom_id
         - operation_id
         - workstation_id
@@ -3619,6 +7610,7 @@ components:
         - metadata
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3643,6 +7635,7 @@ components:
       type: object
       properties:
         company_id:
+          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -3670,6 +7663,982 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BomOperation'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    BomByproduct:
+      type: object
+      required:
+        - id
+        - bom_id
+        - item_id
+        - quantity
+        - cost_share
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        cost_share:
+          type: string
+        metadata:
+          type: object
+
+    BomByproductBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BomByproduct'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateBomByproductRequest:
+      type: object
+      required:
+        - bom_id
+        - item_id
+        - quantity
+        - cost_share
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        cost_share:
+          type: string
+        metadata:
+          type: object
+
+    UpdateBomByproductRequest:
+      type: object
+      required:
+        - bom_id
+        - item_id
+        - quantity
+        - cost_share
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        cost_share:
+          type: string
+        metadata:
+          type: object
+
+    PatchBomByproductRequest:
+      type: object
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        cost_share:
+          type: string
+        metadata:
+          type: object
+
+    BomByproductList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BomByproduct'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    BomSubcontractor:
+      type: object
+      required:
+        - id
+        - bom_id
+        - partner_id
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    BomSubcontractorBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BomSubcontractor'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateBomSubcontractorRequest:
+      type: object
+      required:
+        - bom_id
+        - partner_id
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    UpdateBomSubcontractorRequest:
+      type: object
+      required:
+        - bom_id
+        - partner_id
+        - metadata
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PatchBomSubcontractorRequest:
+      type: object
+      properties:
+        company_id:
+          nullable: true
+          type: string
+          format: uuid
+        bom_id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    BomSubcontractorList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BomSubcontractor'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    CategoryCostingDefaults:
+      type: object
+      required:
+        - id
+        - company_id
+        - product_category_id
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        product_category_id:
+          type: string
+          format: uuid
+        wip_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        fg_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        raw_material_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        conversion_cost_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        subcontract_interim_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        cost_variance_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        inventory_loss_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        repair_expense_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    CategoryCostingDefaultsBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryCostingDefaults'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateCategoryCostingDefaultsRequest:
+      type: object
+      required:
+        - company_id
+        - product_category_id
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        product_category_id:
+          type: string
+          format: uuid
+        wip_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        fg_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        raw_material_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        conversion_cost_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        subcontract_interim_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        cost_variance_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        inventory_loss_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        repair_expense_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    UpdateCategoryCostingDefaultsRequest:
+      type: object
+      required:
+        - company_id
+        - product_category_id
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        product_category_id:
+          type: string
+          format: uuid
+        wip_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        fg_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        raw_material_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        conversion_cost_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        subcontract_interim_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        cost_variance_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        inventory_loss_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        repair_expense_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PatchCategoryCostingDefaultsRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        product_category_id:
+          type: string
+          format: uuid
+        wip_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        fg_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        raw_material_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        conversion_cost_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        subcontract_interim_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        cost_variance_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        inventory_loss_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        repair_expense_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    CategoryCostingDefaultsList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryCostingDefaults'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    RepairOrder:
+      type: object
+      required:
+        - id
+        - company_id
+        - repair_number
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        repair_number:
+          type: string
+          maxLength: 40
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    RepairOrderBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairOrder'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateRepairOrderRequest:
+      type: object
+      required:
+        - company_id
+        - repair_number
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_number:
+          type: string
+          maxLength: 40
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    UpdateRepairOrderRequest:
+      type: object
+      required:
+        - company_id
+        - repair_number
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_number:
+          type: string
+          maxLength: 40
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    PatchRepairOrderRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_number:
+          type: string
+          maxLength: 40
+        item_id:
+          type: string
+          format: uuid
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    RepairOrderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairOrder'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    RepairPart:
+      type: object
+      required:
+        - id
+        - company_id
+        - repair_order_id
+        - item_id
+        - line_type
+        - quantity
+        - rate
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        repair_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        warehouse_id:
+          nullable: true
+          type: string
+          format: uuid
+        line_type:
+          type: string
+        quantity:
+          type: string
+        rate:
+          type: string
+        metadata:
+          type: object
+
+    RepairPartBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairPart'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateRepairPartRequest:
+      type: object
+      required:
+        - company_id
+        - repair_order_id
+        - item_id
+        - line_type
+        - quantity
+        - rate
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        warehouse_id:
+          nullable: true
+          type: string
+          format: uuid
+        line_type:
+          type: string
+        quantity:
+          type: string
+        rate:
+          type: string
+        metadata:
+          type: object
+
+    UpdateRepairPartRequest:
+      type: object
+      required:
+        - company_id
+        - repair_order_id
+        - item_id
+        - line_type
+        - quantity
+        - rate
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        warehouse_id:
+          nullable: true
+          type: string
+          format: uuid
+        line_type:
+          type: string
+        quantity:
+          type: string
+        rate:
+          type: string
+        metadata:
+          type: object
+
+    PatchRepairPartRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        repair_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        warehouse_id:
+          nullable: true
+          type: string
+          format: uuid
+        line_type:
+          type: string
+        quantity:
+          type: string
+        rate:
+          type: string
+        metadata:
+          type: object
+
+    RepairPartList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairPart'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    RepairTag:
+      type: object
+      required:
+        - id
+        - company_id
+        - name
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        metadata:
+          type: object
+
+    RepairTagBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairTag'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateRepairTagRequest:
+      type: object
+      required:
+        - company_id
+        - name
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        metadata:
+          type: object
+
+    UpdateRepairTagRequest:
+      type: object
+      required:
+        - company_id
+        - name
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        metadata:
+          type: object
+
+    PatchRepairTagRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 140
+        metadata:
+          type: object
+
+    RepairTagList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepairTag'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    UnbuildOrder:
+      type: object
+      required:
+        - id
+        - company_id
+        - unbuild_number
+        - work_order_id
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        unbuild_number:
+          type: string
+          maxLength: 40
+        work_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    UnbuildOrderBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnbuildOrder'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateUnbuildOrderRequest:
+      type: object
+      required:
+        - company_id
+        - unbuild_number
+        - work_order_id
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        unbuild_number:
+          type: string
+          maxLength: 40
+        work_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    UpdateUnbuildOrderRequest:
+      type: object
+      required:
+        - company_id
+        - unbuild_number
+        - work_order_id
+        - item_id
+        - quantity
+        - status
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        unbuild_number:
+          type: string
+          maxLength: 40
+        work_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    PatchUnbuildOrderRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        unbuild_number:
+          type: string
+          maxLength: 40
+        work_order_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+
+    UnbuildOrderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnbuildOrder'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
 
@@ -3709,6 +8678,13 @@ components:
           type: string
         status:
           type: string
+        reservation_state:
+          nullable: true
+          type: string
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
         raw_material_cost:
           type: string
         operating_cost:
@@ -3789,6 +8765,13 @@ components:
           type: string
         status:
           type: string
+        reservation_state:
+          nullable: true
+          type: string
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
         raw_material_cost:
           type: string
         operating_cost:
@@ -3856,6 +8839,13 @@ components:
           type: string
         status:
           type: string
+        reservation_state:
+          nullable: true
+          type: string
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
         raw_material_cost:
           type: string
         operating_cost:
@@ -3912,6 +8902,13 @@ components:
           type: string
         status:
           type: string
+        reservation_state:
+          nullable: true
+          type: string
+        product_category_id:
+          nullable: true
+          type: string
+          format: uuid
         raw_material_cost:
           type: string
         operating_cost:
@@ -4250,6 +9247,108 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JobCard'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    SubcontractMoLink:
+      type: object
+      required:
+        - id
+        - company_id
+        - purchase_order_id
+        - work_order_id
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        purchase_order_id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    SubcontractMoLinkBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubcontractMoLink'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateSubcontractMoLinkRequest:
+      type: object
+      required:
+        - company_id
+        - purchase_order_id
+        - work_order_id
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        purchase_order_id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    UpdateSubcontractMoLinkRequest:
+      type: object
+      required:
+        - company_id
+        - purchase_order_id
+        - work_order_id
+        - metadata
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        purchase_order_id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PatchSubcontractMoLinkRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        purchase_order_id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    SubcontractMoLinkList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubcontractMoLink'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
 

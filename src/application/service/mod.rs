@@ -8,13 +8,23 @@ pub mod error;
 pub use error::{ServiceError, ServiceResult};
 
 pub mod workstation_service;
+pub mod workstation_loss_service;
+pub mod workstation_productivity_service;
 pub mod operation_service;
 pub mod bom_service;
 pub mod bom_item_service;
 pub mod bom_operation_service;
+pub mod bom_byproduct_service;
+pub mod bom_subcontractor_service;
+pub mod category_costing_defaults_service;
+pub mod repair_order_service;
+pub mod repair_part_service;
+pub mod repair_tag_service;
+pub mod unbuild_order_service;
 pub mod work_order_service;
 pub mod work_order_item_service;
 pub mod job_card_service;
+pub mod subcontract_mo_link_service;
 
 // <<< CUSTOM
 pub mod manufacturing_gl;
@@ -28,30 +38,48 @@ pub mod manufacturing_bom_definition;
 pub mod manufacturing_work_order;
 pub mod manufacturing_execution;
 pub mod manufacturing_job_card;
+pub mod manufacturing_unbuild;
+pub mod manufacturing_repair;
+pub mod manufacturing_workcenter;
+pub mod manufacturing_subcontract;
 // END CUSTOM
 
 pub use workstation_service::WorkstationService;
+pub use workstation_loss_service::WorkstationLossService;
+pub use workstation_productivity_service::WorkstationProductivityService;
 pub use operation_service::OperationService;
 pub use bom_service::BomService;
 pub use bom_item_service::BomItemService;
 pub use bom_operation_service::BomOperationService;
+pub use bom_byproduct_service::BomByproductService;
+pub use bom_subcontractor_service::BomSubcontractorService;
+pub use category_costing_defaults_service::CategoryCostingDefaultsService;
+pub use repair_order_service::RepairOrderService;
+pub use repair_part_service::RepairPartService;
+pub use repair_tag_service::RepairTagService;
+pub use unbuild_order_service::UnbuildOrderService;
 pub use work_order_service::WorkOrderService;
 pub use work_order_item_service::WorkOrderItemService;
 pub use job_card_service::JobCardService;
+pub use subcontract_mo_link_service::SubcontractMoLinkService;
 // <<< CUSTOM
 pub use manufacturing_gl::{
     AccountingPostEnvelope, GlPostAck, GlPostLine, GlPostRejected, GlPostSink,
 };
 pub use manufacturing_ports::{
-    FinishedReceipt, InventoryPort, InventoryRejected, IssueLine, IssuedLineValue, IssueAck,
-    MaterialIssue,
+    CostPosture, FinishedReceipt, InventoryPort, InventoryRejected, IssueLine, IssuedLineValue,
+    IssueAck, MaterialIssue, ReceiptByproduct, RepairAvailability, RepairLeg, UnbuildReversal,
 };
 pub use manufacturing_events::{
     ConversionCharged, FinishedGoodsReceived, LoggingSink, ManufacturingEvent,
-    ManufacturingEventSink, MaterialsConsumed, WorkOrderCompleted, WorkOrderReleased,
+    ManufacturingEventSink, MaterialsConsumed, RepairCompleted, SubcontractMoMinted,
+    UnbuildExecuted, WorkOrderCancelled, WorkOrderCompleted, WorkOrderConfirmed,
 };
+pub use manufacturing_subcontract::{SubcontractReceiptEvent, SubcontractReceiptLine};
 pub use manufacturing_write_service::{
     ConsumeOutcome, ManufacturingError, ManufacturingWriteService, NewBom, NewBomItem,
-    NewBomOperation, NewJobCard, NewWorkOrder, ReceiveOutcome,
+    NewBomOperation, NewJobCard, NewProductivity, NewRepairOrder, NewRepairPart, NewUnbuild,
+    NewWorkOrder, NewWorkstationLoss, OeeReport, ReceiveByproductLine, ReceiveFinishedOrder,
+    ReceiveOutcome, RepairEndOutcome, UnbuildOutcome,
 };
 // END CUSTOM

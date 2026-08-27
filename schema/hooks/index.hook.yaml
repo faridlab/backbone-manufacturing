@@ -10,6 +10,7 @@ version: 2
 # Import all hook files.
 imports:
   - example.hook.yaml
+  - manufacturing.hook.yaml
 
 # =============================================================================
 # Module-level configuration
@@ -33,4 +34,9 @@ events: {}
 # =============================================================================
 # Scheduled jobs
 # =============================================================================
+# ZERO scheduled jobs (deliberate, verified posture): every manufacturing
+# transition fires synchronously from a service verb. The guard register lives in
+# manufacturing.hook.yaml (state machines T1–T5 / W1–W4 / U1 / R1–R4 with
+# enforcement keys grounded in actual DDL per ADR-0015, plus the ADR-0016
+# lifecycle declarations on every status field in schema/models).
 scheduled_jobs: {}

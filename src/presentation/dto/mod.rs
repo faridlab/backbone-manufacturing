@@ -6,13 +6,23 @@
 //! with validation and OpenAPI schema support.
 
 pub mod workstation_dto;
+pub mod workstation_loss_dto;
+pub mod workstation_productivity_dto;
 pub mod operation_dto;
 pub mod bom_dto;
 pub mod bom_item_dto;
 pub mod bom_operation_dto;
+pub mod bom_byproduct_dto;
+pub mod bom_subcontractor_dto;
+pub mod category_costing_defaults_dto;
+pub mod repair_order_dto;
+pub mod repair_part_dto;
+pub mod repair_tag_dto;
+pub mod unbuild_order_dto;
 pub mod work_order_dto;
 pub mod work_order_item_dto;
 pub mod job_card_dto;
+pub mod subcontract_mo_link_dto;
 
 // Re-exports
 pub use workstation_dto::{
@@ -22,6 +32,22 @@ pub use workstation_dto::{
     WorkstationResponseDto,
     WorkstationListResponseDto,
     WorkstationSummaryDto,
+};
+pub use workstation_loss_dto::{
+    CreateWorkstationLossDto,
+    UpdateWorkstationLossDto,
+    PatchWorkstationLossDto,
+    WorkstationLossResponseDto,
+    WorkstationLossListResponseDto,
+    WorkstationLossSummaryDto,
+};
+pub use workstation_productivity_dto::{
+    CreateWorkstationProductivityDto,
+    UpdateWorkstationProductivityDto,
+    PatchWorkstationProductivityDto,
+    WorkstationProductivityResponseDto,
+    WorkstationProductivityListResponseDto,
+    WorkstationProductivitySummaryDto,
 };
 pub use operation_dto::{
     CreateOperationDto,
@@ -55,6 +81,62 @@ pub use bom_operation_dto::{
     BomOperationListResponseDto,
     BomOperationSummaryDto,
 };
+pub use bom_byproduct_dto::{
+    CreateBomByproductDto,
+    UpdateBomByproductDto,
+    PatchBomByproductDto,
+    BomByproductResponseDto,
+    BomByproductListResponseDto,
+    BomByproductSummaryDto,
+};
+pub use bom_subcontractor_dto::{
+    CreateBomSubcontractorDto,
+    UpdateBomSubcontractorDto,
+    PatchBomSubcontractorDto,
+    BomSubcontractorResponseDto,
+    BomSubcontractorListResponseDto,
+    BomSubcontractorSummaryDto,
+};
+pub use category_costing_defaults_dto::{
+    CreateCategoryCostingDefaultsDto,
+    UpdateCategoryCostingDefaultsDto,
+    PatchCategoryCostingDefaultsDto,
+    CategoryCostingDefaultsResponseDto,
+    CategoryCostingDefaultsListResponseDto,
+    CategoryCostingDefaultsSummaryDto,
+};
+pub use repair_order_dto::{
+    CreateRepairOrderDto,
+    UpdateRepairOrderDto,
+    PatchRepairOrderDto,
+    RepairOrderResponseDto,
+    RepairOrderListResponseDto,
+    RepairOrderSummaryDto,
+};
+pub use repair_part_dto::{
+    CreateRepairPartDto,
+    UpdateRepairPartDto,
+    PatchRepairPartDto,
+    RepairPartResponseDto,
+    RepairPartListResponseDto,
+    RepairPartSummaryDto,
+};
+pub use repair_tag_dto::{
+    CreateRepairTagDto,
+    UpdateRepairTagDto,
+    PatchRepairTagDto,
+    RepairTagResponseDto,
+    RepairTagListResponseDto,
+    RepairTagSummaryDto,
+};
+pub use unbuild_order_dto::{
+    CreateUnbuildOrderDto,
+    UpdateUnbuildOrderDto,
+    PatchUnbuildOrderDto,
+    UnbuildOrderResponseDto,
+    UnbuildOrderListResponseDto,
+    UnbuildOrderSummaryDto,
+};
 pub use work_order_dto::{
     CreateWorkOrderDto,
     UpdateWorkOrderDto,
@@ -78,6 +160,14 @@ pub use job_card_dto::{
     JobCardResponseDto,
     JobCardListResponseDto,
     JobCardSummaryDto,
+};
+pub use subcontract_mo_link_dto::{
+    CreateSubcontractMoLinkDto,
+    UpdateSubcontractMoLinkDto,
+    PatchSubcontractMoLinkDto,
+    SubcontractMoLinkResponseDto,
+    SubcontractMoLinkListResponseDto,
+    SubcontractMoLinkSummaryDto,
 };
 
 // Common pagination types

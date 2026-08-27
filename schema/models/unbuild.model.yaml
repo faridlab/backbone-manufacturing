@@ -1,0 +1,71 @@
+# =============================================================================
+# Domain: Manufacturing — unbuild (transactional, EMITS GL through the reverse leg)
+# Entity: UnbuildOrder
+# Description: Disassemble a FINISHED good back into its components. Guards: the
+# source work order must be done, and the unbuild quantity is bounded by the
+# produced quantity still remaining (produced − Σ prior done unbuilds). An unbuild
+# NEVER creates a reverse work order — it writes reverse stock moves directly
+# through the InventoryPort (finished good out of stock, components back in at
+# their snapshot rates) and posts one balanced reversal leg:
+#   unbuild  Dr Raw-Material Stock (Σ components) · Cr Finished-Goods (same Σ)
+# so conservation is exact and WIP is untouched (it was already cleared at done).
+# Plain 2-state draft → done (hand-set; done is terminal — there is no cancel path,
+# matching the upstream posture).
+# =============================================================================
+
+models:
+  - name: UnbuildOrder
+    collection: unbuild_orders
+    description: "An order to disassemble a produced finished good back into components (from a done work order only)"
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique unbuild order id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner # logical FK to organization.Company.id"
+      unbuild_number:
+        type: string
+        attributes: ["@required", "@max(40)"]
+        description: "Caller-supplied unbuild number (unique per company; sequence minting stays deferred)"
+      work_order_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(WorkOrder.id)"]
+        description: "The DONE work order whose output is being disassembled"
+      item_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The finished-good item being unbuilt # logical FK to catalog.Product.id"
+      quantity:
+        type: decimal
+        attributes: ["@required", "@precision(18,4)", "@positive"]
+        description: "Quantity of the finished good to disassemble (bounded by the source's remaining producible)"
+      status:
+        type: UnbuildStatus
+        attributes: ["@required", "@default(draft)"]
+        lifecycle:
+          shape: hand_set
+          sticky: false
+        description: "Plain 2-state draft → done via execute (guard: source work order done); done is terminal"
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata"
+    indexes:
+      - type: unique
+        fields: [company_id, unbuild_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [work_order_id]
+
+enums:
+  - name: UnbuildStatus
+    description: "Unbuild lifecycle (plain, not computed)"
+    variants:
+      - name: draft
+        description: "Created, not executed"
+        default: true
+      - name: done
+        description: "Executed — reverse stock moves written through the InventoryPort, reversal posted; terminal"
