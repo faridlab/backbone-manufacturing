@@ -88,4 +88,4 @@ rand = "0.8"
 # backbone-accounting ledger through an in-test ACL adapter implementing `GlPostSink`. Dev-dependency
 # ONLY — the shipped manufacturing library has ZERO normal Cargo edge to accounting (verify:
 # `cargo tree -e normal -i backbone-accounting` is empty). Inventory is driven through `InventoryPort`.
-backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.6.5" }
+backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.6.6" }
