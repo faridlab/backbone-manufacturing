@@ -2,6 +2,10 @@
 //! with exploded requirements numbered by the purchase reference; a replayed event returns the
 //! SAME work order id (the link row is the backstop); a non-subcontract BoM is an authoring
 //! defect, LOUD. Zero buying writes, zero SVL.
+//!
+//! The receipt event keeps its `company_id` as the documented legacy twin (ADR-0029): buying's
+//! envelope still carries a tenant on the wire and the module reads it only for accounting
+//! continuity — no module statement keys on it.
 
 mod common;
 
@@ -16,12 +20,11 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn svc_bom(company: Uuid, item: Uuid, comp: Uuid) -> (ManufacturingWriteService, sqlx::PgPool, Uuid) {
+async fn svc_bom(item: Uuid, comp: Uuid) -> (ManufacturingWriteService, sqlx::PgPool, Uuid) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -53,7 +56,8 @@ async fn scb1_kind_mismatch_loud() {
     let svc = ManufacturingWriteService::new(pool.clone());
     let company = Uuid::new_v4();
     let item = Uuid::new_v4();
-    let mut e = event(company, Uuid::new_v4(), item, "5", None);
+    let order = Uuid::new_v4();
+    let mut e = event(company, order, item, "5", None);
     e.order_kind = "goods".into();
     let sink = LoggingSink;
     let err = svc.handle_subcontract_receipt(&e, &sink).await.unwrap_err();
@@ -61,8 +65,9 @@ async fn scb1_kind_mismatch_loud() {
         matches!(err, ManufacturingError::SubcontractKindMismatch(ref k) if k == "goods"),
         "kind mismatch is LOUD, got {err:?}"
     );
-    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM manufacturing.work_orders WHERE company_id=$1")
-        .bind(company)
+    // Without a reference the mint would number the MO by the order id — none was minted.
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM manufacturing.work_orders WHERE work_order_number=$1")
+        .bind(order.to_string())
         .fetch_one(&pool)
         .await
         .unwrap();
@@ -76,7 +81,7 @@ async fn scb2_mint_confirmed_exploded() {
     let company = Uuid::new_v4();
     let item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let (svc, pool, bom) = svc_bom(company, item, comp).await;
+    let (svc, pool, bom) = svc_bom(item, comp).await;
     sqlx::query("UPDATE manufacturing.boms SET bom_type='subcontract'::bom_type WHERE id=$1")
         .bind(bom)
         .execute(&pool)
@@ -110,9 +115,8 @@ async fn scb2_mint_confirmed_exploded() {
     assert_eq!((req_item, req_qty), (comp, dec("10")));
     // The link row exists — one MO per purchase order.
     let linked: Uuid = sqlx::query_scalar(
-        "SELECT work_order_id FROM manufacturing.subcontract_mo_links WHERE company_id=$1 AND purchase_order_id=$2",
+        "SELECT work_order_id FROM manufacturing.subcontract_mo_links WHERE purchase_order_id=$1",
     )
-    .bind(company)
     .bind(po)
     .fetch_one(&pool)
     .await
@@ -127,7 +131,7 @@ async fn scb3_replay_returns_same_id() {
     let company = Uuid::new_v4();
     let item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let (svc, pool, bom) = svc_bom(company, item, comp).await;
+    let (svc, pool, bom) = svc_bom(item, comp).await;
     sqlx::query("UPDATE manufacturing.boms SET bom_type='subcontract'::bom_type WHERE id=$1")
         .bind(bom)
         .execute(&pool)
@@ -138,8 +142,9 @@ async fn scb3_replay_returns_same_id() {
     let first = svc.handle_subcontract_receipt(&event(company, po, item, "3", None), &sink).await.unwrap();
     let replay = svc.handle_subcontract_receipt(&event(company, po, item, "3", None), &sink).await.unwrap();
     assert_eq!(first, replay, "the link row is the replay backstop");
-    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM manufacturing.work_orders WHERE company_id=$1")
-        .bind(company)
+    // Without a reference the MO is numbered by the order id — count that number's rows.
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM manufacturing.work_orders WHERE work_order_number=$1")
+        .bind(po.to_string())
         .fetch_one(&pool)
         .await
         .unwrap();
@@ -156,7 +161,7 @@ async fn scb4_normal_bom_refused() {
     let company = Uuid::new_v4();
     let item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let (svc, _pool, _bom) = svc_bom(company, item, comp).await; // left 'normal'
+    let (svc, _pool, _bom) = svc_bom(item, comp).await; // left 'normal'
     let sink = LoggingSink;
     let err = svc
         .handle_subcontract_receipt(&event(company, Uuid::new_v4(), item, "5", None), &sink)

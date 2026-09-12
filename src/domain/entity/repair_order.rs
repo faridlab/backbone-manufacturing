@@ -51,7 +51,6 @@ impl std::ops::Deref for RepairOrderId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct RepairOrder {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub repair_number: String,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -69,10 +68,9 @@ impl RepairOrder {
     }
 
     /// Create a new RepairOrder with required fields
-    pub fn new(company_id: Uuid, repair_number: String, item_id: Uuid, quantity: Decimal, status: RepairStatus) -> Self {
+    pub fn new(repair_number: String, item_id: Uuid, quantity: Decimal, status: RepairStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             repair_number,
             item_id,
             product_category_id: None,
@@ -156,9 +154,6 @@ impl RepairOrder {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "repair_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.repair_number = v; }
                 }
@@ -228,7 +223,6 @@ impl backbone_orm::EntityRepoMeta for RepairOrder {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m.insert("product_category_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "repair_status".to_string());
@@ -236,9 +230,6 @@ impl backbone_orm::EntityRepoMeta for RepairOrder {
     }
     fn search_fields() -> &'static [&'static str] {
         &["repair_number"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -248,7 +239,6 @@ impl backbone_orm::EntityRepoMeta for RepairOrder {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct RepairOrderBuilder {
-    company_id: Option<Uuid>,
     repair_number: Option<String>,
     item_id: Option<Uuid>,
     product_category_id: Option<Uuid>,
@@ -257,12 +247,6 @@ pub struct RepairOrderBuilder {
 }
 
 impl RepairOrderBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the repair_number field (required)
     pub fn repair_number(mut self, value: String) -> Self {
         self.repair_number = Some(value);
@@ -297,14 +281,12 @@ impl RepairOrderBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<RepairOrder, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let repair_number = self.repair_number.ok_or_else(|| "repair_number is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
         let quantity = self.quantity.ok_or_else(|| "quantity is required".to_string())?;
 
         Ok(RepairOrder {
             id: Uuid::new_v4(),
-            company_id,
             repair_number,
             item_id,
             product_category_id: self.product_category_id,

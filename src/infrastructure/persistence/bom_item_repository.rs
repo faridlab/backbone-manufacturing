@@ -43,7 +43,6 @@ impl BomItemRepository {
 /// write service (`money(quantity * rate)`), not re-derived here.
 pub struct NewBomItemRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -66,19 +65,18 @@ impl BomItemRepository {
     /// Insert one BOM component.
     ///
     /// Takes the CALLER'S connection so the component commits in the SAME transaction as its header.
-    /// The caller binds the company on that connection (`bind_company_on`) before calling — don't
-    /// re-bind. The explicit `company_id` bind (denormalized from the parent BOM) stays as
-    /// defense-in-depth behind the RLS fence (ADR-0010 Decision A).
+    /// The caller relays the ambient org scope onto that connection (`relay_ambient_scope`) before
+    /// calling — don't re-bind (ADR-0029).
     pub async fn insert_component(
         &self,
         conn: &mut sqlx::PgConnection,
         c: &NewBomItemRow,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            r#"INSERT INTO manufacturing.bom_items (id, company_id, bom_id, item_id, quantity, rate, amount, is_phantom)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
+            r#"INSERT INTO manufacturing.bom_items (id, bom_id, item_id, quantity, rate, amount, is_phantom)
+               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
         )
-        .bind(c.id).bind(c.company_id).bind(c.bom_id).bind(c.item_id).bind(c.quantity).bind(c.rate)
+        .bind(c.id).bind(c.bom_id).bind(c.item_id).bind(c.quantity).bind(c.rate)
         .bind(c.amount).bind(c.is_phantom)
         .execute(conn)
         .await?;
@@ -87,10 +85,9 @@ impl BomItemRepository {
 
     /// Read a BOM's components for the explosion.
     ///
-    /// A read outside any transaction: takes the pool and runs `fetch_all_rows_scoped` so the RLS
-    /// fence (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company_id))` — the
-    /// company is on the parameter — so the explosion stays fenced even when driven by a non-request
-    /// caller (job / event subscriber).
+    /// A read outside any transaction: takes the pool and runs `fetch_all_rows_scoped` so it rides
+    /// the request-dedicated connection — under the composed decorator the org fence applies;
+    /// undecorated (module tests) the read runs plain (ADR-0029).
     pub async fn list_components(
         &self,
         pool: &PgPool,

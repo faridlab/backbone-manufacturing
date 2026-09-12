@@ -28,7 +28,13 @@
 //! Account resolution order is ALWAYS: per-order override → category costing default → LOUD
 //! `MissingAccount`. A hardcoded fallback account would silently post to someone else's ledger
 //! and is never used.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic. Writes bind the ambient org scope (set per
+//! request by the composing service) — never a module-side tenant value; pool reads ride the
+//! caller-scoped helpers. Cross-module payload fields that still carry a company id are legacy
+//! twins, filled from the ambient scope's company echo, never keyed on by a statement here.
 
+use backbone_orm::org_scope;
 use rust_decimal::{Decimal, RoundingStrategy};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -41,6 +47,28 @@ use crate::infrastructure::persistence::{
 };
 
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostSink};
+
+/// The ambient org scope's legacy company echo — the acting org unit, which the spine mirrored
+/// from the historical company id verbatim. Cross-module wire fields that still carry a tenant
+/// (the GL envelope, the inventory issues, the outbox fence, the event payloads) are filled from
+/// it; nothing in this module keys a statement on it. `Uuid::nil()` when no scope is bound
+/// (undecorated module tests, jobs).
+pub(crate) fn legacy_company_echo() -> Uuid {
+    org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .unwrap_or(Uuid::nil())
+}
+
+/// Re-bind the caller's ambient org scope onto a transaction this service opened itself — the
+/// scope is task-local and a fresh pool transaction carries none of it. With no ambient scope
+/// (standalone deployment, jobs) the transaction stays plain: the module is tenant-agnostic and
+/// the composed decorator owns isolation.
+pub(crate) async fn relay_ambient_scope(conn: &mut sqlx::PgConnection) -> Result<(), sqlx::Error> {
+    if let Some(scope) = org_scope::current_org_scope() {
+        org_scope::bind_org_scope_on(conn, &scope).await?;
+    }
+    Ok(())
+}
 
 pub(super) fn money(v: Decimal) -> Decimal {
     v.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero)
@@ -98,7 +126,6 @@ pub struct NewBomOperation {
     pub hour_rate: Decimal,
 }
 pub struct NewBom {
-    pub company_id: Uuid,
     pub item_id: Uuid,
     pub bom_code: String,
     pub quantity: Decimal,
@@ -109,8 +136,6 @@ pub struct NewBom {
 /// A byproduct leg authored onto a BoM. The share sum across the family is guarded at authoring
 /// (`add_bom_byproduct` refuses a family whose shares would exceed 100) — never clamped.
 pub struct NewBomByproduct {
-    /// The company session authoring the leg (RLS scope); the ROW's company mirrors the parent BoM.
-    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     /// Category whose costing defaults supply the byproduct's stock account (caller-supplied).
@@ -120,7 +145,6 @@ pub struct NewBomByproduct {
 }
 
 pub struct NewWorkOrder {
-    pub company_id: Uuid,
     pub work_order_number: String,
     pub item_id: Uuid,
     pub bom_id: Uuid,
@@ -137,7 +161,6 @@ pub struct NewWorkOrder {
 }
 
 pub struct NewJobCard {
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -146,7 +169,6 @@ pub struct NewJobCard {
 }
 
 pub struct NewUnbuild {
-    pub company_id: Uuid,
     pub unbuild_number: String,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
@@ -177,7 +199,6 @@ pub struct ReceiveFinishedOrder {
 }
 
 pub struct NewRepairOrder {
-    pub company_id: Uuid,
     pub repair_number: String,
     pub item_id: Uuid,
     /// The item's category at creation — selects the costing defaults that resolve the
@@ -196,13 +217,11 @@ pub struct NewRepairPart {
 }
 
 pub struct NewWorkstationLoss {
-    pub company_id: Option<Uuid>,
     pub name: String,
     pub loss_type: crate::domain::entity::LossType,
 }
 
 pub struct NewProductivity {
-    pub company_id: Uuid,
     pub workstation_id: Uuid,
     pub job_card_id: Option<Uuid>,
     pub loss_name: String,
@@ -212,7 +231,6 @@ pub struct NewProductivity {
 }
 
 pub struct NewCostingDefaults {
-    pub company_id: Uuid,
     pub product_category_id: Uuid,
     pub wip_account_id: Option<Uuid>,
     pub fg_account_id: Option<Uuid>,
@@ -329,22 +347,21 @@ impl ManufacturingWriteService {
     }
 
     pub(super) async fn load_wo(&self, wo_id: Uuid) -> Result<WorkOrderRow, ManufacturingError> {
-        // RLS scope (ADR-0008), ID-only pattern: no company argument — the read rides the
-        // request-dedicated connection, so RLS fences it to the caller's tenant. Callers that are
-        // EVENT-driven (not on a request) must wrap the call in
-        // `with_company_scope(Some(event.company_id))` or this read fails closed.
+        // ID-only pattern: no tenant argument — the read rides the request-dedicated connection,
+        // so the composed decorator's org fence scopes it to the caller's unit (ADR-0029).
+        // Undecorated (module tests) the read runs plain.
         self.work_orders.load(&self.pool, wo_id).await?
             .ok_or(ManufacturingError::NotFound("work order"))
     }
 
     /// THE account-resolution chain: per-order override → category costing default → LOUD
     /// `MissingAccount`. Never a hardcoded fallback — a silent default account posts to someone
-    /// else's ledger.
+    /// else's ledger. The category-default lookup is ID-only: under the composed decorator the
+    /// org fence scopes it to the caller's unit (ADR-0029).
     pub(super) async fn resolve_account(
         &self,
         label: &'static str,
         order_override: Option<Uuid>,
-        company_id: Uuid,
         product_category_id: Option<Uuid>,
         pick: fn(&CostingDefaultsAccounts) -> Option<Uuid>,
     ) -> Result<Uuid, ManufacturingError> {
@@ -354,7 +371,7 @@ impl ManufacturingWriteService {
         if let Some(category) = product_category_id {
             if let Some(defaults) = self
                 .costing_defaults
-                .find(&self.pool, company_id, category)
+                .find(&self.pool, category)
                 .await?
             {
                 if let Some(account) = pick(&defaults) {

@@ -48,7 +48,6 @@ impl std::ops::Deref for RepairTagId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct RepairTag {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub name: String,
     #[serde(default)]
     #[sqlx(json)]
@@ -62,10 +61,9 @@ impl RepairTag {
     }
 
     /// Create a new RepairTag with required fields
-    pub fn new(company_id: Uuid, name: String) -> Self {
+    pub fn new(name: String) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             name,
             metadata: AuditMetadata::default(),
         }
@@ -130,9 +128,6 @@ impl RepairTag {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "name" => {
                     if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
@@ -190,14 +185,10 @@ impl backbone_orm::EntityRepoMeta for RepairTag {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["name"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -207,17 +198,10 @@ impl backbone_orm::EntityRepoMeta for RepairTag {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct RepairTagBuilder {
-    company_id: Option<Uuid>,
     name: Option<String>,
 }
 
 impl RepairTagBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the name field (required)
     pub fn name(mut self, value: String) -> Self {
         self.name = Some(value);
@@ -228,12 +212,10 @@ impl RepairTagBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<RepairTag, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
 
         Ok(RepairTag {
             id: Uuid::new_v4(),
-            company_id,
             name,
             metadata: AuditMetadata::default(),
         })

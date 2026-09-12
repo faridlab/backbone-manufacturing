@@ -35,9 +35,6 @@ use crate::domain::entity::RepairLineType;
 #[serde(rename_all = "camelCase")]
 pub struct CreateRepairPartDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "repair_order_id")]
     pub repair_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -64,9 +61,6 @@ pub struct CreateRepairPartDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRepairPartDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "repair_order_id")]
     pub repair_order_id: Uuid,
@@ -95,9 +89,6 @@ pub struct UpdateRepairPartDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchRepairPartDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "repair_order_id")]
     pub repair_order_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -116,7 +107,7 @@ pub struct PatchRepairPartDto {
 impl PatchRepairPartDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.repair_order_id.is_some() || self.item_id.is_some() || self.warehouse_id.is_some() || self.line_type.is_some() || self.quantity.is_some() || self.rate.is_some()
+        self.repair_order_id.is_some() || self.item_id.is_some() || self.warehouse_id.is_some() || self.line_type.is_some() || self.quantity.is_some() || self.rate.is_some()
     }
 }
 
@@ -134,8 +125,6 @@ impl PatchRepairPartDto {
 pub struct RepairPartResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub repair_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -201,9 +190,9 @@ impl RepairPartListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct RepairPartSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub repair_order_id: Uuid,
     pub item_id: Uuid,
+    pub warehouse_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -215,7 +204,6 @@ impl From<RepairPart> for RepairPartResponseDto {
     fn from(entity: RepairPart) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             repair_order_id: entity.repair_order_id,
             item_id: entity.item_id,
             warehouse_id: entity.warehouse_id,
@@ -232,9 +220,9 @@ impl From<RepairPart> for RepairPartSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             repair_order_id: entity.repair_order_id,
             item_id: entity.item_id,
+            warehouse_id: entity.warehouse_id,
             created_at,
         }
     }
@@ -244,7 +232,6 @@ impl From<CreateRepairPartDto> for RepairPart {
     fn from(dto: CreateRepairPartDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             repair_order_id: dto.repair_order_id,
             item_id: dto.item_id,
             warehouse_id: dto.warehouse_id,
@@ -260,7 +247,6 @@ impl From<&RepairPart> for RepairPartResponseDto {
     fn from(entity: &RepairPart) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             repair_order_id: entity.repair_order_id.clone(),
             item_id: entity.item_id.clone(),
             warehouse_id: entity.warehouse_id.clone(),
@@ -280,7 +266,6 @@ impl backbone_core::FromCreateDto<CreateRepairPartDto> for RepairPart {
 
 impl backbone_core::ApplyUpdateDto<UpdateRepairPartDto> for RepairPart {
     fn apply_update(mut self, dto: UpdateRepairPartDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.repair_order_id = dto.repair_order_id;
         self.item_id = dto.item_id;
         self.warehouse_id = dto.warehouse_id;

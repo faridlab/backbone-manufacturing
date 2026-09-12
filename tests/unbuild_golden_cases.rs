@@ -15,32 +15,21 @@ use uuid::Uuid;
 
 /// A done work order of `qty` FG whose component costs 100/unit and whose job card costs 30,
 /// fully received into `inv`'s finished estate. Value locked in FG = qty × 103.
-/// Returns (svc, pool, company, wo, fg_item, comp, accounts).
-#[allow(clippy::type_complexity)]
+/// Returns (svc, pool, wo, fg_item, comp, accounts).
 async fn done_wo(
     qty: &str,
     inv: &FakeInventory,
-) -> (
-    ManufacturingWriteService,
-    sqlx::PgPool,
-    Uuid,
-    Uuid,
-    Uuid,
-    Uuid,
-    WoAccounts,
-) {
+) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid, Uuid, WoAccounts) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     inv.stock(comp, qty, "100"); // exactly the BoM's requirement (1/unit)
 
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -52,7 +41,6 @@ async fn done_wo(
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -72,7 +60,6 @@ async fn done_wo(
     svc.consume_materials(wo, Uuid::new_v4(), inv, &gl, &sink).await.unwrap();
     let jc = svc
         .add_job_card(NewJobCard {
-            company_id: company,
             work_order_id: wo,
             operation_id: Uuid::new_v4(),
             workstation_id: Uuid::new_v4(),
@@ -84,7 +71,7 @@ async fn done_wo(
     svc.complete_job_card(jc, &gl, &sink).await.unwrap();
     let out = svc.receive_finished(wo, rcv(dec(qty)), inv, &gl, &sink).await.unwrap();
     assert!(out.completed, "the source order must be fully produced");
-    (svc, pool, company, wo, fg_item, comp, acc)
+    (svc, pool, wo, fg_item, comp, acc)
 }
 
 async fn wo_status(pool: &sqlx::PgPool, wo: Uuid) -> String {
@@ -101,14 +88,12 @@ async fn ug1_source_not_done_refused() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
     let inv = FakeInventory::new();
     inv.stock(comp, "1000", "100");
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -120,7 +105,6 @@ async fn ug1_source_not_done_refused() {
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -139,7 +123,6 @@ async fn ug1_source_not_done_refused() {
 
     let unbuild = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -171,7 +154,7 @@ async fn ug1_source_not_done_refused() {
 #[tokio::test]
 async fn ug2_over_remaining_refused() {
     let inv = FakeInventory::new();
-    let (svc, pool, company, wo, fg_item, _comp, _acc) = done_wo("10", &inv).await;
+    let (svc, pool, wo, fg_item, _comp, _acc) = done_wo("10", &inv).await;
     let sink = LoggingSink;
     let gl = GlAdapter::new(pool.clone());
     let raw_wh = Uuid::new_v4();
@@ -179,7 +162,6 @@ async fn ug2_over_remaining_refused() {
     // Over the whole batch → LOUD.
     let too_much = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -197,7 +179,6 @@ async fn ug2_over_remaining_refused() {
     // 6 unbuilt → only 4 remain; asking for 5 is LOUD.
     let first = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -208,7 +189,6 @@ async fn ug2_over_remaining_refused() {
     svc.execute_unbuild(first, raw_wh, &inv, &gl, &sink).await.unwrap();
     let second = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -228,7 +208,7 @@ async fn ug2_over_remaining_refused() {
 #[tokio::test]
 async fn ug3_reversal_estates_and_post() {
     let inv = FakeInventory::new();
-    let (svc, pool, _company, wo, fg_item, comp, acc) = done_wo("10", &inv).await;
+    let (svc, pool, wo, fg_item, comp, acc) = done_wo("10", &inv).await;
     let sink = LoggingSink;
     let gl = GlAdapter::new(pool.clone());
     let raw_wh = Uuid::new_v4();
@@ -239,11 +219,6 @@ async fn ug3_reversal_estates_and_post() {
 
     let unbuild = svc
         .create_unbuild(NewUnbuild {
-            company_id: sqlx::query_scalar("SELECT company_id FROM manufacturing.work_orders WHERE id=$1")
-                .bind(wo)
-                .fetch_one(&pool)
-                .await
-                .unwrap(),
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -268,12 +243,11 @@ async fn ug3_reversal_estates_and_post() {
 #[tokio::test]
 async fn ug4_reexecute_idempotent() {
     let inv = FakeInventory::new();
-    let (svc, pool, company, wo, fg_item, _comp, acc) = done_wo("10", &inv).await;
+    let (svc, pool, wo, fg_item, _comp, acc) = done_wo("10", &inv).await;
     let sink = LoggingSink;
     let gl = GlAdapter::new(pool.clone());
     let unbuild = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,
@@ -294,7 +268,7 @@ async fn ug4_reexecute_idempotent() {
 #[tokio::test]
 async fn ug5_source_work_order_untouched() {
     let inv = FakeInventory::new();
-    let (svc, pool, company, wo, fg_item, _comp, _acc) = done_wo("10", &inv).await;
+    let (svc, pool, wo, fg_item, _comp, _acc) = done_wo("10", &inv).await;
     let sink = LoggingSink;
     let gl = GlAdapter::new(pool.clone());
     let (produced, raw_cost, op_cost): (Decimal, Decimal, Decimal) = sqlx::query_as(
@@ -306,7 +280,6 @@ async fn ug5_source_work_order_untouched() {
     .unwrap();
     let unbuild = svc
         .create_unbuild(NewUnbuild {
-            company_id: company,
             unbuild_number: format!("UB-{}", &Uuid::new_v4().to_string()[..8]),
             work_order_id: wo,
             item_id: fg_item,

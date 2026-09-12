@@ -13,32 +13,20 @@ use common::*;
 use uuid::Uuid;
 
 /// Seed the repair accounts through the category chain (a repair carries NO per-order overrides)
-/// and return (svc, pool, company, category, repair_expense, inventory_loss, raw accounts).
-#[allow(clippy::type_complexity)]
-async fn repair_base(
-) -> (
-    ManufacturingWriteService,
-    sqlx::PgPool,
-    Uuid,
-    Uuid,
-    Uuid,
-    Uuid,
-    Uuid,
-) {
+/// and return (svc, pool, category, repair_expense, inventory_loss, raw accounts).
+async fn repair_base() -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid, Uuid, Uuid) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let category = Uuid::new_v4();
-    let expense = account(&pool, company, "6100-REPX", "expense", "operating_expense", "debit").await;
-    let loss = account(&pool, company, "6200-INVLOSS", "expense", "operating_expense", "debit").await;
-    let raw = account(&pool, company, "1400-RAWX", "asset", "inventory", "debit").await;
-    seed_costing_defaults(&pool, company, category, None, None, Some(raw), None, None, None, Some(loss), Some(expense)).await;
-    (svc, pool, company, category, expense, loss, raw)
+    let expense = account(&pool, "6100-REPX", "expense", "operating_expense", "debit").await;
+    let loss = account(&pool, "6200-INVLOSS", "expense", "operating_expense", "debit").await;
+    let raw = account(&pool, "1400-RAWX", "asset", "inventory", "debit").await;
+    seed_costing_defaults(&pool, category, None, None, Some(raw), None, None, None, Some(loss), Some(expense)).await;
+    (svc, pool, category, expense, loss, raw)
 }
 
-fn new_repair(company: Uuid, category: Uuid, broken: Uuid, parts: Vec<NewRepairPart>) -> NewRepairOrder {
+fn new_repair(category: Uuid, broken: Uuid, parts: Vec<NewRepairPart>) -> NewRepairOrder {
     NewRepairOrder {
-        company_id: company,
         repair_number: format!("RP-{}", &Uuid::new_v4().to_string()[..8]),
         item_id: broken,
         product_category_id: Some(category),
@@ -59,13 +47,12 @@ async fn status(pool: &sqlx::PgPool, id: Uuid) -> String {
 /// the draft stays draft; a stocked draft validates to confirmed.
 #[tokio::test]
 async fn rp1_validate_availability() {
-    let (svc, pool, company, category, _e, _l, _r) = repair_base().await;
+    let (svc, pool, category, _e, _l, _r) = repair_base().await;
     let broken = Uuid::new_v4();
     let part = Uuid::new_v4();
     let inv = FakeInventory::new();
     let id = svc
         .create_repair_order(new_repair(
-            company,
             category,
             broken,
             vec![NewRepairPart {
@@ -104,7 +91,7 @@ async fn rp1_validate_availability() {
 ///   Cr Raw 250 (add+remove) · Cr Repair-Expense 80 (recycle)
 #[tokio::test]
 async fn rp2_end_moves_legs_and_posts() {
-    let (svc, pool, company, category, expense, loss, raw) = repair_base().await;
+    let (svc, pool, category, expense, loss, raw) = repair_base().await;
     let broken = Uuid::new_v4();
     let part_a = Uuid::new_v4();
     let part_b = Uuid::new_v4();
@@ -115,7 +102,6 @@ async fn rp2_end_moves_legs_and_posts() {
     inv.stock(part_c, "0", "80"); // recycle: 1 × 80 (returns to stock, needs nothing)
     let id = svc
         .create_repair_order(new_repair(
-            company,
             category,
             broken,
             vec![
@@ -159,7 +145,7 @@ async fn rp2_end_moves_legs_and_posts() {
 /// leaves the order under_repair, LOUD, and the already-moved legs are idempotent on retry.
 #[tokio::test]
 async fn rp3_leg_failure_loud_not_gated() {
-    let (svc, pool, company, category, _e, _l, _r) = repair_base().await;
+    let (svc, pool, category, _e, _l, _r) = repair_base().await;
     let broken = Uuid::new_v4();
     let stocked = Uuid::new_v4();
     let missing = Uuid::new_v4();
@@ -168,7 +154,6 @@ async fn rp3_leg_failure_loud_not_gated() {
     inv.stock(missing, "0", "100"); // the second leg cannot draw
     let id = svc
         .create_repair_order(new_repair(
-            company,
             category,
             broken,
             vec![
@@ -200,14 +185,13 @@ async fn rp3_leg_failure_loud_not_gated() {
 /// needs no move cancellation.
 #[tokio::test]
 async fn rp4_cancel_rules() {
-    let (svc, pool, company, category, _e, _l, _r) = repair_base().await;
+    let (svc, pool, category, _e, _l, _r) = repair_base().await;
     let broken = Uuid::new_v4();
     let part = Uuid::new_v4();
     let inv = FakeInventory::new();
     inv.stock(part, "10", "100");
     let id = svc
         .create_repair_order(new_repair(
-            company,
             category,
             broken,
             vec![NewRepairPart { item_id: part, warehouse_id: None, line_type: RepairLineType::Add, quantity: dec("2"), rate: dec("100") }],
@@ -224,7 +208,6 @@ async fn rp4_cancel_rules() {
     // A DONE repair refuses cancel LOUDLY.
     let id2 = svc
         .create_repair_order(new_repair(
-            company,
             category,
             broken,
             vec![NewRepairPart { item_id: part, warehouse_id: None, line_type: RepairLineType::Add, quantity: dec("1"), rate: dec("100") }],
@@ -240,12 +223,15 @@ async fn rp4_cancel_rules() {
     assert_eq!(status(&pool, id2).await, "done");
 }
 
-/// RP-5 — repair tags are tenant-scoped master data: a duplicate name is a LOUD domain error.
+/// RP-5 — repair tags are master data with a single module-level namespace: the service refuses a
+/// duplicate name LOUDLY. The DB-level one-namespace-per-org-unit guard is the (org unit, name)
+/// unique installed by the composing service's tenancy decorator (ADR-0029), so this leg asserts
+/// only the module's own read-then-insert refusal — never an org-scoped collision.
 #[tokio::test]
 async fn rp5_tag_duplicate_loud() {
-    let (svc, _pool, company, _c, _e, _l, _r) = repair_base().await;
+    let (svc, _pool, _c, _e, _l, _r) = repair_base().await;
     let name = format!("warranty-{}", &Uuid::new_v4().to_string()[..8]);
-    svc.create_repair_tag(company, name.clone()).await.unwrap();
-    let err = svc.create_repair_tag(company, name).await.unwrap_err();
+    svc.create_repair_tag(name.clone()).await.unwrap();
+    let err = svc.create_repair_tag(name).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::Invalid(_)), "duplicate tag is LOUD");
 }

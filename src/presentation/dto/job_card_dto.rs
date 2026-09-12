@@ -35,9 +35,6 @@ use crate::domain::entity::JobCardState;
 #[serde(rename_all = "camelCase")]
 pub struct CreateJobCardDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "work_order_id")]
     pub work_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -68,9 +65,6 @@ pub struct CreateJobCardDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateJobCardDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "work_order_id")]
     pub work_order_id: Uuid,
@@ -103,9 +97,6 @@ pub struct UpdateJobCardDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchJobCardDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "work_order_id")]
     pub work_order_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -127,7 +118,7 @@ pub struct PatchJobCardDto {
 impl PatchJobCardDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.work_order_id.is_some() || self.operation_id.is_some() || self.workstation_id.is_some() || self.total_time_mins.is_some() || self.hour_rate.is_some() || self.operating_cost.is_some() || self.status.is_some()
+        self.work_order_id.is_some() || self.operation_id.is_some() || self.workstation_id.is_some() || self.total_time_mins.is_some() || self.hour_rate.is_some() || self.operating_cost.is_some() || self.status.is_some()
     }
 }
 
@@ -145,8 +136,6 @@ impl PatchJobCardDto {
 pub struct JobCardResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub work_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -214,9 +203,9 @@ impl JobCardListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct JobCardSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub operation_id: Uuid,
+    pub workstation_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -228,7 +217,6 @@ impl From<JobCard> for JobCardResponseDto {
     fn from(entity: JobCard) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             work_order_id: entity.work_order_id,
             operation_id: entity.operation_id,
             workstation_id: entity.workstation_id,
@@ -246,9 +234,9 @@ impl From<JobCard> for JobCardSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             work_order_id: entity.work_order_id,
             operation_id: entity.operation_id,
+            workstation_id: entity.workstation_id,
             created_at,
         }
     }
@@ -258,7 +246,6 @@ impl From<CreateJobCardDto> for JobCard {
     fn from(dto: CreateJobCardDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             work_order_id: dto.work_order_id,
             operation_id: dto.operation_id,
             workstation_id: dto.workstation_id,
@@ -275,7 +262,6 @@ impl From<&JobCard> for JobCardResponseDto {
     fn from(entity: &JobCard) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             work_order_id: entity.work_order_id.clone(),
             operation_id: entity.operation_id.clone(),
             workstation_id: entity.workstation_id.clone(),
@@ -296,7 +282,6 @@ impl backbone_core::FromCreateDto<CreateJobCardDto> for JobCard {
 
 impl backbone_core::ApplyUpdateDto<UpdateJobCardDto> for JobCard {
     fn apply_update(mut self, dto: UpdateJobCardDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.work_order_id = dto.work_order_id;
         self.operation_id = dto.operation_id;
         self.workstation_id = dto.workstation_id;

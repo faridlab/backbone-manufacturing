@@ -11,12 +11,11 @@ use backbone_manufacturing::application::service::manufacturing_write_service::{
 use common::*;
 use uuid::Uuid;
 
-async fn draft_wo(svc: &ManufacturingWriteService, company: Uuid) -> Uuid {
+async fn draft_wo(svc: &ManufacturingWriteService) -> Uuid {
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -27,7 +26,6 @@ async fn draft_wo(svc: &ManufacturingWriteService, company: Uuid) -> Uuid {
         .await
         .unwrap();
     svc.create_work_order(NewWorkOrder {
-        company_id: company,
         work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
         item_id: fg_item,
         bom_id: bom,
@@ -57,8 +55,7 @@ async fn wo_item(pool: &sqlx::PgPool, wo: Uuid) -> Uuid {
 async fn f11_draft_item_mutable() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
-    let wo = draft_wo(&svc, company).await;
+    let wo = draft_wo(&svc).await;
     let replacement = Uuid::new_v4();
     let n = sqlx::query("UPDATE manufacturing.work_orders SET item_id=$2 WHERE id=$1")
         .bind(wo)
@@ -76,9 +73,8 @@ async fn f11_draft_item_mutable() {
 async fn f11_confirmed_item_immutable() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let sink = LoggingSink;
-    let wo = draft_wo(&svc, company).await;
+    let wo = draft_wo(&svc).await;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let err = sqlx::query("UPDATE manufacturing.work_orders SET item_id=$2 WHERE id=$1")
         .bind(wo)

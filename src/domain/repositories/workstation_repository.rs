@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use anyhow::Result;
-use uuid::Uuid;
 
 use crate::domain::entity::{Workstation, WorkstationStatus};
 
@@ -44,7 +43,6 @@ pub struct WorkstationPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct WorkstationFilter {
-    pub company_id: Option<Uuid>,
     pub workstation_name: Option<String>,
     pub status: Option<WorkstationStatus>,
 }
@@ -52,7 +50,7 @@ pub struct WorkstationFilter {
 impl WorkstationFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.workstation_name.is_some() || self.status.is_some()
+        self.workstation_name.is_some() || self.status.is_some()
     }
 }
 

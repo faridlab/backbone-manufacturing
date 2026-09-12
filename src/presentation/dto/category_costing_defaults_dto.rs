@@ -33,9 +33,6 @@ use crate::domain::entity::AuditMetadata;
 #[serde(rename_all = "camelCase")]
 pub struct CreateCategoryCostingDefaultsDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "product_category_id")]
     pub product_category_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "wip_account_id")]
@@ -69,9 +66,6 @@ pub struct CreateCategoryCostingDefaultsDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCategoryCostingDefaultsDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "product_category_id")]
     pub product_category_id: Uuid,
@@ -107,9 +101,6 @@ pub struct UpdateCategoryCostingDefaultsDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchCategoryCostingDefaultsDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "wip_account_id")]
@@ -133,7 +124,7 @@ pub struct PatchCategoryCostingDefaultsDto {
 impl PatchCategoryCostingDefaultsDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.product_category_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.subcontract_interim_account_id.is_some() || self.cost_variance_account_id.is_some() || self.inventory_loss_account_id.is_some() || self.repair_expense_account_id.is_some()
+        self.product_category_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.subcontract_interim_account_id.is_some() || self.cost_variance_account_id.is_some() || self.inventory_loss_account_id.is_some() || self.repair_expense_account_id.is_some()
     }
 }
 
@@ -151,8 +142,6 @@ impl PatchCategoryCostingDefaultsDto {
 pub struct CategoryCostingDefaultsResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub product_category_id: Uuid,
     pub wip_account_id: Option<Uuid>,
@@ -220,9 +209,9 @@ impl CategoryCostingDefaultsListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct CategoryCostingDefaultsSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub product_category_id: Uuid,
     pub wip_account_id: Option<Uuid>,
+    pub fg_account_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -234,7 +223,6 @@ impl From<CategoryCostingDefaults> for CategoryCostingDefaultsResponseDto {
     fn from(entity: CategoryCostingDefaults) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             product_category_id: entity.product_category_id,
             wip_account_id: entity.wip_account_id,
             fg_account_id: entity.fg_account_id,
@@ -254,9 +242,9 @@ impl From<CategoryCostingDefaults> for CategoryCostingDefaultsSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             product_category_id: entity.product_category_id,
             wip_account_id: entity.wip_account_id,
+            fg_account_id: entity.fg_account_id,
             created_at,
         }
     }
@@ -266,7 +254,6 @@ impl From<CreateCategoryCostingDefaultsDto> for CategoryCostingDefaults {
     fn from(dto: CreateCategoryCostingDefaultsDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             product_category_id: dto.product_category_id,
             wip_account_id: dto.wip_account_id,
             fg_account_id: dto.fg_account_id,
@@ -285,7 +272,6 @@ impl From<&CategoryCostingDefaults> for CategoryCostingDefaultsResponseDto {
     fn from(entity: &CategoryCostingDefaults) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             product_category_id: entity.product_category_id.clone(),
             wip_account_id: entity.wip_account_id.clone(),
             fg_account_id: entity.fg_account_id.clone(),
@@ -308,7 +294,6 @@ impl backbone_core::FromCreateDto<CreateCategoryCostingDefaultsDto> for Category
 
 impl backbone_core::ApplyUpdateDto<UpdateCategoryCostingDefaultsDto> for CategoryCostingDefaults {
     fn apply_update(mut self, dto: UpdateCategoryCostingDefaultsDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.product_category_id = dto.product_category_id;
         self.wip_account_id = dto.wip_account_id;
         self.fg_account_id = dto.fg_account_id;

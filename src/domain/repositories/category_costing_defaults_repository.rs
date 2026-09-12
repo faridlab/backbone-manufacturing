@@ -44,7 +44,6 @@ pub struct CategoryCostingDefaultsPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct CategoryCostingDefaultsFilter {
-    pub company_id: Option<Uuid>,
     pub product_category_id: Option<Uuid>,
     pub wip_account_id: Option<Uuid>,
     pub fg_account_id: Option<Uuid>,
@@ -59,7 +58,7 @@ pub struct CategoryCostingDefaultsFilter {
 impl CategoryCostingDefaultsFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.product_category_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.subcontract_interim_account_id.is_some() || self.cost_variance_account_id.is_some() || self.inventory_loss_account_id.is_some() || self.repair_expense_account_id.is_some()
+        self.product_category_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some() || self.subcontract_interim_account_id.is_some() || self.cost_variance_account_id.is_some() || self.inventory_loss_account_id.is_some() || self.repair_expense_account_id.is_some()
     }
 }
 

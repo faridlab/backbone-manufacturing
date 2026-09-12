@@ -49,7 +49,6 @@ impl From<WorkstationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkstationDto {
     pub id: WorkstationId,
-    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
     pub capacity: Decimal,
@@ -110,7 +109,6 @@ impl From<WorkstationLossId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkstationLossDto {
     pub id: WorkstationLossId,
-    pub company_id: Option<Uuid>,
     pub name: String,
     pub loss_type: LossType,
     pub metadata: serde_json::Value,
@@ -167,7 +165,6 @@ impl From<WorkstationProductivityId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkstationProductivityDto {
     pub id: WorkstationProductivityId,
-    pub company_id: Uuid,
     pub workstation_id: Uuid,
     pub job_card_id: Option<Uuid>,
     pub loss_id: Uuid,
@@ -227,7 +224,6 @@ impl From<OperationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationDto {
     pub id: OperationId,
-    pub company_id: Option<Uuid>,
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
     pub status: OperationStatus,
@@ -286,7 +282,6 @@ impl From<BomId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomDto {
     pub id: BomId,
-    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: String,
     pub version: i32,
@@ -353,7 +348,6 @@ impl From<BomItemId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomItemDto {
     pub id: BomItemId,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -413,7 +407,6 @@ impl From<BomOperationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomOperationDto {
     pub id: BomOperationId,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -473,7 +466,6 @@ impl From<BomByproductId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomByproductDto {
     pub id: BomByproductId,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -532,7 +524,6 @@ impl From<BomSubcontractorId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BomSubcontractorDto {
     pub id: BomSubcontractorId,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub partner_id: Uuid,
     pub metadata: serde_json::Value,
@@ -588,7 +579,6 @@ impl From<CategoryCostingDefaultsId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryCostingDefaultsDto {
     pub id: CategoryCostingDefaultsId,
-    pub company_id: Uuid,
     pub product_category_id: Uuid,
     pub wip_account_id: Option<Uuid>,
     pub fg_account_id: Option<Uuid>,
@@ -651,7 +641,6 @@ impl From<RepairOrderId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepairOrderDto {
     pub id: RepairOrderId,
-    pub company_id: Uuid,
     pub repair_number: String,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -711,7 +700,6 @@ impl From<RepairPartId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepairPartDto {
     pub id: RepairPartId,
-    pub company_id: Uuid,
     pub repair_order_id: Uuid,
     pub item_id: Uuid,
     pub warehouse_id: Option<Uuid>,
@@ -771,7 +759,6 @@ impl From<RepairTagId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepairTagDto {
     pub id: RepairTagId,
-    pub company_id: Uuid,
     pub name: String,
     pub metadata: serde_json::Value,
 }
@@ -827,7 +814,6 @@ impl From<UnbuildOrderId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnbuildOrderDto {
     pub id: UnbuildOrderId,
-    pub company_id: Uuid,
     pub unbuild_number: String,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
@@ -887,7 +873,6 @@ impl From<WorkOrderId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkOrderDto {
     pub id: WorkOrderId,
-    pub company_id: Uuid,
     pub work_order_number: String,
     pub item_id: Uuid,
     pub bom_id: Uuid,
@@ -959,7 +944,6 @@ impl From<WorkOrderItemId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkOrderItemDto {
     pub id: WorkOrderItemId,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub required_qty: Decimal,
@@ -1018,7 +1002,6 @@ impl From<JobCardId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobCardDto {
     pub id: JobCardId,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -1080,7 +1063,6 @@ impl From<SubcontractMoLinkId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubcontractMoLinkDto {
     pub id: SubcontractMoLinkId,
-    pub company_id: Uuid,
     pub purchase_order_id: Uuid,
     pub work_order_id: Uuid,
     pub metadata: serde_json::Value,

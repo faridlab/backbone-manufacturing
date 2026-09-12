@@ -9,6 +9,11 @@
 //! carried off), the unbuild path reverses a done order's output through `reverse_production`, and
 //! repair part legs move through `execute_repair_leg` — every call idempotent by its key, so a
 //! retry of the same saga step never moves stock twice.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic and no module statement keys on a company.
+//! Every request below still carries a `company_id` as a documented legacy twin — filled from the
+//! ambient org scope's company echo (the composing service sets the scope per request) for the
+//! inventory side, which still scopes its own stock per company.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -17,6 +22,8 @@ use uuid::Uuid;
 /// A request to issue components out of a raw warehouse into WIP.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MaterialIssue {
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub warehouse_id: Uuid,
@@ -72,6 +79,8 @@ pub enum CostPosture {
 /// A request to receive finished goods into an FG warehouse at the computed unit cost.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FinishedReceipt {
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub warehouse_id: Uuid,
@@ -99,6 +108,8 @@ pub struct FinishedReceipt {
 /// the reversal's recovered value — never a reverse work order.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UnbuildReversal {
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub unbuild_order_id: Uuid,
     pub source_work_order_id: Uuid,
@@ -119,6 +130,8 @@ pub struct UnbuildReversal {
 /// What one repair part leg does to stock (the port mirrors the line_type).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RepairLeg {
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub repair_order_id: Uuid,
     pub item_id: Uuid,
@@ -138,6 +151,8 @@ pub struct RepairLeg {
 /// shortfall detail in `message`; no stock moves.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RepairAvailability {
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub warehouse_id: Option<Uuid>,

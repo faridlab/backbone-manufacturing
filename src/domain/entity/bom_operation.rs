@@ -49,7 +49,6 @@ impl std::ops::Deref for BomOperationId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BomOperation {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -71,7 +70,6 @@ impl BomOperation {
     pub fn new(bom_id: Uuid, operation_id: Uuid, workstation_id: Uuid, time_in_mins: Decimal, hour_rate: Decimal, operating_cost: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: None,
             bom_id,
             operation_id,
             workstation_id,
@@ -134,16 +132,6 @@ impl BomOperation {
 
 
     // ==========================================================
-    // Fluent Setters (with_* for optional fields)
-    // ==========================================================
-
-    /// Set the company_id field (chainable)
-    pub fn with_company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
-    // ==========================================================
     // Partial Update
     // ==========================================================
 
@@ -151,9 +139,6 @@ impl BomOperation {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "bom_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.bom_id = v; }
                 }
@@ -226,7 +211,6 @@ impl backbone_orm::EntityRepoMeta for BomOperation {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("bom_id".to_string(), "uuid".to_string());
         m.insert("operation_id".to_string(), "uuid".to_string());
         m.insert("workstation_id".to_string(), "uuid".to_string());
@@ -234,9 +218,6 @@ impl backbone_orm::EntityRepoMeta for BomOperation {
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -246,7 +227,6 @@ impl backbone_orm::EntityRepoMeta for BomOperation {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct BomOperationBuilder {
-    company_id: Option<Uuid>,
     bom_id: Option<Uuid>,
     operation_id: Option<Uuid>,
     workstation_id: Option<Uuid>,
@@ -256,12 +236,6 @@ pub struct BomOperationBuilder {
 }
 
 impl BomOperationBuilder {
-    /// Set the company_id field (optional)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the bom_id field (required)
     pub fn bom_id(mut self, value: Uuid) -> Self {
         self.bom_id = Some(value);
@@ -309,7 +283,6 @@ impl BomOperationBuilder {
 
         Ok(BomOperation {
             id: Uuid::new_v4(),
-            company_id: self.company_id,
             bom_id,
             operation_id,
             workstation_id,

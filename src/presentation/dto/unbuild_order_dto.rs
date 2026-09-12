@@ -34,9 +34,6 @@ use crate::domain::entity::UnbuildStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUnbuildOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "unbuild_number")]
@@ -64,9 +61,6 @@ pub struct CreateUnbuildOrderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUnbuildOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "unbuild_number")]
@@ -94,9 +88,6 @@ pub struct UpdateUnbuildOrderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchUnbuildOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "unbuild_number")]
@@ -116,7 +107,7 @@ pub struct PatchUnbuildOrderDto {
 impl PatchUnbuildOrderDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.unbuild_number.is_some() || self.work_order_id.is_some() || self.item_id.is_some() || self.quantity.is_some() || self.status.is_some()
+        self.unbuild_number.is_some() || self.work_order_id.is_some() || self.item_id.is_some() || self.quantity.is_some() || self.status.is_some()
     }
 }
 
@@ -134,8 +125,6 @@ impl PatchUnbuildOrderDto {
 pub struct UnbuildOrderResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub unbuild_number: String,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -201,9 +190,9 @@ impl UnbuildOrderListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct UnbuildOrderSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub unbuild_number: String,
     pub work_order_id: Uuid,
+    pub item_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -215,7 +204,6 @@ impl From<UnbuildOrder> for UnbuildOrderResponseDto {
     fn from(entity: UnbuildOrder) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             unbuild_number: entity.unbuild_number,
             work_order_id: entity.work_order_id,
             item_id: entity.item_id,
@@ -231,9 +219,9 @@ impl From<UnbuildOrder> for UnbuildOrderSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             unbuild_number: entity.unbuild_number,
             work_order_id: entity.work_order_id,
+            item_id: entity.item_id,
             created_at,
         }
     }
@@ -243,7 +231,6 @@ impl From<CreateUnbuildOrderDto> for UnbuildOrder {
     fn from(dto: CreateUnbuildOrderDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             unbuild_number: dto.unbuild_number,
             work_order_id: dto.work_order_id,
             item_id: dto.item_id,
@@ -258,7 +245,6 @@ impl From<&UnbuildOrder> for UnbuildOrderResponseDto {
     fn from(entity: &UnbuildOrder) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             unbuild_number: entity.unbuild_number.clone(),
             work_order_id: entity.work_order_id.clone(),
             item_id: entity.item_id.clone(),
@@ -277,7 +263,6 @@ impl backbone_core::FromCreateDto<CreateUnbuildOrderDto> for UnbuildOrder {
 
 impl backbone_core::ApplyUpdateDto<UpdateUnbuildOrderDto> for UnbuildOrder {
     fn apply_update(mut self, dto: UpdateUnbuildOrderDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.unbuild_number = dto.unbuild_number;
         self.work_order_id = dto.work_order_id;
         self.item_id = dto.item_id;

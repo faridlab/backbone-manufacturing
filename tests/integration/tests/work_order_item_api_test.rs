@@ -24,7 +24,6 @@ impl TestDataGenerator for WorkOrderItemTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "work_order_id": Uuid::new_v4().to_string(),
             "item_id": Uuid::new_v4().to_string(),
             "required_qty": 0,
@@ -38,7 +37,6 @@ impl TestDataGenerator for WorkOrderItemTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "work_order_id": Uuid::new_v4().to_string(),
             "item_id": Uuid::new_v4().to_string(),
             "required_qty": 0,

@@ -16,22 +16,20 @@ use common::*;
 use uuid::Uuid;
 
 /// A confirmed WO for `qty` units whose single component costs `qty × 500` to consume, with real
-/// accounts and stocked inventory. Returns (svc, pool, company, wo, comp, accounts).
-async fn wo_base(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid, Uuid, WoAccounts) {
+/// accounts and stocked inventory. Returns (svc, pool, wo, comp, accounts).
+async fn wo_base(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid, WoAccounts) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     let inv = FakeInventory::new();
     inv.stock(comp, "1000", "500");
     let _ = inv;
 
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             // One component per FG unit at rate 500 — the whole order consumes qty × 500
@@ -45,7 +43,6 @@ async fn wo_base(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, U
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -61,7 +58,7 @@ async fn wo_base(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, U
         .await
         .unwrap();
     svc.confirm_work_order(wo, &sink).await.unwrap();
-    (svc, pool, company, wo, comp, acc)
+    (svc, pool, wo, comp, acc)
 }
 
 /// Consume the order's materials. `gl` receives the consume post — tests that assert
@@ -78,8 +75,8 @@ async fn consumed(svc: &ManufacturingWriteService, wo: Uuid, comp: Uuid, gl: &dy
 /// interim credited 2,500. Real ledger.
 #[tokio::test]
 async fn bp1_subcontract_dod_numbers() {
-    let (svc, pool, company, wo, comp, acc) = wo_base("12").await; // 12 × 500 = 6,000
-    let interim = account(&pool, company, "2200-INTERIM", "liability", "current_liability", "credit").await;
+    let (svc, pool, wo, comp, acc) = wo_base("12").await; // 12 × 500 = 6,000
+    let interim = account(&pool, "2200-INTERIM", "liability", "current_liability", "credit").await;
     let gl = GlAdapter::new(pool.clone());
     let inv = consumed(&svc, wo, comp, &gl).await;
     let sink = LoggingSink;
@@ -88,7 +85,7 @@ async fn bp1_subcontract_dod_numbers() {
     // through the category chain, so point the order at a seeded category.
     sqlx::query("UPDATE manufacturing.work_orders SET product_category_id=$2 WHERE id=$1")
         .bind(wo)
-        .bind(seed_interim_category(&pool, company, Some(interim)).await)
+        .bind(seed_interim_category(&pool, Some(interim)).await)
         .execute(&pool)
         .await
         .unwrap();
@@ -116,22 +113,14 @@ async fn bp1_subcontract_dod_numbers() {
     // GL: Dr FG 8,500 · Cr WIP 6,000 · Cr Interim 2,500; WIP nets to zero.
     assert_eq!(balance(&pool, acc.fg).await, dec("8500.00"));
     assert_eq!(balance(&pool, acc.wip).await, dec("0.00"));
-    let interim_id: Uuid = sqlx::query_scalar(
-        "SELECT id FROM accounting.accounts WHERE company_id=$1 AND account_code='2200-INTERIM'",
-    )
-    .bind(company)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(balance(&pool, interim_id).await, dec("-2500.00"), "interim credited the PO value");
+    assert_eq!(balance(&pool, interim).await, dec("-2500.00"), "interim credited the PO value");
 }
 
 /// Seed a category whose defaults row carries only the interim account; returns the category id.
-async fn seed_interim_category(pool: &sqlx::PgPool, company: Uuid, interim: Option<Uuid>) -> Uuid {
+async fn seed_interim_category(pool: &sqlx::PgPool, interim: Option<Uuid>) -> Uuid {
     let category = Uuid::new_v4();
     seed_costing_defaults(
         pool,
-        company,
         category,
         None,
         None,
@@ -146,7 +135,7 @@ async fn seed_interim_category(pool: &sqlx::PgPool, company: Uuid, interim: Opti
     category
 }
 
-/// Attach a shared (company-NULL) byproduct leg to a BoM — master data, seeded directly.
+/// Attach a byproduct leg to a BoM directly — BoM master data the receipt path splits across.
 async fn seed_byproduct(pool: &sqlx::PgPool, bom_id: Uuid, item: Uuid, qty: &str, share: &str) {
     let repo = BomByproductRepository::new(pool.clone());
     let mut conn = pool.acquire().await.unwrap();
@@ -154,7 +143,6 @@ async fn seed_byproduct(pool: &sqlx::PgPool, bom_id: Uuid, item: Uuid, qty: &str
         &mut conn,
         &NewBomByproductRow {
             id: Uuid::new_v4(),
-            company_id: None,
             bom_id,
             item_id: item,
             product_category_id: None,
@@ -169,7 +157,7 @@ async fn seed_byproduct(pool: &sqlx::PgPool, bom_id: Uuid, item: Uuid, qty: &str
 /// BP-2 — byproduct legs slice T by cost_share; the FG line keeps the remainder exactly.
 #[tokio::test]
 async fn bp2_cost_share_split() {
-    let (svc, pool, _company, wo, comp, _acc) = wo_base("10").await; // T = 10 × 500 = 5,000
+    let (svc, pool, wo, comp, _acc) = wo_base("10").await; // T = 10 × 500 = 5,000
     let byproduct_item = Uuid::new_v4();
     let bom_id: Uuid = sqlx::query_scalar("SELECT bom_id FROM manufacturing.work_orders WHERE id=$1")
         .bind(wo)
@@ -207,7 +195,7 @@ async fn bp2_cost_share_split() {
 /// BP-3 — a byproduct family carrying more than the whole batch is refused LOUDLY.
 #[tokio::test]
 async fn bp3_cost_share_overflow_loud() {
-    let (svc, pool, _company, wo, comp, _acc) = wo_base("4").await;
+    let (svc, pool, wo, comp, _acc) = wo_base("4").await;
     let bp_a = Uuid::new_v4();
     let bp_b = Uuid::new_v4();
     let bom_id: Uuid = sqlx::query_scalar("SELECT bom_id FROM manufacturing.work_orders WHERE id=$1")
@@ -249,7 +237,7 @@ async fn bp3_cost_share_overflow_loud() {
 /// BP-4 — a byproduct line with NO BoM row (no cost share) is refused LOUDLY.
 #[tokio::test]
 async fn bp4_unknown_byproduct_refused() {
-    let (svc, _pool, _company, wo, comp, _acc) = wo_base("4").await;
+    let (svc, _pool, wo, comp, _acc) = wo_base("4").await;
     let gl = CountingGl::new();
     let inv = consumed(&svc, wo, comp, &gl).await;
     let sink = LoggingSink;
@@ -276,12 +264,11 @@ async fn bp4_unknown_byproduct_refused() {
 /// cost-variance account as a plug; a nonzero plug with no variance account is LOUD.
 #[tokio::test]
 async fn bp5_standard_posture_variance_plug() {
-    let (svc, pool, company, wo, comp, acc) = wo_base("10").await; // actual 5,000
-    let variance = account(&pool, company, "9300-VAR", "expense", "operating_expense", "debit").await;
+    let (svc, pool, wo, comp, acc) = wo_base("10").await; // actual 5,000
+    let variance = account(&pool, "9300-VAR", "expense", "operating_expense", "debit").await;
     let category = Uuid::new_v4();
     seed_costing_defaults(
         &pool,
-        company,
         category,
         None,
         None,

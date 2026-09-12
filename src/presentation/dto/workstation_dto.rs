@@ -34,8 +34,6 @@ use crate::domain::entity::WorkstationStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateWorkstationDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "workstation_name")]
@@ -61,8 +59,6 @@ pub struct CreateWorkstationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWorkstationDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "workstation_name")]
@@ -88,8 +84,6 @@ pub struct UpdateWorkstationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchWorkstationDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "workstation_name")]
@@ -107,7 +101,7 @@ pub struct PatchWorkstationDto {
 impl PatchWorkstationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.workstation_name.is_some() || self.hour_rate.is_some() || self.capacity.is_some() || self.time_efficiency.is_some() || self.status.is_some()
+        self.workstation_name.is_some() || self.hour_rate.is_some() || self.capacity.is_some() || self.time_efficiency.is_some() || self.status.is_some()
     }
 }
 
@@ -125,7 +119,6 @@ impl PatchWorkstationDto {
 pub struct WorkstationResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub workstation_name: String,
     pub hour_rate: Decimal,
@@ -189,9 +182,9 @@ impl WorkstationListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct WorkstationSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
+    pub capacity: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -203,7 +196,6 @@ impl From<Workstation> for WorkstationResponseDto {
     fn from(entity: Workstation) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             workstation_name: entity.workstation_name,
             hour_rate: entity.hour_rate,
             capacity: entity.capacity,
@@ -219,9 +211,9 @@ impl From<Workstation> for WorkstationSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             workstation_name: entity.workstation_name,
             hour_rate: entity.hour_rate,
+            capacity: entity.capacity,
             created_at,
         }
     }
@@ -231,7 +223,6 @@ impl From<CreateWorkstationDto> for Workstation {
     fn from(dto: CreateWorkstationDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             workstation_name: dto.workstation_name,
             hour_rate: dto.hour_rate,
             capacity: dto.capacity,
@@ -246,7 +237,6 @@ impl From<&Workstation> for WorkstationResponseDto {
     fn from(entity: &Workstation) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             workstation_name: entity.workstation_name.clone(),
             hour_rate: entity.hour_rate.clone(),
             capacity: entity.capacity.clone(),
@@ -265,7 +255,6 @@ impl backbone_core::FromCreateDto<CreateWorkstationDto> for Workstation {
 
 impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
     fn apply_update(mut self, dto: UpdateWorkstationDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.workstation_name = dto.workstation_name;
         self.hour_rate = dto.hour_rate;
         self.capacity = dto.capacity;

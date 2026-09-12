@@ -33,8 +33,6 @@ use crate::domain::entity::AuditMetadata;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBomByproductDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -61,8 +59,6 @@ pub struct CreateBomByproductDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBomByproductDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -89,8 +85,6 @@ pub struct UpdateBomByproductDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchBomByproductDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "bom_id")]
     pub bom_id: Option<Uuid>,
@@ -108,7 +102,7 @@ pub struct PatchBomByproductDto {
 impl PatchBomByproductDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.quantity.is_some() || self.cost_share.is_some()
+        self.bom_id.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.quantity.is_some() || self.cost_share.is_some()
     }
 }
 
@@ -126,7 +120,6 @@ impl PatchBomByproductDto {
 pub struct BomByproductResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub bom_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -191,9 +184,9 @@ impl BomByproductListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct BomByproductSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
+    pub product_category_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -205,7 +198,6 @@ impl From<BomByproduct> for BomByproductResponseDto {
     fn from(entity: BomByproduct) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             item_id: entity.item_id,
             product_category_id: entity.product_category_id,
@@ -221,9 +213,9 @@ impl From<BomByproduct> for BomByproductSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             item_id: entity.item_id,
+            product_category_id: entity.product_category_id,
             created_at,
         }
     }
@@ -233,7 +225,6 @@ impl From<CreateBomByproductDto> for BomByproduct {
     fn from(dto: CreateBomByproductDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             bom_id: dto.bom_id,
             item_id: dto.item_id,
             product_category_id: dto.product_category_id,
@@ -248,7 +239,6 @@ impl From<&BomByproduct> for BomByproductResponseDto {
     fn from(entity: &BomByproduct) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             bom_id: entity.bom_id.clone(),
             item_id: entity.item_id.clone(),
             product_category_id: entity.product_category_id.clone(),
@@ -267,7 +257,6 @@ impl backbone_core::FromCreateDto<CreateBomByproductDto> for BomByproduct {
 
 impl backbone_core::ApplyUpdateDto<UpdateBomByproductDto> for BomByproduct {
     fn apply_update(mut self, dto: UpdateBomByproductDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.bom_id = dto.bom_id;
         self.item_id = dto.item_id;
         self.product_category_id = dto.product_category_id;

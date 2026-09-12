@@ -34,9 +34,6 @@ use crate::domain::entity::AuditMetadata;
 #[serde(rename_all = "camelCase")]
 pub struct CreateWorkOrderItemDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "work_order_id")]
     pub work_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -62,9 +59,6 @@ pub struct CreateWorkOrderItemDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWorkOrderItemDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "work_order_id")]
     pub work_order_id: Uuid,
@@ -92,9 +86,6 @@ pub struct UpdateWorkOrderItemDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchWorkOrderItemDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "work_order_id")]
     pub work_order_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -111,7 +102,7 @@ pub struct PatchWorkOrderItemDto {
 impl PatchWorkOrderItemDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.work_order_id.is_some() || self.item_id.is_some() || self.required_qty.is_some() || self.consumed_qty.is_some() || self.rate.is_some()
+        self.work_order_id.is_some() || self.item_id.is_some() || self.required_qty.is_some() || self.consumed_qty.is_some() || self.rate.is_some()
     }
 }
 
@@ -129,8 +120,6 @@ impl PatchWorkOrderItemDto {
 pub struct WorkOrderItemResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub work_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -195,9 +184,9 @@ impl WorkOrderItemListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct WorkOrderItemSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
+    pub required_qty: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -209,7 +198,6 @@ impl From<WorkOrderItem> for WorkOrderItemResponseDto {
     fn from(entity: WorkOrderItem) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             work_order_id: entity.work_order_id,
             item_id: entity.item_id,
             required_qty: entity.required_qty,
@@ -225,9 +213,9 @@ impl From<WorkOrderItem> for WorkOrderItemSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             work_order_id: entity.work_order_id,
             item_id: entity.item_id,
+            required_qty: entity.required_qty,
             created_at,
         }
     }
@@ -237,7 +225,6 @@ impl From<CreateWorkOrderItemDto> for WorkOrderItem {
     fn from(dto: CreateWorkOrderItemDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             work_order_id: dto.work_order_id,
             item_id: dto.item_id,
             required_qty: dto.required_qty,
@@ -252,7 +239,6 @@ impl From<&WorkOrderItem> for WorkOrderItemResponseDto {
     fn from(entity: &WorkOrderItem) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             work_order_id: entity.work_order_id.clone(),
             item_id: entity.item_id.clone(),
             required_qty: entity.required_qty.clone(),
@@ -271,7 +257,6 @@ impl backbone_core::FromCreateDto<CreateWorkOrderItemDto> for WorkOrderItem {
 
 impl backbone_core::ApplyUpdateDto<UpdateWorkOrderItemDto> for WorkOrderItem {
     fn apply_update(mut self, dto: UpdateWorkOrderItemDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.work_order_id = dto.work_order_id;
         self.item_id = dto.item_id;
         self.required_qty = dto.required_qty;

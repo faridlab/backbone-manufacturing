@@ -11,18 +11,17 @@ use common::*;
 use uuid::Uuid;
 
 /// Produce one unit through consume + operate (NO receive yet) with REAL ledger posts.
-/// Returns (svc, company, wo, accounts) — WIP holds exactly 6,060 on return.
-async fn full_cycle() -> (ManufacturingWriteService, Uuid, Uuid, WoAccounts) {
+/// Returns (svc, wo, accounts) — WIP holds exactly 6,060 on return.
+async fn full_cycle() -> (ManufacturingWriteService, Uuid, WoAccounts) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
     let op = Uuid::new_v4();
     let ws = Uuid::new_v4();
     let raw_wh = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
 
     let inv = FakeInventory::new();
     inv.stock(comp, "100", "500"); // component at rate 500 → 12 issued = 6,000
@@ -30,7 +29,6 @@ async fn full_cycle() -> (ManufacturingWriteService, Uuid, Uuid, WoAccounts) {
 
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -42,7 +40,6 @@ async fn full_cycle() -> (ManufacturingWriteService, Uuid, Uuid, WoAccounts) {
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -66,7 +63,6 @@ async fn full_cycle() -> (ManufacturingWriteService, Uuid, Uuid, WoAccounts) {
     // operate: 60 minutes at 60/h = 60 → Dr WIP 60 · Cr Conversion 60
     let jc = svc
         .add_job_card(NewJobCard {
-            company_id: company,
             work_order_id: wo,
             operation_id: op,
             workstation_id: ws,
@@ -78,14 +74,14 @@ async fn full_cycle() -> (ManufacturingWriteService, Uuid, Uuid, WoAccounts) {
     let charged = svc.complete_job_card(jc, &gl, &sink).await.unwrap();
     assert_eq!(charged, dec("60.00"));
 
-    (svc, company, wo, acc)
+    (svc, wo, acc)
 }
 
 /// WN-1 — mid-cycle WIP holds the accumulated cost (6,000 + 60), and the three estates balance.
 #[tokio::test]
 async fn wn1_wip_holds_accumulated_cost() {
     let pool = pool().await;
-    let (_svc, _company, _wo, acc) = full_cycle().await;
+    let (_svc, _wo, acc) = full_cycle().await;
     // receive is NOT run here — WIP must hold exactly raw + operating.
     assert_eq!(balance(&pool, acc.wip).await, dec("6060.00"));
     assert_eq!(balance(&pool, acc.raw).await, dec("-6000.00"));
@@ -96,7 +92,7 @@ async fn wn1_wip_holds_accumulated_cost() {
 #[tokio::test]
 async fn wn2_wip_nets_to_zero_on_completion() {
     let pool = pool().await;
-    let (svc, company, wo, acc) = full_cycle().await;
+    let (svc, wo, acc) = full_cycle().await;
     let sink = LoggingSink;
     let inv = FakeInventory::new();
     let gl = GlAdapter::new(pool.clone());
@@ -109,14 +105,13 @@ async fn wn2_wip_nets_to_zero_on_completion() {
     assert_eq!(balance(&pool, acc.fg).await, dec("6060.00"));
     assert_eq!(balance(&pool, acc.raw).await, dec("-6000.00"));
     assert_eq!(balance(&pool, acc.conversion).await, dec("-60.00"));
-    let _ = company;
 }
 
 /// WN-3 — a partial receipt leaves the residue in WIP; the final receipt clears it exactly.
 #[tokio::test]
 async fn wn3_partial_receipts_clear_wip_exactly() {
     let pool = pool().await;
-    let (svc, _company, wo, acc) = full_cycle().await;
+    let (svc, wo, acc) = full_cycle().await;
     let sink = LoggingSink;
     let inv = FakeInventory::new();
     let gl = GlAdapter::new(pool.clone());

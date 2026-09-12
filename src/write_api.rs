@@ -12,6 +12,10 @@
 //! No compatibility aliases exist: the old `release` route is GONE, replaced by `confirm` (the
 //! state vocabulary renamed with it). A stale client gets a 404, not a silently-different verb.
 //!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no request body carries a company id.
+//! Scoping is installed by the composing service's tenancy decorator from the authenticated
+//! principal's org scope; these handlers forward ids and payloads only.
+//!
 //! ## The ports are YOURS to supply
 //!
 //! Manufacturing owns no stock or ledger ([`InventoryPort`] lives in `backbone-inventory`,
@@ -159,8 +163,6 @@ pub async fn cancel_work_order(
 
 #[derive(Deserialize)]
 pub struct ReservationBody {
-    /// Tenant owner of the work order. In production prefer the authenticated principal's company.
-    pub company_id: Uuid,
     /// waiting | confirmed | assigned — the inventory-side projection of component availability.
     pub state: ReservationState,
 }
@@ -179,7 +181,7 @@ pub async fn write_reservation(
     Json(body): Json<ReservationBody>,
 ) -> Result<Json<ReservationResponse>, (StatusCode, String)> {
     deps.write_service
-        .write_reservation(body.company_id, id, body.state)
+        .write_reservation(id, body.state)
         .await
         .map_err(map_mfg_error)?;
     Ok(Json(ReservationResponse {
@@ -220,9 +222,6 @@ pub async fn consume_materials(
 
 #[derive(Deserialize)]
 pub struct AddJobCardBody {
-    /// Tenant owner of the work order. In production prefer the authenticated principal's company,
-    /// not a request body field — kept here as the reference shape.
-    pub company_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
     pub total_time_mins: Decimal,
@@ -243,7 +242,6 @@ pub async fn add_job_card(
     let id = deps
         .write_service
         .add_job_card(NewJobCard {
-            company_id: body.company_id,
             work_order_id,
             operation_id: body.operation_id,
             workstation_id: body.workstation_id,
@@ -395,7 +393,6 @@ pub async fn receive_finished(
 
 #[derive(Deserialize)]
 pub struct CreateUnbuildBody {
-    pub company_id: Uuid,
     pub unbuild_number: String,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
@@ -415,7 +412,6 @@ pub async fn create_unbuild(
     let id = deps
         .write_service
         .create_unbuild(NewUnbuild {
-            company_id: body.company_id,
             unbuild_number: body.unbuild_number,
             work_order_id: body.work_order_id,
             item_id: body.item_id,
@@ -473,7 +469,6 @@ pub struct RepairPartBody {
 
 #[derive(Deserialize)]
 pub struct CreateRepairBody {
-    pub company_id: Uuid,
     pub repair_number: String,
     pub item_id: Uuid,
     /// The item's category at creation — selects the costing defaults that resolve the
@@ -492,7 +487,6 @@ pub async fn create_repair(
     let id = deps
         .write_service
         .create_repair_order(NewRepairOrder {
-            company_id: body.company_id,
             repair_number: body.repair_number,
             item_id: body.item_id,
             product_category_id: body.product_category_id,
@@ -591,7 +585,6 @@ pub async fn cancel_repair(
 
 #[derive(Deserialize)]
 pub struct ProductivityBody {
-    pub company_id: Uuid,
     /// Named loss reason (must exist; its classification feeds the OEE buckets).
     pub loss_name: String,
     pub job_card_id: Option<Uuid>,
@@ -616,7 +609,6 @@ pub async fn record_productivity(
     let id = deps
         .write_service
         .record_productivity(NewProductivity {
-            company_id: body.company_id,
             workstation_id,
             job_card_id: body.job_card_id,
             loss_name: body.loss_name,
@@ -631,7 +623,6 @@ pub async fn record_productivity(
 
 #[derive(Deserialize)]
 pub struct OeeQuery {
-    pub company_id: Uuid,
     pub from: chrono::DateTime<chrono::Utc>,
     pub to: chrono::DateTime<chrono::Utc>,
 }
@@ -654,7 +645,7 @@ pub async fn workstation_oee(
 ) -> Result<Json<OeeResponse>, (StatusCode, String)> {
     let r = deps
         .write_service
-        .workstation_oee(q.company_id, workstation_id, q.from, q.to)
+        .workstation_oee(workstation_id, q.from, q.to)
         .await
         .map_err(map_mfg_error)?;
     Ok(Json(OeeResponse {

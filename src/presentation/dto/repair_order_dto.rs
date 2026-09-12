@@ -34,9 +34,6 @@ use crate::domain::entity::RepairStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRepairOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "repair_number")]
@@ -63,9 +60,6 @@ pub struct CreateRepairOrderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRepairOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "repair_number")]
@@ -92,9 +86,6 @@ pub struct UpdateRepairOrderDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchRepairOrderDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 40)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "repair_number")]
@@ -113,7 +104,7 @@ pub struct PatchRepairOrderDto {
 impl PatchRepairOrderDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.repair_number.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.quantity.is_some() || self.status.is_some()
+        self.repair_number.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.quantity.is_some() || self.status.is_some()
     }
 }
 
@@ -131,8 +122,6 @@ impl PatchRepairOrderDto {
 pub struct RepairOrderResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub repair_number: String,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -197,9 +186,9 @@ impl RepairOrderListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct RepairOrderSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub repair_number: String,
     pub item_id: Uuid,
+    pub product_category_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -211,7 +200,6 @@ impl From<RepairOrder> for RepairOrderResponseDto {
     fn from(entity: RepairOrder) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             repair_number: entity.repair_number,
             item_id: entity.item_id,
             product_category_id: entity.product_category_id,
@@ -227,9 +215,9 @@ impl From<RepairOrder> for RepairOrderSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             repair_number: entity.repair_number,
             item_id: entity.item_id,
+            product_category_id: entity.product_category_id,
             created_at,
         }
     }
@@ -239,7 +227,6 @@ impl From<CreateRepairOrderDto> for RepairOrder {
     fn from(dto: CreateRepairOrderDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             repair_number: dto.repair_number,
             item_id: dto.item_id,
             product_category_id: dto.product_category_id,
@@ -254,7 +241,6 @@ impl From<&RepairOrder> for RepairOrderResponseDto {
     fn from(entity: &RepairOrder) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             repair_number: entity.repair_number.clone(),
             item_id: entity.item_id.clone(),
             product_category_id: entity.product_category_id.clone(),
@@ -273,7 +259,6 @@ impl backbone_core::FromCreateDto<CreateRepairOrderDto> for RepairOrder {
 
 impl backbone_core::ApplyUpdateDto<UpdateRepairOrderDto> for RepairOrder {
     fn apply_update(mut self, dto: UpdateRepairOrderDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.repair_number = dto.repair_number;
         self.item_id = dto.item_id;
         self.product_category_id = dto.product_category_id;

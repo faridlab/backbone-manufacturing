@@ -33,8 +33,6 @@ use crate::domain::entity::OperationStatus;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOperationDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "operation_name")]
@@ -57,8 +55,6 @@ pub struct CreateOperationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateOperationDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "operation_name")]
@@ -81,8 +77,6 @@ pub struct UpdateOperationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchOperationDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "operation_name")]
@@ -96,7 +90,7 @@ pub struct PatchOperationDto {
 impl PatchOperationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.operation_name.is_some() || self.default_workstation_id.is_some() || self.status.is_some()
+        self.operation_name.is_some() || self.default_workstation_id.is_some() || self.status.is_some()
     }
 }
 
@@ -114,7 +108,6 @@ impl PatchOperationDto {
 pub struct OperationResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
@@ -176,9 +169,9 @@ impl OperationListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct OperationSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub operation_name: String,
     pub default_workstation_id: Option<Uuid>,
+    pub status: OperationStatus,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -190,7 +183,6 @@ impl From<Operation> for OperationResponseDto {
     fn from(entity: Operation) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             operation_name: entity.operation_name,
             default_workstation_id: entity.default_workstation_id,
             status: entity.status,
@@ -204,9 +196,9 @@ impl From<Operation> for OperationSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             operation_name: entity.operation_name,
             default_workstation_id: entity.default_workstation_id,
+            status: entity.status,
             created_at,
         }
     }
@@ -216,7 +208,6 @@ impl From<CreateOperationDto> for Operation {
     fn from(dto: CreateOperationDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             operation_name: dto.operation_name,
             default_workstation_id: dto.default_workstation_id,
             status: dto.status,
@@ -229,7 +220,6 @@ impl From<&Operation> for OperationResponseDto {
     fn from(entity: &Operation) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             operation_name: entity.operation_name.clone(),
             default_workstation_id: entity.default_workstation_id.clone(),
             status: entity.status.clone(),
@@ -246,7 +236,6 @@ impl backbone_core::FromCreateDto<CreateOperationDto> for Operation {
 
 impl backbone_core::ApplyUpdateDto<UpdateOperationDto> for Operation {
     fn apply_update(mut self, dto: UpdateOperationDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.operation_name = dto.operation_name;
         self.default_workstation_id = dto.default_workstation_id;
         self.status = dto.status;

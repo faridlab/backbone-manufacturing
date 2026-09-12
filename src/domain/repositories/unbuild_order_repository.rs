@@ -44,7 +44,6 @@ pub struct UnbuildOrderPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct UnbuildOrderFilter {
-    pub company_id: Option<Uuid>,
     pub unbuild_number: Option<String>,
     pub work_order_id: Option<Uuid>,
     pub item_id: Option<Uuid>,
@@ -54,7 +53,7 @@ pub struct UnbuildOrderFilter {
 impl UnbuildOrderFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.unbuild_number.is_some() || self.work_order_id.is_some() || self.item_id.is_some() || self.status.is_some()
+        self.unbuild_number.is_some() || self.work_order_id.is_some() || self.item_id.is_some() || self.status.is_some()
     }
 }
 

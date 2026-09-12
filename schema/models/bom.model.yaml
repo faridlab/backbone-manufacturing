@@ -10,9 +10,9 @@
 # operations. Region-neutral, posts NO GL: a Bom only DEFINES cost; the Work Order
 # execution context is what emits WIP/FG postings. Cross-module ids are logical FKs.
 #
-# Fence: the master-data family carries nullable company_id (shared_blank) — a NULL
-# company row is a first-class shared recipe/machine visible to every company; the
-# execution side (work_order.model.yaml) stays strict NOT NULL.
+# Tenancy: none, by design (ADR-0029) — this family declares no company axis; see
+# the posture map in index.model.yaml for how the historical shared masters port to
+# root-anchored org rows under the composing service's decorator.
 # =============================================================================
 
 models:
@@ -24,10 +24,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique workstation id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company; NULL = shared workstation visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       workstation_name:
         type: string
         attributes: ["@required", "@max(140)"]
@@ -56,9 +52,9 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: index
-        fields: [company_id, status]
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading status lookup is installed by the composing service's tenancy
+    # decorator, not declared here.
 
   - name: WorkstationLoss
     collection: workstation_losses
@@ -68,10 +64,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique loss id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company; NULL = shared loss reason visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       name:
         type: string
         attributes: ["@required", "@max(140)"]
@@ -84,10 +76,10 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: unique
-        fields: [company_id, name]
-        where: "deleted_at IS NULL"
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading loss-name unique (NULLS NOT DISTINCT, so root-shared and unit-owned
+    # reasons keep one namespace) is installed by the composing service's tenancy
+    # decorator, not declared here.
 
   - name: WorkstationProductivity
     collection: workstation_productivity
@@ -97,10 +89,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique productivity record id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
       workstation_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Workstation.id)"]
@@ -139,10 +127,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique operation id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company; NULL = shared operation visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       operation_name:
         type: string
         attributes: ["@required", "@max(140)"]
@@ -163,9 +147,9 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: index
-        fields: [company_id, status]
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading status lookup is installed by the composing service's tenancy
+    # decorator, not declared here.
 
   - name: Bom
     collection: boms
@@ -175,10 +159,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique BOM id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company; NULL = shared BOM visible to every company (shared_blank master data, ADR-0014) # logical FK to organization.Company.id"
       item_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
@@ -186,7 +166,7 @@ models:
       bom_code:
         type: string
         attributes: ["@required", "@max(40)"]
-        description: "BOM number (unique per company)"
+        description: "BOM number (the org-scoped code unique is installed by the composing service's tenancy decorator, ADR-0029)"
       version:
         type: int
         attributes: ["@default(1)", "@positive"]
@@ -236,15 +216,10 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: unique
-        fields: [company_id, bom_code]
-        where: "deleted_at IS NULL"
-      - type: unique
-        fields: [company_id, item_id, version]
-        where: "deleted_at IS NULL"
-      - type: index
-        fields: [company_id, item_id, status]
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading bom-code unique, the (org unit, item, version) revision unique, and the
+    # (org unit, item, status) selection lookup are installed by the composing
+    # service's tenancy decorator, not declared here.
 
   - name: BomItem
     collection: bom_items
@@ -254,10 +229,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -298,10 +269,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -342,10 +309,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]
@@ -382,10 +345,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
-      company_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Owning company, denormalized from the parent BOM (NULL when the parent is a shared row) # logical FK to organization.Company.id"
       bom_id:
         type: uuid
         attributes: ["@required", "@foreign_key(Bom.id)"]

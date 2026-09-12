@@ -45,11 +45,9 @@ impl BomRepository {
 /// Mirrors the raw column shape rather than the `Bom` entity: the three cost columns are already
 /// rolled up server-side by the write service, and `currency` / `status` / `is_default` /
 /// `version` / `bom_type` are pinned by the statement (`'IDR'`, `'active'`, `false`, `1`,
-/// `'normal'`) rather than passed. `company_id` is nullable: a NULL company is shared master
-/// data, visible to every company session (the shared_blank fence, ADR-0014).
+/// `'normal'`) rather than passed.
 pub struct NewBomRow<'a> {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: &'a str,
     pub quantity: Decimal,
@@ -65,9 +63,8 @@ impl BomRepository {
     /// Insert a BOM header.
     ///
     /// Takes the CALLER'S connection so the header, its components and its operations commit as ONE
-    /// unit. The caller binds the company on that connection (`bind_company_on`) before calling —
-    /// don't re-bind here. The explicit `company_id` bind stays as defense-in-depth behind the RLS
-    /// fence (ADR-0008).
+    /// unit. The caller relays the ambient org scope onto that connection (`relay_ambient_scope`)
+    /// before calling — don't re-bind here (ADR-0029).
     ///
     /// Returns the raw `sqlx::Error` deliberately: the caller inspects it for a unique violation to
     /// turn a duplicate BOM code into a domain error.
@@ -78,12 +75,12 @@ impl BomRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.boms
-                 (id, company_id, item_id, bom_code, quantity, uom, currency,
+                 (id, item_id, bom_code, quantity, uom, currency,
                   raw_material_cost, operating_cost, total_cost, status, is_default,
                   version, bom_type)
-               VALUES ($1,$2,$3,$4,$5,$6,'IDR',$7,$8,$9,'active',false,1,'normal'::bom_type)"#,
+               VALUES ($1,$2,$3,$4,$5,'IDR',$6,$7,$8,'active',false,1,'normal'::bom_type)"#,
         )
-        .bind(b.id).bind(b.company_id).bind(b.item_id).bind(b.bom_code).bind(b.quantity)
+        .bind(b.id).bind(b.item_id).bind(b.bom_code).bind(b.quantity)
         .bind(b.uom).bind(b.raw_material_cost).bind(b.operating_cost).bind(b.total_cost)
         .execute(conn)
         .await?;
@@ -92,10 +89,9 @@ impl BomRepository {
 
     /// Read a BOM's output quantity — the denominator the explosion prorates each component against.
     ///
-    /// A read outside any transaction: takes the pool and runs `fetch_optional_scalar_scoped` so the
-    /// RLS fence (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company_id))`
-    /// — the company is on the parameter — so the explosion stays fenced even when driven by a
-    /// non-request caller (job / event subscriber).
+    /// A read outside any transaction: takes the pool and runs `fetch_optional_scalar_scoped` so it
+    /// rides the request-dedicated connection — under the composed decorator the org fence applies;
+    /// undecorated (module tests) the read runs plain (ADR-0029).
     pub async fn fetch_output_quantity(
         &self,
         pool: &PgPool,
@@ -105,23 +101,6 @@ impl BomRepository {
             pool,
             sqlx::query_scalar(
                 r#"SELECT quantity FROM manufacturing.boms WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
-            )
-            .bind(bom_id),
-        ).await
-    }
-
-    /// Read a BOM's owning company (NULL = a shared master-data row). Byproduct authoring
-    /// mirrors this onto the child row so a byproduct rides its BoM's fence posture.
-    pub async fn fetch_company_id(
-        &self,
-        pool: &PgPool,
-        bom_id: Uuid,
-    ) -> Result<Option<Option<Uuid>>, sqlx::Error> {
-        company_scope::fetch_optional_scalar_scoped(
-            pool,
-            sqlx::query_scalar(
-                r#"SELECT company_id FROM manufacturing.boms
-                   WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(bom_id),
         ).await
@@ -147,29 +126,29 @@ impl BomRepository {
         ).await
     }
 
-    /// Resolve the BOM to explode a phantom component through: its item's active BOM, company-owned
-    /// before shared, default first, oldest as the tiebreak (a deterministic pick — the explosion
-    /// must not vary run to run).
+    /// Resolve the BOM to explode a phantom component through: its item's active BOM, default
+    /// first, oldest as the tiebreak (a deterministic pick — the explosion must not vary run to
+    /// run).
     ///
-    /// The `OR company_id IS NULL` arm is the shared_blank master-data read (ADR-0014): a recipe
-    /// authored once as shared master data resolves for every company, while a company-owned BoM of
-    /// the same item still wins. Same scoping as [`Self::fetch_output_quantity`].
+    /// ID-only (ADR-0029): the module declares no tenant axis. Under the composed decorator the
+    /// org fence's scope union (subtree ∪ tenant root) decides which BOMs resolve — a root-anchored
+    /// shared recipe and a unit-owned one both match, and the decorator's re-declared
+    /// (org, item, version) unique keeps the candidate set unambiguous. Same scoping as
+    /// [`Self::fetch_output_quantity`].
     pub async fn find_active_bom_for_item(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         item_id: Uuid,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         company_scope::fetch_optional_scalar_scoped(
             pool,
             sqlx::query_scalar(
                 r#"SELECT id FROM manufacturing.boms
-                   WHERE (company_id=$1 OR company_id IS NULL) AND item_id=$2 AND status='active'
+                   WHERE item_id=$1 AND status='active'
                      AND (metadata->>'deleted_at') IS NULL
-                   ORDER BY (company_id IS NULL) ASC, is_default DESC,
+                   ORDER BY is_default DESC,
                             (metadata->>'created_at') ASC LIMIT 1"#,
             )
-            .bind(company_id)
             .bind(item_id),
         ).await
     }

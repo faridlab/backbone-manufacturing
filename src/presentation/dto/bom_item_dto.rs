@@ -33,8 +33,6 @@ use crate::domain::entity::AuditMetadata;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBomItemDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -62,8 +60,6 @@ pub struct CreateBomItemDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBomItemDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -91,8 +87,6 @@ pub struct UpdateBomItemDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchBomItemDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "bom_id")]
     pub bom_id: Option<Uuid>,
@@ -113,7 +107,7 @@ pub struct PatchBomItemDto {
 impl PatchBomItemDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.item_id.is_some() || self.quantity.is_some() || self.rate.is_some() || self.amount.is_some() || self.is_phantom.is_some()
+        self.bom_id.is_some() || self.item_id.is_some() || self.quantity.is_some() || self.rate.is_some() || self.amount.is_some() || self.is_phantom.is_some()
     }
 }
 
@@ -131,7 +125,6 @@ impl PatchBomItemDto {
 pub struct BomItemResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub bom_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -198,9 +191,9 @@ impl BomItemListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct BomItemSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
+    pub quantity: Decimal,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -212,7 +205,6 @@ impl From<BomItem> for BomItemResponseDto {
     fn from(entity: BomItem) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             item_id: entity.item_id,
             quantity: entity.quantity,
@@ -229,9 +221,9 @@ impl From<BomItem> for BomItemSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             item_id: entity.item_id,
+            quantity: entity.quantity,
             created_at,
         }
     }
@@ -241,7 +233,6 @@ impl From<CreateBomItemDto> for BomItem {
     fn from(dto: CreateBomItemDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             bom_id: dto.bom_id,
             item_id: dto.item_id,
             quantity: dto.quantity,
@@ -257,7 +248,6 @@ impl From<&BomItem> for BomItemResponseDto {
     fn from(entity: &BomItem) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             bom_id: entity.bom_id.clone(),
             item_id: entity.item_id.clone(),
             quantity: entity.quantity.clone(),
@@ -277,7 +267,6 @@ impl backbone_core::FromCreateDto<CreateBomItemDto> for BomItem {
 
 impl backbone_core::ApplyUpdateDto<UpdateBomItemDto> for BomItem {
     fn apply_update(mut self, dto: UpdateBomItemDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.bom_id = dto.bom_id;
         self.item_id = dto.item_id;
         self.quantity = dto.quantity;

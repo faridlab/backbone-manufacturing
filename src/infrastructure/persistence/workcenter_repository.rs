@@ -12,7 +12,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::{WorkstationLoss, WorkstationProductivity};
 
@@ -50,7 +50,6 @@ impl WorkcenterRepository {
 /// The exact row a loss insert writes.
 pub struct NewWorkstationLossRow<'a> {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub name: &'a str,
     pub loss_type: crate::domain::entity::LossType,
 }
@@ -59,7 +58,6 @@ pub struct NewWorkstationLossRow<'a> {
 /// up to NOW() on the read side (a station still down contributes its downtime so far).
 pub struct NewWorkstationProductivityRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub workstation_id: Uuid,
     pub job_card_id: Option<Uuid>,
     pub loss_id: Uuid,
@@ -75,61 +73,62 @@ pub struct OeeBucketRow {
 }
 
 impl WorkcenterRepository {
-    /// Insert a loss reason (pool write, RLS-fenced).
+    /// Insert a loss reason — a pool write riding `org_scope::execute_scoped`, which binds the
+    /// ambient org scope (the composing service sets it per request); undecorated (module tests)
+    /// the insert runs plain (ADR-0029).
     pub async fn insert_loss(
         &self,
         pool: &PgPool,
         l: &NewWorkstationLossRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
-                r#"INSERT INTO manufacturing.workstation_losses (id, company_id, name, loss_type)
-                   VALUES ($1,$2,$3,$4)"#,
+                r#"INSERT INTO manufacturing.workstation_losses (id, name, loss_type)
+                   VALUES ($1,$2,$3)"#,
             )
-            .bind(l.id).bind(l.company_id).bind(l.name).bind(l.loss_type),
+            .bind(l.id).bind(l.name).bind(l.loss_type),
         )
         .await?;
         Ok(())
     }
 
-    /// Find a loss reason by name — company-owned before shared (the shared_blank master-data
-    /// read, ADR-0014: a loss authored once as shared master data resolves for every company,
-    /// while a company-owned loss of the same name still wins).
+    /// Find a loss reason by name — ID-only (ADR-0029): the module declares no tenant axis; under
+    /// the composed decorator the org fence's scope union (subtree ∪ tenant root) decides which
+    /// losses resolve, and the decorator's re-declared (org unit, name) NULLS NOT DISTINCT unique
+    /// keeps the one-namespace-per-unit shape.
     pub async fn find_loss_by_name(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         name: &str,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         company_scope::fetch_optional_scalar_scoped(
             pool,
             sqlx::query_scalar(
                 r#"SELECT id FROM manufacturing.workstation_losses
-                   WHERE (company_id=$1 OR company_id IS NULL) AND name=$2
-                     AND (metadata->>'deleted_at') IS NULL
-                   ORDER BY (company_id IS NULL) ASC LIMIT 1"#,
+                   WHERE name=$1
+                     AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(name),
         ).await
     }
 
-    /// Insert a productivity row (pool write, RLS-fenced).
+    /// Insert a productivity row — a pool write riding `org_scope::execute_scoped`
+    /// (ADR-0029; see `insert_loss`).
     pub async fn insert_productivity(
         &self,
         pool: &PgPool,
         p: &NewWorkstationProductivityRow,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO manufacturing.workstation_productivity
-                     (id, company_id, workstation_id, job_card_id, loss_id,
+                     (id, workstation_id, job_card_id, loss_id,
                       date_start, date_end, description)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
+                   VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
             )
-            .bind(p.id).bind(p.company_id).bind(p.workstation_id).bind(p.job_card_id)
+            .bind(p.id).bind(p.workstation_id).bind(p.job_card_id)
             .bind(p.loss_id).bind(p.date_start).bind(p.date_end).bind(p.description.clone()),
         )
         .await?;
@@ -145,7 +144,6 @@ impl WorkcenterRepository {
     pub async fn oee_buckets(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         workstation_id: Uuid,
         from: DateTime<Utc>,
         to: DateTime<Utc>,
@@ -155,18 +153,17 @@ impl WorkcenterRepository {
             sqlx::query(
                 r#"SELECT l.loss_type::text AS loss_type,
                           SUM(EXTRACT(EPOCH FROM (
-                              LEAST(COALESCE(p.date_end, NOW()), $4::timestamptz)
-                              - GREATEST(p.date_start, $3::timestamptz)
+                              LEAST(COALESCE(p.date_end, NOW()), $3::timestamptz)
+                              - GREATEST(p.date_start, $2::timestamptz)
                           )))::float8 AS seconds
                    FROM manufacturing.workstation_productivity p
                    JOIN manufacturing.workstation_losses l ON l.id = p.loss_id
-                   WHERE p.company_id=$1 AND p.workstation_id=$2
-                     AND COALESCE(p.date_end, NOW()) > $3::timestamptz
-                     AND p.date_start < $4::timestamptz
+                   WHERE p.workstation_id=$1
+                     AND COALESCE(p.date_end, NOW()) > $2::timestamptz
+                     AND p.date_start < $3::timestamptz
                      AND (p.metadata->>'deleted_at') IS NULL
                    GROUP BY 1"#,
             )
-            .bind(company_id)
             .bind(workstation_id)
             .bind(from)
             .bind(to),

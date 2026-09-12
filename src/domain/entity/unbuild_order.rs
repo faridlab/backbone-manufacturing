@@ -51,7 +51,6 @@ impl std::ops::Deref for UnbuildOrderId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct UnbuildOrder {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub unbuild_number: String,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
@@ -69,10 +68,9 @@ impl UnbuildOrder {
     }
 
     /// Create a new UnbuildOrder with required fields
-    pub fn new(company_id: Uuid, unbuild_number: String, work_order_id: Uuid, item_id: Uuid, quantity: Decimal, status: UnbuildStatus) -> Self {
+    pub fn new(unbuild_number: String, work_order_id: Uuid, item_id: Uuid, quantity: Decimal, status: UnbuildStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             unbuild_number,
             work_order_id,
             item_id,
@@ -146,9 +144,6 @@ impl UnbuildOrder {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "unbuild_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.unbuild_number = v; }
                 }
@@ -218,7 +213,6 @@ impl backbone_orm::EntityRepoMeta for UnbuildOrder {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("work_order_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "unbuild_status".to_string());
@@ -226,9 +220,6 @@ impl backbone_orm::EntityRepoMeta for UnbuildOrder {
     }
     fn search_fields() -> &'static [&'static str] {
         &["unbuild_number"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -238,7 +229,6 @@ impl backbone_orm::EntityRepoMeta for UnbuildOrder {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct UnbuildOrderBuilder {
-    company_id: Option<Uuid>,
     unbuild_number: Option<String>,
     work_order_id: Option<Uuid>,
     item_id: Option<Uuid>,
@@ -247,12 +237,6 @@ pub struct UnbuildOrderBuilder {
 }
 
 impl UnbuildOrderBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the unbuild_number field (required)
     pub fn unbuild_number(mut self, value: String) -> Self {
         self.unbuild_number = Some(value);
@@ -287,7 +271,6 @@ impl UnbuildOrderBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<UnbuildOrder, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let unbuild_number = self.unbuild_number.ok_or_else(|| "unbuild_number is required".to_string())?;
         let work_order_id = self.work_order_id.ok_or_else(|| "work_order_id is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
@@ -295,7 +278,6 @@ impl UnbuildOrderBuilder {
 
         Ok(UnbuildOrder {
             id: Uuid::new_v4(),
-            company_id,
             unbuild_number,
             work_order_id,
             item_id,

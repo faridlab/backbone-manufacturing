@@ -44,7 +44,6 @@ pub struct SubcontractMoLinkPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct SubcontractMoLinkFilter {
-    pub company_id: Option<Uuid>,
     pub purchase_order_id: Option<Uuid>,
     pub work_order_id: Option<Uuid>,
 }
@@ -52,7 +51,7 @@ pub struct SubcontractMoLinkFilter {
 impl SubcontractMoLinkFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.purchase_order_id.is_some() || self.work_order_id.is_some()
+        self.purchase_order_id.is_some() || self.work_order_id.is_some()
     }
 }
 

@@ -44,7 +44,6 @@ pub struct BomItemPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct BomItemFilter {
-    pub company_id: Option<Uuid>,
     pub bom_id: Option<Uuid>,
     pub item_id: Option<Uuid>,
     pub is_phantom: Option<bool>,
@@ -53,7 +52,7 @@ pub struct BomItemFilter {
 impl BomItemFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.item_id.is_some() || self.is_phantom.is_some()
+        self.bom_id.is_some() || self.item_id.is_some() || self.is_phantom.is_some()
     }
 }
 

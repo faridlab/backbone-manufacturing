@@ -33,9 +33,6 @@ use crate::domain::entity::AuditMetadata;
 #[serde(rename_all = "camelCase")]
 pub struct CreateWorkstationProductivityDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "workstation_id")]
     pub workstation_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "job_card_id")]
@@ -65,9 +62,6 @@ pub struct CreateWorkstationProductivityDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWorkstationProductivityDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "workstation_id")]
     pub workstation_id: Uuid,
@@ -99,9 +93,6 @@ pub struct UpdateWorkstationProductivityDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchWorkstationProductivityDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "workstation_id")]
     pub workstation_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "job_card_id")]
@@ -121,7 +112,7 @@ pub struct PatchWorkstationProductivityDto {
 impl PatchWorkstationProductivityDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.workstation_id.is_some() || self.job_card_id.is_some() || self.loss_id.is_some() || self.date_start.is_some() || self.date_end.is_some() || self.description.is_some()
+        self.workstation_id.is_some() || self.job_card_id.is_some() || self.loss_id.is_some() || self.date_start.is_some() || self.date_end.is_some() || self.description.is_some()
     }
 }
 
@@ -139,8 +130,6 @@ impl PatchWorkstationProductivityDto {
 pub struct WorkstationProductivityResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub workstation_id: Uuid,
     pub job_card_id: Option<Uuid>,
@@ -207,9 +196,9 @@ impl WorkstationProductivityListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct WorkstationProductivitySummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub workstation_id: Uuid,
     pub job_card_id: Option<Uuid>,
+    pub loss_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -221,7 +210,6 @@ impl From<WorkstationProductivity> for WorkstationProductivityResponseDto {
     fn from(entity: WorkstationProductivity) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             workstation_id: entity.workstation_id,
             job_card_id: entity.job_card_id,
             loss_id: entity.loss_id,
@@ -238,9 +226,9 @@ impl From<WorkstationProductivity> for WorkstationProductivitySummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             workstation_id: entity.workstation_id,
             job_card_id: entity.job_card_id,
+            loss_id: entity.loss_id,
             created_at,
         }
     }
@@ -250,7 +238,6 @@ impl From<CreateWorkstationProductivityDto> for WorkstationProductivity {
     fn from(dto: CreateWorkstationProductivityDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             workstation_id: dto.workstation_id,
             job_card_id: dto.job_card_id,
             loss_id: dto.loss_id,
@@ -266,7 +253,6 @@ impl From<&WorkstationProductivity> for WorkstationProductivityResponseDto {
     fn from(entity: &WorkstationProductivity) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             workstation_id: entity.workstation_id.clone(),
             job_card_id: entity.job_card_id.clone(),
             loss_id: entity.loss_id.clone(),
@@ -286,7 +272,6 @@ impl backbone_core::FromCreateDto<CreateWorkstationProductivityDto> for Workstat
 
 impl backbone_core::ApplyUpdateDto<UpdateWorkstationProductivityDto> for WorkstationProductivity {
     fn apply_update(mut self, dto: UpdateWorkstationProductivityDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.workstation_id = dto.workstation_id;
         self.job_card_id = dto.job_card_id;
         self.loss_id = dto.loss_id;

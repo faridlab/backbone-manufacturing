@@ -12,8 +12,6 @@ use uuid::Uuid;
 
 async fn draft_wo(
     svc: &ManufacturingWriteService,
-    pool: &sqlx::PgPool,
-    company: Uuid,
     category: Option<Uuid>,
     overrides: Option<WoAccounts>,
 ) -> Uuid {
@@ -21,7 +19,6 @@ async fn draft_wo(
     let comp = Uuid::new_v4();
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -31,9 +28,7 @@ async fn draft_wo(
         })
         .await
         .unwrap();
-    let _ = pool;
     svc.create_work_order(NewWorkOrder {
-        company_id: company,
         work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
         item_id: fg_item,
         bom_id: bom,
@@ -55,9 +50,8 @@ async fn draft_wo(
 async fn cd1_missing_account_loud() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let sink = LoggingSink;
-    let wo = draft_wo(&svc, &pool, company, None, None).await;
+    let wo = draft_wo(&svc, None, None).await;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let inv = FakeInventory::new();
     inv.stock(item_of(&pool, wo).await, "10", "10");
@@ -88,14 +82,13 @@ async fn item_of(pool: &sqlx::PgPool, wo: Uuid) -> Uuid {
 async fn cd2_category_defaults_fill() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let sink = LoggingSink;
     let category = Uuid::new_v4();
-    let dw = account(&pool, company, "1410-DWIP", "asset", "inventory", "debit").await;
-    let dr = account(&pool, company, "1400-DRAW", "asset", "inventory", "debit").await;
-    seed_costing_defaults(&pool, company, category, Some(dw), None, Some(dr), None, None, None, None, None).await;
+    let dw = account(&pool, "1410-DWIP", "asset", "inventory", "debit").await;
+    let dr = account(&pool, "1400-DRAW", "asset", "inventory", "debit").await;
+    seed_costing_defaults(&pool, category, Some(dw), None, Some(dr), None, None, None, None, None).await;
 
-    let wo = draft_wo(&svc, &pool, company, Some(category), None).await;
+    let wo = draft_wo(&svc, Some(category), None).await;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let comp = item_of(&pool, wo).await;
     let inv = FakeInventory::new();
@@ -113,17 +106,16 @@ async fn cd2_category_defaults_fill() {
 async fn cd3_override_wins_over_default() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let sink = LoggingSink;
     let category = Uuid::new_v4();
-    let dw = account(&pool, company, "1410-DWIP", "asset", "inventory", "debit").await;
-    let dr = account(&pool, company, "1400-DRAW", "asset", "inventory", "debit").await;
-    seed_costing_defaults(&pool, company, category, Some(dw), None, Some(dr), None, None, None, None, None).await;
-    let over = wo_accounts(&pool, company).await; // 1410-WIP / 1400-RAW — distinct ids
+    let dw = account(&pool, "1410-DWIP", "asset", "inventory", "debit").await;
+    let dr = account(&pool, "1400-DRAW", "asset", "inventory", "debit").await;
+    seed_costing_defaults(&pool, category, Some(dw), None, Some(dr), None, None, None, None, None).await;
+    let over = wo_accounts(&pool).await; // 1410-WIP / 1400-RAW — distinct ids
     let over_wip = over.wip;
     let over_raw = over.raw;
 
-    let wo = draft_wo(&svc, &pool, company, Some(category), Some(over)).await;
+    let wo = draft_wo(&svc, Some(category), Some(over)).await;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let comp = item_of(&pool, wo).await;
     let inv = FakeInventory::new();
@@ -143,11 +135,10 @@ async fn cd3_override_wins_over_default() {
 async fn cd4_null_default_still_loud() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let sink = LoggingSink;
     let category = Uuid::new_v4();
-    seed_costing_defaults(&pool, company, category, None, None, None, None, None, None, None, None).await;
-    let wo = draft_wo(&svc, &pool, company, Some(category), None).await;
+    seed_costing_defaults(&pool, category, None, None, None, None, None, None, None, None).await;
+    let wo = draft_wo(&svc, Some(category), None).await;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let inv = FakeInventory::new();
     inv.stock(item_of(&pool, wo).await, "10", "10");

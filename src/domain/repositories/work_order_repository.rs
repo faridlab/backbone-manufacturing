@@ -44,7 +44,6 @@ pub struct WorkOrderPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct WorkOrderFilter {
-    pub company_id: Option<Uuid>,
     pub work_order_number: Option<String>,
     pub item_id: Option<Uuid>,
     pub bom_id: Option<Uuid>,
@@ -62,7 +61,7 @@ pub struct WorkOrderFilter {
 impl WorkOrderFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.status.is_some() || self.reservation_state.is_some() || self.product_category_id.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some()
+        self.work_order_number.is_some() || self.item_id.is_some() || self.bom_id.is_some() || self.status.is_some() || self.reservation_state.is_some() || self.product_category_id.is_some() || self.wip_warehouse_id.is_some() || self.fg_warehouse_id.is_some() || self.wip_account_id.is_some() || self.fg_account_id.is_some() || self.raw_material_account_id.is_some() || self.conversion_cost_account_id.is_some()
     }
 }
 

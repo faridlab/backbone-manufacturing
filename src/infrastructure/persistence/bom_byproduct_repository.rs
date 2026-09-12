@@ -37,7 +37,6 @@ impl BomByproductRepository {
 /// The exact row a byproduct insert writes.
 pub struct NewBomByproductRow {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -57,7 +56,8 @@ impl BomByproductRepository {
     /// Insert a byproduct row.
     ///
     /// Takes the CALLER'S connection so the byproduct lands atomically with the BoM header it
-    /// rides; the caller binds the company on it (`bind_company_on`) — don't re-bind.
+    /// rides; the caller relays the ambient org scope on it (`relay_ambient_scope`) — don't re-bind
+    /// (ADR-0029).
     pub async fn insert_byproduct(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -65,10 +65,10 @@ impl BomByproductRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.bom_byproducts
-                 (id, company_id, bom_id, item_id, product_category_id, quantity, cost_share)
-               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
+                 (id, bom_id, item_id, product_category_id, quantity, cost_share)
+               VALUES ($1,$2,$3,$4,$5,$6)"#,
         )
-        .bind(b.id).bind(b.company_id).bind(b.bom_id).bind(b.item_id)
+        .bind(b.id).bind(b.bom_id).bind(b.item_id)
         .bind(b.product_category_id).bind(b.quantity).bind(b.cost_share)
         .execute(conn)
         .await?;

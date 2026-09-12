@@ -73,53 +73,26 @@ shared_types:
   Metadata: [Timestamps, Actors]
 
 # =============================================================================
-# company_fence (ADR-0014): Multi-tenant row-level security posture
+# Tenancy: none, by design (ADR-0029)
 # -----------------------------------------------------------------------------
-# Posture: shared_blank — nullable company_id on MASTER DATA, NOT NULL on
-# TRANSACTIONS (the fence vocabulary inventory established).
-#
-# Per ADR-0014, this declaration governs how the codegen stamps @required company_id
-# and how ADR-0015 enforcement hooks ground the three keys (db/both/service) against
-# the actual DDL. Posture options:
-#   shared_blank  : nullable company_id — NULL rows are first-class shared rows
-#                   (the port of Odoo's `[False]` escape). Applies to MASTER DATA:
-#                   the product-definition family, which is reference data a
-#                   multi-company group shares (a machine or a recipe is not a
-#                   bookkeeping event).
-#   strict        : NOT NULL company_id — every row belongs to exactly one company
-#                   and NULL rows are rejected. The `company_id IS NULL` arm of the
-#                   shared_blank RLS predicate is dead on these tables, making them
-#                   behaviorally strict. Applies to TRANSACTIONS and their
-#                   configuration: everything that emits or can emit a posting.
-#
-# LANDED DECISION (the earlier all-strict declaration carried the master-data
-# question as open; it is decided now): master data escapes the fence with shared
-# NULL rows; transactions stay strict. A NULL-company BOM or workstation is visible
-# to every company session; a work order never can be.
-#
-# Posture map (entity -> realized fence, all under this one declaration):
-#   MASTER DATA (shared_blank — nullable company_id, NULL = shared row):
-#     workstations          -> shared_blank
-#     workstation_losses    -> shared_blank
-#     operations            -> shared_blank
-#     boms                  -> shared_blank
-#     bom_items             -> shared_blank
-#     bom_operations        -> shared_blank
-#     bom_byproducts        -> shared_blank
-#     bom_subcontractors    -> shared_blank
-#   TRANSACTIONS (strict — @required company_id, the IS NULL arm is dead):
-#     work_orders           -> strict
-#     work_order_items      -> strict
-#     job_cards             -> strict
-#     workstation_productivity -> strict
-#     unbuild_orders        -> strict
-#     repair_orders         -> strict
-#     repair_parts          -> strict
-#     repair_tags           -> strict
-#     category_costing_defaults -> strict (defaults are company decisions)
-#     subcontract_mo_links  -> strict
+# This module is tenant-agnostic. It declares NO company axis and NO fence:
+# RLS stays ENABLE+FORCE with zero policies after the strip, and the composing
+# service installs the org-unit fence (tenancy.yaml + decorator) at composition
+# time. The historical postures port to the composed world as follows:
+#   - the master-data family (workstations, workstation_losses, operations,
+#     boms + bom_items/bom_operations/bom_byproducts/bom_subcontractors — was
+#     shared_blank: nullable company_id, NULL = the one shared recipe/machine
+#     set): ROOT-ANCHORED rows. The decorator's allow_root admits
+#     tenant-root-anchored masters, and the scope union (subtree ∪ tenant
+#     root) carries the visible-to-every-company semantics; a master anchored
+#     at a regular unit is that unit's private master, the same distinction
+#     the old company_id-set arm drew.
+#   - the transaction family (work_orders, work_order_items, job_cards,
+#     workstation_productivity, unbuild_orders, repair_orders, repair_parts,
+#     repair_tags, category_costing_defaults, subcontract_mo_links — were
+#     strict): plain org-scoped rows — the decorator's NOT NULL org_unit_id
+#     with the acting-unit fill, exactly like every strict table before them.
 # -----------------------------------------------------------------------------
-company_fence: shared_blank
 
 # Import each entity model. Replace `example` with your real entities.
 imports:

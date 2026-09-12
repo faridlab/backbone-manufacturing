@@ -24,7 +24,6 @@ impl TestDataGenerator for WorkstationTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": null,
             "workstation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "hour_rate": 0,
             "capacity": 0,
@@ -38,7 +37,6 @@ impl TestDataGenerator for WorkstationTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": null,
             "workstation_name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "hour_rate": 0,
             "capacity": 0,

@@ -51,7 +51,6 @@ impl std::ops::Deref for WorkstationId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Workstation {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub workstation_name: String,
     pub hour_rate: Decimal,
     pub capacity: Decimal,
@@ -72,7 +71,6 @@ impl Workstation {
     pub fn new(workstation_name: String, hour_rate: Decimal, capacity: Decimal, time_efficiency: Decimal, status: WorkstationStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: None,
             workstation_name,
             hour_rate,
             capacity,
@@ -139,16 +137,6 @@ impl Workstation {
 
 
     // ==========================================================
-    // Fluent Setters (with_* for optional fields)
-    // ==========================================================
-
-    /// Set the company_id field (chainable)
-    pub fn with_company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
-    // ==========================================================
     // Partial Update
     // ==========================================================
 
@@ -156,9 +144,6 @@ impl Workstation {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "workstation_name" => {
                     if let Ok(v) = serde_json::from_value(value) { self.workstation_name = v; }
                 }
@@ -228,15 +213,11 @@ impl backbone_orm::EntityRepoMeta for Workstation {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "workstation_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["workstation_name"]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -246,7 +227,6 @@ impl backbone_orm::EntityRepoMeta for Workstation {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct WorkstationBuilder {
-    company_id: Option<Uuid>,
     workstation_name: Option<String>,
     hour_rate: Option<Decimal>,
     capacity: Option<Decimal>,
@@ -255,12 +235,6 @@ pub struct WorkstationBuilder {
 }
 
 impl WorkstationBuilder {
-    /// Set the company_id field (optional)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the workstation_name field (required)
     pub fn workstation_name(mut self, value: String) -> Self {
         self.workstation_name = Some(value);
@@ -299,7 +273,6 @@ impl WorkstationBuilder {
 
         Ok(Workstation {
             id: Uuid::new_v4(),
-            company_id: self.company_id,
             workstation_name,
             hour_rate: self.hour_rate.unwrap_or(Decimal::from(0)),
             capacity: self.capacity.unwrap_or(Decimal::from(1)),

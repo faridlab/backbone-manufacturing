@@ -49,7 +49,6 @@ impl std::ops::Deref for BomByproductId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BomByproduct {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -70,7 +69,6 @@ impl BomByproduct {
     pub fn new(bom_id: Uuid, item_id: Uuid, quantity: Decimal, cost_share: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: None,
             bom_id,
             item_id,
             product_category_id: None,
@@ -135,12 +133,6 @@ impl BomByproduct {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the company_id field (chainable)
-    pub fn with_company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the product_category_id field (chainable)
     pub fn with_product_category_id(mut self, value: Uuid) -> Self {
         self.product_category_id = Some(value);
@@ -155,9 +147,6 @@ impl BomByproduct {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "bom_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.bom_id = v; }
                 }
@@ -227,7 +216,6 @@ impl backbone_orm::EntityRepoMeta for BomByproduct {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("bom_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m.insert("product_category_id".to_string(), "uuid".to_string());
@@ -235,9 +223,6 @@ impl backbone_orm::EntityRepoMeta for BomByproduct {
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -247,7 +232,6 @@ impl backbone_orm::EntityRepoMeta for BomByproduct {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct BomByproductBuilder {
-    company_id: Option<Uuid>,
     bom_id: Option<Uuid>,
     item_id: Option<Uuid>,
     product_category_id: Option<Uuid>,
@@ -256,12 +240,6 @@ pub struct BomByproductBuilder {
 }
 
 impl BomByproductBuilder {
-    /// Set the company_id field (optional)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the bom_id field (required)
     pub fn bom_id(mut self, value: Uuid) -> Self {
         self.bom_id = Some(value);
@@ -302,7 +280,6 @@ impl BomByproductBuilder {
 
         Ok(BomByproduct {
             id: Uuid::new_v4(),
-            company_id: self.company_id,
             bom_id,
             item_id,
             product_category_id: self.product_category_id,

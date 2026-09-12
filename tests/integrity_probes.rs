@@ -11,16 +11,15 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-/// Build a company + a released Work Order for `qty`, with real GL accounts and stocked components.
-/// Returns (svc, company, wo_id, raw_warehouse, accounts, inventory).
+/// Build a released Work Order for `qty`, with real GL accounts and stocked components.
+/// Returns (svc, wo_id, raw_warehouse, inventory).
 async fn released_wo(
     accounts_present: bool,
     qty: &str,
-) -> (ManufacturingWriteService, Uuid, Uuid, Uuid, FakeInventory) {
+) -> (ManufacturingWriteService, Uuid, Uuid, FakeInventory) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
     let raw_wh = Uuid::new_v4();
@@ -30,7 +29,6 @@ async fn released_wo(
 
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -41,11 +39,10 @@ async fn released_wo(
         .await
         .unwrap();
 
-    let acc = if accounts_present { Some(wo_accounts(&pool, company).await) } else { None };
+    let acc = if accounts_present { Some(wo_accounts(&pool).await) } else { None };
     let wo = svc
         .create_work_order(NewWorkOrder {
             product_category_id: None,
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -60,13 +57,13 @@ async fn released_wo(
         .await
         .unwrap();
     svc.confirm_work_order(wo, &sink).await.unwrap();
-    (svc, company, wo, raw_wh, inv)
+    (svc, wo, raw_wh, inv)
 }
 
 /// IP-1 — a Work Order cannot produce more than it was ordered to.
 #[tokio::test]
 async fn ip1_over_produce_rejected() {
-    let (svc, _company, wo, raw_wh, inv) = released_wo(true, "5").await;
+    let (svc, wo, raw_wh, inv) = released_wo(true, "5").await;
     let gl = CountingGl::new();
     let sink = LoggingSink;
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
@@ -78,7 +75,7 @@ async fn ip1_over_produce_rejected() {
 /// IP-2 — consuming materials is idempotent: a retry re-charges WIP at most once.
 #[tokio::test]
 async fn ip2_consume_is_idempotent() {
-    let (svc, _company, wo, raw_wh, inv) = released_wo(true, "1").await;
+    let (svc, wo, raw_wh, inv) = released_wo(true, "1").await;
     let gl = CountingGl::new();
     let sink = LoggingSink;
 
@@ -94,7 +91,7 @@ async fn ip2_consume_is_idempotent() {
 /// IP-3 — receiving finished goods is idempotent: WIP is cleared once and the WO completes once.
 #[tokio::test]
 async fn ip3_receive_is_idempotent() {
-    let (svc, _company, wo, raw_wh, inv) = released_wo(true, "1").await;
+    let (svc, wo, raw_wh, inv) = released_wo(true, "1").await;
     let gl = CountingGl::new();
     let sink = LoggingSink;
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
@@ -109,7 +106,7 @@ async fn ip3_receive_is_idempotent() {
 /// IP-4 — a Work Order missing its GL accounts is rejected before any post reaches the ledger.
 #[tokio::test]
 async fn ip4_missing_account_before_any_post() {
-    let (svc, _company, wo, raw_wh, inv) = released_wo(false, "1").await;
+    let (svc, wo, raw_wh, inv) = released_wo(false, "1").await;
     let gl = CountingGl::new();
     let sink = LoggingSink;
     let err = svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap_err();
@@ -121,14 +118,13 @@ async fn ip4_missing_account_before_any_post() {
 /// IP-5 — a job card charges its conversion cost to WIP exactly once (idempotent completion).
 #[tokio::test]
 async fn ip5_job_card_charges_once() {
-    let (svc, company, wo, raw_wh, inv) = released_wo(true, "1").await;
+    let (svc, wo, raw_wh, inv) = released_wo(true, "1").await;
     let gl = CountingGl::new();
     let sink = LoggingSink;
     svc.consume_materials(wo, raw_wh, &inv, &gl, &sink).await.unwrap();
 
     let jc = svc
         .add_job_card(NewJobCard {
-            company_id: company,
             work_order_id: wo,
             operation_id: Uuid::new_v4(),
             workstation_id: Uuid::new_v4(),
@@ -153,17 +149,15 @@ async fn ip6_receive_failure_does_not_strand_wip() {
     let svc = ManufacturingWriteService::new(pool.clone());
     let gl = GlAdapter::new(pool.clone()); // REAL ledger, so we can check WIP nets to zero
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
     let raw_wh = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     let inv = FakeInventory::new();
     inv.stock(comp, "100", "500");
 
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -176,7 +170,6 @@ async fn ip6_receive_failure_does_not_strand_wip() {
     let wo = svc
         .create_work_order(NewWorkOrder {
             product_category_id: None,
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,

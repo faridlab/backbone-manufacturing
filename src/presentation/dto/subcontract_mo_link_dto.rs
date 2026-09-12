@@ -33,9 +33,6 @@ use crate::domain::entity::AuditMetadata;
 #[serde(rename_all = "camelCase")]
 pub struct CreateSubcontractMoLinkDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "purchase_order_id")]
     pub purchase_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -56,9 +53,6 @@ pub struct CreateSubcontractMoLinkDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSubcontractMoLinkDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "purchase_order_id")]
     pub purchase_order_id: Uuid,
@@ -81,9 +75,6 @@ pub struct UpdateSubcontractMoLinkDto {
 #[serde(rename_all = "camelCase")]
 pub struct PatchSubcontractMoLinkDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "purchase_order_id")]
     pub purchase_order_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -94,7 +85,7 @@ pub struct PatchSubcontractMoLinkDto {
 impl PatchSubcontractMoLinkDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.purchase_order_id.is_some() || self.work_order_id.is_some()
+        self.purchase_order_id.is_some() || self.work_order_id.is_some()
     }
 }
 
@@ -112,8 +103,6 @@ impl PatchSubcontractMoLinkDto {
 pub struct SubcontractMoLinkResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub purchase_order_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -175,7 +164,6 @@ impl SubcontractMoLinkListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct SubcontractMoLinkSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub purchase_order_id: Uuid,
     pub work_order_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
@@ -189,7 +177,6 @@ impl From<SubcontractMoLink> for SubcontractMoLinkResponseDto {
     fn from(entity: SubcontractMoLink) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             purchase_order_id: entity.purchase_order_id,
             work_order_id: entity.work_order_id,
             metadata: entity.metadata,
@@ -202,7 +189,6 @@ impl From<SubcontractMoLink> for SubcontractMoLinkSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             purchase_order_id: entity.purchase_order_id,
             work_order_id: entity.work_order_id,
             created_at,
@@ -214,7 +200,6 @@ impl From<CreateSubcontractMoLinkDto> for SubcontractMoLink {
     fn from(dto: CreateSubcontractMoLinkDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             purchase_order_id: dto.purchase_order_id,
             work_order_id: dto.work_order_id,
             metadata: AuditMetadata::default(),
@@ -226,7 +211,6 @@ impl From<&SubcontractMoLink> for SubcontractMoLinkResponseDto {
     fn from(entity: &SubcontractMoLink) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             purchase_order_id: entity.purchase_order_id.clone(),
             work_order_id: entity.work_order_id.clone(),
             metadata: entity.metadata.clone(),
@@ -242,7 +226,6 @@ impl backbone_core::FromCreateDto<CreateSubcontractMoLinkDto> for SubcontractMoL
 
 impl backbone_core::ApplyUpdateDto<UpdateSubcontractMoLinkDto> for SubcontractMoLink {
     fn apply_update(mut self, dto: UpdateSubcontractMoLinkDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.purchase_order_id = dto.purchase_order_id;
         self.work_order_id = dto.work_order_id;
         Ok(self)

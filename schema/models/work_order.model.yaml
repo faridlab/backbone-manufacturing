@@ -28,14 +28,10 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique work order id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
       work_order_number:
         type: string
         attributes: ["@required", "@max(40)"]
-        description: "WO number (unique per company)"
+        description: "WO number (the org-scoped unique is installed by the composing service's tenancy decorator, ADR-0029)"
       item_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
@@ -115,11 +111,9 @@ models:
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
     indexes:
-      - type: unique
-        fields: [company_id, work_order_number]
-        where: "deleted_at IS NULL"
-      - type: index
-        fields: [company_id, status]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+      # leading work-order-number unique and the status lookup are installed by the
+      # composing service's tenancy decorator, not declared here.
       - type: index
         fields: [item_id]
 
@@ -131,10 +125,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique line id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner, denormalized from the parent work order # logical FK to organization.Company.id"
       work_order_id:
         type: uuid
         attributes: ["@required", "@foreign_key(WorkOrder.id)"]
@@ -171,10 +161,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique job card id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
       work_order_id:
         type: uuid
         attributes: ["@required", "@foreign_key(WorkOrder.id)"]
@@ -215,7 +201,7 @@ models:
         fields: [work_order_id, status]
 
   # The idempotency backstop for subcontract receipt events (see manufacturing_subcontract.rs):
-  # one hidden work order per (company, purchase order). A replayed event finds the prior link
+  # one hidden work order per purchase order. A replayed event finds the prior link
   # and returns the existing work order instead of minting a second one.
   - name: SubcontractMoLink
     collection: subcontract_mo_links
@@ -225,10 +211,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique link id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner # logical FK to organization.Company.id"
       purchase_order_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
@@ -241,10 +223,9 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: unique
-        fields: [company_id, purchase_order_id]
-        where: "deleted_at IS NULL"
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading purchase-order unique (the replay backstop's scope) is installed by the
+    # composing service's tenancy decorator, not declared here.
 
 enums:
   # Hybrid shape (ADR-0016): the enum carries both hand-gated direct writes and derived

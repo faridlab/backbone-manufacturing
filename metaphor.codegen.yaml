@@ -99,5 +99,10 @@ user_owned:
   - "migrations/20260901110200_fence_shared_blank_master_data.down.sql"
   - "migrations/20260901110300_rls_fence_new_tables.up.sql"
   - "migrations/20260901110300_rls_fence_new_tables.down.sql"
+
+  # The tenancy strip (ADR-0029): drops the company fence artifacts — policies,
+  # company-leading indexes/uniques, company_id columns — from every manufacturing
+  # table. Hand-authored; the down file restores the historical fence shapes.
+  - "migrations/*strip_tenancy*"
   - "tests/common/mod.rs"
   - "src/write_api.rs"

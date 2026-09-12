@@ -11,9 +11,8 @@ use common::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-async fn a_bom(svc: &ManufacturingWriteService, company: Uuid, item: Uuid, code: &str) -> Uuid {
+async fn a_bom(svc: &ManufacturingWriteService, item: Uuid, code: &str) -> Uuid {
     svc.create_bom(NewBom {
-        company_id: company,
         item_id: item,
         bom_code: code.into(),
         quantity: dec("1"),
@@ -38,8 +37,8 @@ async fn a_bom(svc: &ManufacturingWriteService, company: Uuid, item: Uuid, code:
 async fn mgc1_bom_cost_rollup() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let (company, item) = (Uuid::new_v4(), Uuid::new_v4());
-    let bom = a_bom(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let item = Uuid::new_v4();
+    let bom = a_bom(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
 
     let row = sqlx::query_as::<_, (Decimal, Decimal, Decimal)>(
         "SELECT raw_material_cost, operating_cost, total_cost FROM manufacturing.boms WHERE id=$1",
@@ -59,11 +58,10 @@ async fn mgc2_work_order_explosion() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let (company, item) = (Uuid::new_v4(), Uuid::new_v4());
+    let item = Uuid::new_v4();
     let comp_a = Uuid::new_v4();
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -77,7 +75,6 @@ async fn mgc2_work_order_explosion() {
     let wo = svc
         .create_work_order(NewWorkOrder {
             product_category_id: None,
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: item,
             bom_id: bom,
@@ -110,11 +107,10 @@ async fn mgc2_work_order_explosion() {
 async fn mgc3_validation() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let (company, item) = (Uuid::new_v4(), Uuid::new_v4());
+    let item = Uuid::new_v4();
 
     let empty = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: item,
             bom_code: "BAD".into(),
             quantity: dec("1"),
@@ -125,11 +121,10 @@ async fn mgc3_validation() {
         .await;
     assert!(matches!(empty, Err(ManufacturingError::Invalid(_))));
 
-    let bom = a_bom(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let bom = a_bom(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     let bad_qty = svc
         .create_work_order(NewWorkOrder {
             product_category_id: None,
-            company_id: company,
             work_order_number: "WO-BAD".into(),
             item_id: item,
             bom_id: bom,
@@ -154,13 +149,12 @@ async fn mgc4_phantom_bom_explodes_through() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let (chair, frame, leg, dowel, cushion) =
         (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
 
     // The phantom Frame's own BOM: 4 legs + 8 dowels (per 1 frame).
     svc.create_bom(NewBom {
-        company_id: company, item_id: frame, bom_code: format!("BOM-F-{}", &Uuid::new_v4().to_string()[..8]),
+        item_id: frame, bom_code: format!("BOM-F-{}", &Uuid::new_v4().to_string()[..8]),
         quantity: dec("1"), uom: None,
         items: vec![
             NewBomItem { item_id: leg, quantity: dec("4"), rate: dec("1000"), is_phantom: false },
@@ -171,7 +165,7 @@ async fn mgc4_phantom_bom_explodes_through() {
 
     // The Chair BOM: 1 phantom Frame + 1 real Cushion (per 1 chair).
     let chair_bom = svc.create_bom(NewBom {
-        company_id: company, item_id: chair, bom_code: format!("BOM-C-{}", &Uuid::new_v4().to_string()[..8]),
+        item_id: chair, bom_code: format!("BOM-C-{}", &Uuid::new_v4().to_string()[..8]),
         quantity: dec("1"), uom: None,
         items: vec![
             NewBomItem { item_id: frame, quantity: dec("1"), rate: dec("0"), is_phantom: true },
@@ -182,7 +176,7 @@ async fn mgc4_phantom_bom_explodes_through() {
 
     let wo = svc.create_work_order(NewWorkOrder {
             product_category_id: None,
-        company_id: company, work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
+        work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
         item_id: chair, bom_id: chair_bom, quantity: dec("2"),
         wip_warehouse_id: None, fg_warehouse_id: None, wip_account_id: None, fg_account_id: None,
         raw_material_account_id: None, conversion_cost_account_id: None,

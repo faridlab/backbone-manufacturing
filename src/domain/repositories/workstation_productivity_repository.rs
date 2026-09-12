@@ -44,7 +44,6 @@ pub struct WorkstationProductivityPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct WorkstationProductivityFilter {
-    pub company_id: Option<Uuid>,
     pub workstation_id: Option<Uuid>,
     pub job_card_id: Option<Uuid>,
     pub loss_id: Option<Uuid>,
@@ -54,7 +53,7 @@ pub struct WorkstationProductivityFilter {
 impl WorkstationProductivityFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.workstation_id.is_some() || self.job_card_id.is_some() || self.loss_id.is_some() || self.description.is_some()
+        self.workstation_id.is_some() || self.job_card_id.is_some() || self.loss_id.is_some() || self.description.is_some()
     }
 }
 

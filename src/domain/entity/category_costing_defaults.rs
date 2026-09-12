@@ -48,7 +48,6 @@ impl std::ops::Deref for CategoryCostingDefaultsId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CategoryCostingDefaults {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub product_category_id: Uuid,
     pub wip_account_id: Option<Uuid>,
     pub fg_account_id: Option<Uuid>,
@@ -70,10 +69,9 @@ impl CategoryCostingDefaults {
     }
 
     /// Create a new CategoryCostingDefaults with required fields
-    pub fn new(company_id: Uuid, product_category_id: Uuid) -> Self {
+    pub fn new(product_category_id: Uuid) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             product_category_id,
             wip_account_id: None,
             fg_account_id: None,
@@ -198,9 +196,6 @@ impl CategoryCostingDefaults {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "product_category_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.product_category_id = v; }
                 }
@@ -282,7 +277,6 @@ impl backbone_orm::EntityRepoMeta for CategoryCostingDefaults {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("product_category_id".to_string(), "uuid".to_string());
         m.insert("wip_account_id".to_string(), "uuid".to_string());
         m.insert("fg_account_id".to_string(), "uuid".to_string());
@@ -297,9 +291,6 @@ impl backbone_orm::EntityRepoMeta for CategoryCostingDefaults {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
-    }
 }
 
 /// Builder for CategoryCostingDefaults entity
@@ -308,7 +299,6 @@ impl backbone_orm::EntityRepoMeta for CategoryCostingDefaults {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct CategoryCostingDefaultsBuilder {
-    company_id: Option<Uuid>,
     product_category_id: Option<Uuid>,
     wip_account_id: Option<Uuid>,
     fg_account_id: Option<Uuid>,
@@ -321,12 +311,6 @@ pub struct CategoryCostingDefaultsBuilder {
 }
 
 impl CategoryCostingDefaultsBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the product_category_id field (required)
     pub fn product_category_id(mut self, value: Uuid) -> Self {
         self.product_category_id = Some(value);
@@ -385,12 +369,10 @@ impl CategoryCostingDefaultsBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<CategoryCostingDefaults, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let product_category_id = self.product_category_id.ok_or_else(|| "product_category_id is required".to_string())?;
 
         Ok(CategoryCostingDefaults {
             id: Uuid::new_v4(),
-            company_id,
             product_category_id,
             wip_account_id: self.wip_account_id,
             fg_account_id: self.fg_account_id,

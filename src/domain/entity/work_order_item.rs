@@ -49,7 +49,6 @@ impl std::ops::Deref for WorkOrderItemId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct WorkOrderItem {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub required_qty: Decimal,
@@ -67,10 +66,9 @@ impl WorkOrderItem {
     }
 
     /// Create a new WorkOrderItem with required fields
-    pub fn new(company_id: Uuid, work_order_id: Uuid, item_id: Uuid, required_qty: Decimal, consumed_qty: Decimal, rate: Decimal) -> Self {
+    pub fn new(work_order_id: Uuid, item_id: Uuid, required_qty: Decimal, consumed_qty: Decimal, rate: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             work_order_id,
             item_id,
             required_qty,
@@ -139,9 +137,6 @@ impl WorkOrderItem {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "work_order_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.work_order_id = v; }
                 }
@@ -211,16 +206,12 @@ impl backbone_orm::EntityRepoMeta for WorkOrderItem {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("work_order_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -230,7 +221,6 @@ impl backbone_orm::EntityRepoMeta for WorkOrderItem {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct WorkOrderItemBuilder {
-    company_id: Option<Uuid>,
     work_order_id: Option<Uuid>,
     item_id: Option<Uuid>,
     required_qty: Option<Decimal>,
@@ -239,12 +229,6 @@ pub struct WorkOrderItemBuilder {
 }
 
 impl WorkOrderItemBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the work_order_id field (required)
     pub fn work_order_id(mut self, value: Uuid) -> Self {
         self.work_order_id = Some(value);
@@ -279,14 +263,12 @@ impl WorkOrderItemBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<WorkOrderItem, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let work_order_id = self.work_order_id.ok_or_else(|| "work_order_id is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
         let required_qty = self.required_qty.ok_or_else(|| "required_qty is required".to_string())?;
 
         Ok(WorkOrderItem {
             id: Uuid::new_v4(),
-            company_id,
             work_order_id,
             item_id,
             required_qty,

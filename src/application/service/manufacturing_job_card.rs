@@ -14,8 +14,12 @@
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on `JobCardRepository`
 //! / `WorkOrderRepository`, whose gate methods take THIS service's transaction so the once-only guard
 //! commits with the cost accumulation.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no company argument exists on any verb
+//! here. Transactions relay the ambient org scope (the composing service sets it per request);
+//! pool reads ride the caller-scoped helpers undecorated. The GL post + event keep a legacy
+//! company twin filled from the ambient scope's echo.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -24,7 +28,8 @@ use crate::infrastructure::persistence::NewJobCardRow;
 use super::manufacturing_events::*;
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostLine, GlPostSink};
 use super::manufacturing_write_service::{
-    money, sixty, ManufacturingError, ManufacturingWriteService, NewJobCard,
+    legacy_company_echo, money, relay_ambient_scope, sixty, ManufacturingError,
+    ManufacturingWriteService, NewJobCard,
 };
 
 impl ManufacturingWriteService {
@@ -36,21 +41,19 @@ impl ManufacturingWriteService {
         }
         let id = Uuid::new_v4();
         let cost = money(j.total_time_mins / sixty() * j.hour_rate);
-        // RLS scope (ADR-0008): company on the DTO — scope the insert so it passes the WITH CHECK fence.
-        company_scope::with_company_scope(
-            Some(j.company_id),
-            self.job_cards.insert_ready(&self.pool, &NewJobCardRow {
+        // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
+        // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
+        self.job_cards
+            .insert_ready(&self.pool, &NewJobCardRow {
                 id,
-                company_id: j.company_id,
                 work_order_id: j.work_order_id,
                 operation_id: j.operation_id,
                 workstation_id: j.workstation_id,
                 total_time_mins: j.total_time_mins,
                 hour_rate: j.hour_rate,
                 operating_cost: cost,
-            }),
-        )
-        .await?;
+            })
+            .await?;
         Ok(id)
     }
 
@@ -75,7 +78,9 @@ impl ManufacturingWriteService {
             ));
         }
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, jc.company_id).await?;
+        // The ambient org scope — the start gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.job_cards.gate_start(&mut tx, job_card_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -94,8 +99,8 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<Decimal, ManufacturingError> {
-        // RLS scope (ADR-0008), ID-only pattern — see `confirm_work_order`: the join is fenced by the
-        // request-dedicated connection; the transaction below binds the job card's own company.
+        // ID-only pattern (ADR-0029): the join read rides the request-dedicated connection; under
+        // the composed decorator the org fence scopes the card to the caller's unit.
         let jc = self.job_cards.find_completion_source(&self.pool, job_card_id).await?
             .ok_or(ManufacturingError::NotFound("job card"))?;
         if jc.status == "done" {
@@ -107,32 +112,29 @@ impl ManufacturingWriteService {
         if jc.work_order_status != "confirmed" && jc.work_order_status != "progress" {
             return Err(ManufacturingError::InvalidState("work order not open for operations"));
         }
-        let company_id: Uuid = jc.company_id;
         let wo_id: Uuid = jc.work_order_id;
         let cost: Decimal = jc.operating_cost;
         let wip = self
-            .resolve_account(
-                "wip",
-                jc.wip_account_id,
-                company_id,
-                jc.product_category_id,
-                |d| d.wip_account_id,
-            )
+            .resolve_account("wip", jc.wip_account_id, jc.product_category_id, |d| d.wip_account_id)
             .await?;
         let conv = self
             .resolve_account(
                 "conversion_cost",
                 jc.conversion_cost_account_id,
-                company_id,
                 jc.product_category_id,
                 |d| d.conversion_cost_account_id,
             )
             .await?;
 
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for the
+        // wire consumers below (GL post, event) that still read a tenant off the wire. No module
+        // statement keys on it.
+        let legacy_company = legacy_company_echo();
+
         if cost > Decimal::ZERO {
             let env = AccountingPostEnvelope {
                 idempotency_key: format!("operate:{job_card_id}"),
-                company_id,
+                company_id: legacy_company,
                 branch_id: None,
                 source_type: "manufacturing".into(),
                 // The job card id is already a distinct voucher id.
@@ -151,7 +153,9 @@ impl ManufacturingWriteService {
         }
 
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, company_id).await?;
+        // The ambient org scope — the completion gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.job_cards.gate_complete(&mut tx, job_card_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -164,7 +168,7 @@ impl ManufacturingWriteService {
         sink.publish(&ManufacturingEvent::ConversionCharged(ConversionCharged {
             job_card_id,
             work_order_id: wo_id,
-            company_id,
+            company_id: legacy_company,
             operating_cost: cost,
         }));
         Ok(cost)
@@ -186,7 +190,9 @@ impl ManufacturingWriteService {
             _ => return Err(ManufacturingError::InvalidState("job card state does not allow cancel")),
         }
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, jc.company_id).await?;
+        // The ambient org scope — the cancel gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.job_cards.gate_cancel(&mut tx, job_card_id).await?;
         if moved != 1 {
             tx.rollback().await?;

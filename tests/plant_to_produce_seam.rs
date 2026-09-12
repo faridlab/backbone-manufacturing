@@ -23,11 +23,10 @@ async fn ptpseam1_wip_nets_to_zero() {
     let svc = ManufacturingWriteService::new(pool.clone());
     let gl = Arc::new(GlAdapter::new(pool.clone()));
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let (comp_x, comp_y) = (Uuid::new_v4(), Uuid::new_v4());
     let raw_wh = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
 
     // Real inventory valuation: X @ 500, Y @ 250, both well stocked.
     let inv = FakeInventory::new();
@@ -37,7 +36,6 @@ async fn ptpseam1_wip_nets_to_zero() {
     // BOM for 1 FG: 2 × X + 4 × Y.
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -54,7 +52,6 @@ async fn ptpseam1_wip_nets_to_zero() {
     let wo = svc
         .create_work_order(NewWorkOrder {
             product_category_id: None,
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -77,7 +74,6 @@ async fn ptpseam1_wip_nets_to_zero() {
     // 2) operate: 30 min @ 120/hr = 60. Dr WIP · Cr Conversion.
     let jc = svc
         .add_job_card(NewJobCard {
-            company_id: company,
             work_order_id: wo,
             operation_id: Uuid::new_v4(),
             workstation_id: Uuid::new_v4(),

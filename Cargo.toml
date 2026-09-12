@@ -1,6 +1,6 @@
 [package]
 name = "backbone-manufacturing"
-version = "0.4.6"
+version = "0.5.0"
 edition = "2021"
 description = "Manufacturing module: BOM/product definition (versioned, typed normal/kit/subcontract) and work-order execution (hybrid 6-state lifecycle, WIP job-order costing through the inventory/GL ports, unbuild, repair, subcontract mint, OEE read side)"
 
@@ -88,4 +88,6 @@ rand = "0.8"
 # backbone-accounting ledger through an in-test ACL adapter implementing `GlPostSink`. Dev-dependency
 # ONLY — the shipped manufacturing library has ZERO normal Cargo edge to accounting (verify:
 # `cargo tree -e normal -i backbone-accounting` is empty). Inventory is driven through `InventoryPort`.
-backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.6.10" }
+# Pinned to the tenant-agnostic (ADR-0029) accounting line — the undecorated module tests assume
+# the company-free accounts shape.
+backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.8.0" }

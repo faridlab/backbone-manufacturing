@@ -44,7 +44,6 @@ pub struct BomSubcontractorPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct BomSubcontractorFilter {
-    pub company_id: Option<Uuid>,
     pub bom_id: Option<Uuid>,
     pub partner_id: Option<Uuid>,
 }
@@ -52,7 +51,7 @@ pub struct BomSubcontractorFilter {
 impl BomSubcontractorFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.partner_id.is_some()
+        self.bom_id.is_some() || self.partner_id.is_some()
     }
 }
 

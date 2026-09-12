@@ -18,8 +18,12 @@
 //! repair billing is not this module's surface.
 //!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on `RepairRepository`.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no company argument exists on any verb
+//! here. Transactions relay the ambient org scope (the composing service sets it per request);
+//! pool reads ride the caller-scoped helpers undecorated. Wire payloads (availability probes,
+//! legs, the GL post, the event) keep a legacy company twin filled from the ambient scope's echo.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -29,8 +33,8 @@ use super::manufacturing_events::*;
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostLine, GlPostSink};
 use super::manufacturing_ports::{InventoryPort, RepairAvailability, RepairLeg};
 use super::manufacturing_write_service::{
-    money, is_dup, ManufacturingError, ManufacturingWriteService, NewRepairOrder,
-    RepairEndOutcome,
+    is_dup, legacy_company_echo, money, relay_ambient_scope, ManufacturingError,
+    ManufacturingWriteService, NewRepairOrder, RepairEndOutcome,
 };
 
 impl ManufacturingWriteService {
@@ -49,37 +53,33 @@ impl ManufacturingWriteService {
             }
         }
         let id = Uuid::new_v4();
-        // RLS scope (ADR-0008): company on the DTO — scope the inserts so they pass the WITH CHECK fence.
-        let r = company_scope::with_company_scope(
-            Some(o.company_id),
-            self.repairs.insert_repair_order(&self.pool, &NewRepairOrderRow {
+        // The pool inserts ride `org_scope::execute_scoped` — the ambient org scope (the
+        // composing service sets it per request) makes the decorator's fence see them (ADR-0029).
+        let r = self
+            .repairs
+            .insert_repair_order(&self.pool, &NewRepairOrderRow {
                 id,
-                company_id: o.company_id,
                 repair_number: &o.repair_number,
                 item_id: o.item_id,
                 product_category_id: o.product_category_id,
                 quantity: o.quantity,
-            }),
-        )
-        .await;
+            })
+            .await;
         if let Err(e) = r {
             return Err(if is_dup(&e) { ManufacturingError::DuplicateNumber(o.repair_number) } else { e.into() });
         }
         for p in &o.parts {
-            company_scope::with_company_scope(
-                Some(o.company_id),
-                self.repairs.insert_repair_part(&self.pool, &NewRepairPartRow {
+            self.repairs
+                .insert_repair_part(&self.pool, &NewRepairPartRow {
                     id: Uuid::new_v4(),
-                    company_id: o.company_id,
                     repair_order_id: id,
                     item_id: p.item_id,
                     warehouse_id: p.warehouse_id,
                     line_type: p.line_type,
                     quantity: p.quantity,
                     rate: p.rate,
-                }),
-            )
-            .await?;
+                })
+                .await?;
         }
         Ok(id)
     }
@@ -100,16 +100,17 @@ impl ManufacturingWriteService {
         if o.status != "draft" {
             return Err(ManufacturingError::RepairInvalidState("repair order is not draft"));
         }
-        let parts = company_scope::with_company_scope(
-            Some(o.company_id),
-            self.repairs.find_parts(&self.pool, repair_id),
-        )
-        .await?;
+        // The parts read rides the caller-scoped helper (ADR-0029) — the fence decides under
+        // composition; undecorated (module tests) it runs plain.
+        let parts = self.repairs.find_parts(&self.pool, repair_id).await?;
+        // Legacy company twin (ADR-0029): the availability probe is a wire payload — the ambient
+        // org scope's company echo fills it for consumers that still read a tenant off the wire.
+        let legacy_company = legacy_company_echo();
         for p in &parts {
             if p.line_type == "add" {
                 inventory
                     .check_repair_availability(&RepairAvailability {
-                        company_id: o.company_id,
+                        company_id: legacy_company,
                         item_id: p.item_id,
                         warehouse_id: p.warehouse_id,
                         quantity: p.quantity,
@@ -119,7 +120,9 @@ impl ManufacturingWriteService {
             }
         }
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, o.company_id).await?;
+        // The ambient org scope — the validate gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.repairs.gate_validate(&mut tx, repair_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -146,7 +149,9 @@ impl ManufacturingWriteService {
             _ => return Err(ManufacturingError::RepairInvalidState("repair order state does not allow start")),
         }
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, o.company_id).await?;
+        // The ambient org scope — the start gates ride the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         self.repairs.gate_auto_confirm(&mut tx, repair_id).await?;
         let moved = self.repairs.gate_start(&mut tx, repair_id).await?;
         if moved != 1 {
@@ -186,23 +191,26 @@ impl ManufacturingWriteService {
                 "repair order is not under repair — start it first",
             ));
         }
-        let parts = company_scope::with_company_scope(
-            Some(o.company_id),
-            self.repairs.find_parts(&self.pool, repair_id),
-        )
-        .await?;
+        // The parts read rides the caller-scoped helper (ADR-0029) — the fence decides under
+        // composition; undecorated (module tests) it runs plain.
+        let parts = self.repairs.find_parts(&self.pool, repair_id).await?;
 
         // Accounts resolve through the same chain as every other costing path: category default
         // → LOUD MissingAccount (a repair carries no per-order account overrides).
         let repair_expense_acct = self
-            .resolve_account("repair_expense", None, o.company_id, o.product_category_id, |d| d.repair_expense_account_id)
+            .resolve_account("repair_expense", None, o.product_category_id, |d| d.repair_expense_account_id)
             .await?;
         let inventory_loss_acct = self
-            .resolve_account("inventory_loss", None, o.company_id, o.product_category_id, |d| d.inventory_loss_account_id)
+            .resolve_account("inventory_loss", None, o.product_category_id, |d| d.inventory_loss_account_id)
             .await?;
         let raw_acct = self
-            .resolve_account("raw_material", None, o.company_id, o.product_category_id, |d| d.raw_material_account_id)
+            .resolve_account("raw_material", None, o.product_category_id, |d| d.raw_material_account_id)
             .await?;
+
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for the
+        // wire consumers below (legs, GL post, event) that still read a tenant off the wire. No
+        // module statement keys on it.
+        let legacy_company = legacy_company_echo();
 
         // SIDE EFFECTS BEFORE THE GATE: every leg through the port, idempotent per leg key.
         let mut inventory_loss = Decimal::ZERO; // Σ(remove)
@@ -213,7 +221,7 @@ impl ManufacturingWriteService {
             let key = format!("repair-leg:{repair_id}:{idx}");
             inventory
                 .execute_repair_leg(&RepairLeg {
-                    company_id: o.company_id,
+                    company_id: legacy_company,
                     repair_order_id: repair_id,
                     item_id: p.item_id,
                     warehouse_id: p.warehouse_id,
@@ -256,7 +264,7 @@ impl ManufacturingWriteService {
             }
             let env = AccountingPostEnvelope {
                 idempotency_key: format!("repair:{repair_id}"),
-                company_id: o.company_id,
+                company_id: legacy_company,
                 branch_id: None,
                 source_type: "manufacturing".into(),
                 source_id: Uuid::new_v5(&repair_id, b"manufacturing:repair"),
@@ -272,7 +280,9 @@ impl ManufacturingWriteService {
 
         // THE GATE, last: under_repair → done (once-only, terminal).
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, o.company_id).await?;
+        // The ambient org scope — the end gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.repairs.gate_end(&mut tx, repair_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -293,7 +303,7 @@ impl ManufacturingWriteService {
         };
         sink.publish(&ManufacturingEvent::RepairCompleted(RepairCompleted {
             repair_order_id: repair_id,
-            company_id: o.company_id,
+            company_id: legacy_company,
             item_id: o.item_id,
             repair_expense,
             inventory_loss,
@@ -318,7 +328,9 @@ impl ManufacturingWriteService {
             _ => return Err(ManufacturingError::RepairInvalidState("repair order state does not allow cancel")),
         }
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, o.company_id).await?;
+        // The ambient org scope — the cancel gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.repairs.gate_cancel(&mut tx, repair_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -330,21 +342,19 @@ impl ManufacturingWriteService {
         Ok(())
     }
 
-    /// Create (or reuse) a tenant-scoped repair tag — the family's sole DB-level guard is the
-    /// unique (company, name); a duplicate name is a LOUD domain error, not an overwrite.
-    pub async fn create_repair_tag(&self, company_id: Uuid, name: String) -> Result<Uuid, ManufacturingError> {
+    /// Create (or reuse) a repair tag — the family's DB-level one-namespace-per-org-unit guard is
+    /// the (org unit, name) unique installed by the composing service's tenancy decorator
+    /// (ADR-0029); a duplicate name is a LOUD domain error, not an overwrite.
+    pub async fn create_repair_tag(&self, name: String) -> Result<Uuid, ManufacturingError> {
         if name.trim().is_empty() {
             return Err(ManufacturingError::Invalid("repair tag name must not be empty".into()));
         }
-        if self.repairs.find_tag_by_name(&self.pool, company_id, &name).await?.is_some() {
+        if self.repairs.find_tag_by_name(&self.pool, &name).await?.is_some() {
             return Err(ManufacturingError::Invalid(format!("repair tag '{name}' already exists")));
         }
         let id = Uuid::new_v4();
-        let r = company_scope::with_company_scope(
-            Some(company_id),
-            self.repairs.insert_tag(&self.pool, id, company_id, &name),
-        )
-        .await;
+        // The pool insert rides `org_scope::execute_scoped` (ADR-0029) — see `insert_tag`.
+        let r = self.repairs.insert_tag(&self.pool, id, &name).await;
         if let Err(e) = r {
             return Err(if is_dup(&e) {
                 ManufacturingError::Invalid(format!("repair tag '{name}' already exists"))

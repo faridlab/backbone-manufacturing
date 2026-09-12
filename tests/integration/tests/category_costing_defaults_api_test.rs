@@ -24,7 +24,6 @@ impl TestDataGenerator for CategoryCostingDefaultsTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "product_category_id": Uuid::new_v4().to_string(),
             "wip_account_id": null,
             "fg_account_id": null,
@@ -42,7 +41,6 @@ impl TestDataGenerator for CategoryCostingDefaultsTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "product_category_id": Uuid::new_v4().to_string(),
             "wip_account_id": null,
             "fg_account_id": null,

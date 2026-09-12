@@ -52,7 +52,6 @@ impl std::ops::Deref for WorkOrderId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct WorkOrder {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_number: String,
     pub item_id: Uuid,
     pub bom_id: Uuid,
@@ -82,10 +81,9 @@ impl WorkOrder {
     }
 
     /// Create a new WorkOrder with required fields
-    pub fn new(company_id: Uuid, work_order_number: String, item_id: Uuid, bom_id: Uuid, quantity: Decimal, produced_qty: Decimal, status: WorkOrderState, raw_material_cost: Decimal, operating_cost: Decimal) -> Self {
+    pub fn new(work_order_number: String, item_id: Uuid, bom_id: Uuid, quantity: Decimal, produced_qty: Decimal, status: WorkOrderState, raw_material_cost: Decimal, operating_cost: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             work_order_number,
             item_id,
             bom_id,
@@ -229,9 +227,6 @@ impl WorkOrder {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "work_order_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.work_order_number = v; }
                 }
@@ -337,7 +332,6 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("item_id".to_string(), "uuid".to_string());
         m.insert("bom_id".to_string(), "uuid".to_string());
         m.insert("product_category_id".to_string(), "uuid".to_string());
@@ -354,9 +348,6 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
     fn search_fields() -> &'static [&'static str] {
         &["work_order_number"]
     }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
-    }
 }
 
 /// Builder for WorkOrder entity
@@ -365,7 +356,6 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct WorkOrderBuilder {
-    company_id: Option<Uuid>,
     work_order_number: Option<String>,
     item_id: Option<Uuid>,
     bom_id: Option<Uuid>,
@@ -386,12 +376,6 @@ pub struct WorkOrderBuilder {
 }
 
 impl WorkOrderBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the work_order_number field (required)
     pub fn work_order_number(mut self, value: String) -> Self {
         self.work_order_number = Some(value);
@@ -498,7 +482,6 @@ impl WorkOrderBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<WorkOrder, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let work_order_number = self.work_order_number.ok_or_else(|| "work_order_number is required".to_string())?;
         let item_id = self.item_id.ok_or_else(|| "item_id is required".to_string())?;
         let bom_id = self.bom_id.ok_or_else(|| "bom_id is required".to_string())?;
@@ -506,7 +489,6 @@ impl WorkOrderBuilder {
 
         Ok(WorkOrder {
             id: Uuid::new_v4(),
-            company_id,
             work_order_number,
             item_id,
             bom_id,

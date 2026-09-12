@@ -13,6 +13,12 @@
 //!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on
 //! [`WorkcenterRepository`].
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no company argument exists on any verb
+//! here. Loss reasons are master data: under the composed decorator they ride the root-anchored
+//! shared posture (one shared set per tenant root via the fence's scope union), with the
+//! (org unit, name) unique installed by the composing service's tenancy decorator. Pool reads
+//! ride the caller-scoped helpers undecorated.
 
 use rust_decimal::{Decimal, prelude::FromPrimitive};
 
@@ -21,46 +27,30 @@ use uuid::Uuid;
 use crate::infrastructure::persistence::{NewWorkstationLossRow, NewWorkstationProductivityRow};
 
 use super::manufacturing_write_service::{
-    ManufacturingError, ManufacturingWriteService, NewProductivity, NewWorkstationLoss, OeeReport,
+    is_dup, ManufacturingError, ManufacturingWriteService, NewProductivity, NewWorkstationLoss,
+    OeeReport,
 };
 
 impl ManufacturingWriteService {
-    /// Author a loss reason. `company_id: None` authors it as SHARED master data (visible to every
-    /// company — the shared_blank fence, ADR-0014); a company id keeps it tenant-owned.
-    /// A duplicate name is a LOUD refusal, never an overwrite.
+    /// Author a loss reason — master data with a classification, never free text. A duplicate
+    /// name is a LOUD refusal, never an overwrite.
     pub async fn create_workstation_loss(&self, l: NewWorkstationLoss) -> Result<Uuid, ManufacturingError> {
         if l.name.trim().is_empty() {
             return Err(ManufacturingError::Invalid("loss name must not be empty".into()));
         }
         let id = Uuid::new_v4();
-        // RLS scope (ADR-0008): for shared master data (company None) the insert must ride an
-        // UNFENCED (system) scope — a company-scoped session cannot write the shared row.
-        let r = match l.company_id {
-            Some(company) => {
-                backbone_orm::company_scope::with_company_scope(
-                    Some(company),
-                    self.workcenter.insert_loss(&self.pool, &NewWorkstationLossRow {
-                        id,
-                        company_id: Some(company),
-                        name: &l.name,
-                        loss_type: l.loss_type,
-                    }),
-                )
-                .await
-            }
-            None => {
-                self.workcenter
-                    .insert_loss(&self.pool, &NewWorkstationLossRow {
-                        id,
-                        company_id: None,
-                        name: &l.name,
-                        loss_type: l.loss_type,
-                    })
-                    .await
-            }
-        };
+        // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
+        // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
+        let r = self
+            .workcenter
+            .insert_loss(&self.pool, &NewWorkstationLossRow {
+                id,
+                name: &l.name,
+                loss_type: l.loss_type,
+            })
+            .await;
         if let Err(e) = r {
-            return Err(if super::manufacturing_write_service::is_dup(&e) {
+            return Err(if is_dup(&e) {
                 ManufacturingError::Invalid(format!("loss reason '{}' already exists", l.name))
             } else {
                 e.into()
@@ -72,37 +62,35 @@ impl ManufacturingWriteService {
     /// Book a stretch of workstation time against a named loss reason. `date_end` may be None —
     /// an open stretch (a station still down) counts up to NOW() on the read side.
     ///
-    /// The loss reason must already exist (company-owned or shared); an unknown name is LOUD —
-    /// reasons are master data with a classification, not free text.
+    /// The loss reason must already exist; an unknown name is LOUD — reasons are master data
+    /// with a classification, not free text.
     pub async fn record_productivity(&self, p: NewProductivity) -> Result<Uuid, ManufacturingError> {
         if let Some(end) = p.date_end {
             if end <= p.date_start {
                 return Err(ManufacturingError::Invalid("productivity stretch must end after it starts".into()));
             }
         }
-        // RLS scope (ADR-0008): the company is on the DTO — scope the lookup + insert.
-        let loss_id = backbone_orm::company_scope::with_company_scope(
-            Some(p.company_id),
-            self.workcenter.find_loss_by_name(&self.pool, p.company_id, &p.loss_name),
-        )
-        .await?
-        .ok_or_else(|| ManufacturingError::Invalid(format!("unknown loss reason '{}'", p.loss_name)))?;
+        // The lookup rides the caller-scoped helper (ADR-0029): under the composed decorator the
+        // org fence's scope union resolves the name against the caller's subtree ∪ tenant root.
+        let loss_id = self
+            .workcenter
+            .find_loss_by_name(&self.pool, &p.loss_name)
+            .await?
+            .ok_or_else(|| ManufacturingError::Invalid(format!("unknown loss reason '{}'", p.loss_name)))?;
 
         let id = Uuid::new_v4();
-        backbone_orm::company_scope::with_company_scope(
-            Some(p.company_id),
-            self.workcenter.insert_productivity(&self.pool, &NewWorkstationProductivityRow {
+        // The pool insert rides `org_scope::execute_scoped` (ADR-0029) — see `insert_loss`.
+        self.workcenter
+            .insert_productivity(&self.pool, &NewWorkstationProductivityRow {
                 id,
-                company_id: p.company_id,
                 workstation_id: p.workstation_id,
                 job_card_id: p.job_card_id,
                 loss_id,
                 date_start: p.date_start,
                 date_end: p.date_end,
                 description: p.description,
-            }),
-        )
-        .await?;
+            })
+            .await?;
         Ok(id)
     }
 
@@ -114,7 +102,6 @@ impl ManufacturingWriteService {
     /// was measured, and reporting a vacuous perfect score would overstate the station.
     pub async fn workstation_oee(
         &self,
-        company_id: Uuid,
         workstation_id: Uuid,
         from: chrono::DateTime<chrono::Utc>,
         to: chrono::DateTime<chrono::Utc>,
@@ -122,11 +109,9 @@ impl ManufacturingWriteService {
         if to <= from {
             return Err(ManufacturingError::Invalid("OEE window must end after it starts".into()));
         }
-        let buckets = backbone_orm::company_scope::with_company_scope(
-            Some(company_id),
-            self.workcenter.oee_buckets(&self.pool, company_id, workstation_id, from, to),
-        )
-        .await?;
+        // ID-only (ADR-0029): the aggregation read rides the caller-scoped helper — under the
+        // composed decorator the org fence scopes the ledger to the caller's unit.
+        let buckets = self.workcenter.oee_buckets(&self.pool, workstation_id, from, to).await?;
 
         let mut productive = 0.0_f64;
         let mut availability = 0.0_f64;

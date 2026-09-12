@@ -48,26 +48,25 @@ pub fn rcv(q: Decimal) -> ReceiveFinishedOrder {
 }
 
 /// Seed a detail account and return its id. `atype`/`normal` are the accounting enum values.
-/// Idempotent per (company, account number): a code already seeded for the company returns the
-/// existing account's id instead of colliding on the unique index.
+/// Both sides run undecorated (ADR-0029): the accounts table carries no company column and no
+/// account-number unique, so parallel tests seeding the same code get distinct rows — each test
+/// reads balances through the id it seeded.
 pub async fn account(
     pool: &PgPool,
-    company: Uuid,
     code: &str,
     atype: &str,
     subtype: &str,
     normal: &str,
 ) -> Uuid {
     let id = Uuid::new_v4();
-    let inserted = sqlx::query(
+    sqlx::query(
         r#"INSERT INTO accounting.accounts
-             (id, company_id, account_number, account_code, name, account_type, account_subtype,
+             (id, account_number, account_code, name, account_type, account_subtype,
               normal_balance, is_header, is_detail, status)
-           VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
+           VALUES ($1,$2,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,
                    false,true,'active'::account_status)"#,
     )
     .bind(id)
-    .bind(company)
     .bind(code)
     .bind(code)
     .bind(code)
@@ -75,21 +74,9 @@ pub async fn account(
     .bind(subtype)
     .bind(normal)
     .execute(pool)
-    .await;
-    match inserted {
-        Ok(_) => id,
-        Err(e) if matches!(&e, sqlx::Error::Database(db) if db.code().as_deref() == Some("23505")) => {
-            sqlx::query_scalar(
-                "SELECT id FROM accounting.accounts WHERE company_id=$1 AND account_number=$2",
-            )
-            .bind(company)
-            .bind(code)
-            .fetch_one(pool)
-            .await
-            .expect("load already-seeded account")
-        }
-        Err(e) => panic!("seed account: {e}"),
-    }
+    .await
+    .expect("seed account");
+    id
 }
 
 /// Ledger balance (debit − credit) for an account.
@@ -111,12 +98,12 @@ pub struct WoAccounts {
     pub raw: Uuid,
     pub conversion: Uuid,
 }
-pub async fn wo_accounts(pool: &PgPool, company: Uuid) -> WoAccounts {
+pub async fn wo_accounts(pool: &PgPool) -> WoAccounts {
     WoAccounts {
-        wip: account(pool, company, "1410-WIP", "asset", "inventory", "debit").await,
-        fg: account(pool, company, "1420-FG", "asset", "inventory", "debit").await,
-        raw: account(pool, company, "1400-RAW", "asset", "inventory", "debit").await,
-        conversion: account(pool, company, "5100-CONV", "expense", "operating_expense", "credit").await,
+        wip: account(pool, "1410-WIP", "asset", "inventory", "debit").await,
+        fg: account(pool, "1420-FG", "asset", "inventory", "debit").await,
+        raw: account(pool, "1400-RAW", "asset", "inventory", "debit").await,
+        conversion: account(pool, "5100-CONV", "expense", "operating_expense", "credit").await,
     }
 }
 
@@ -369,7 +356,6 @@ impl InventoryPort for FakeInventory {
 #[allow(clippy::too_many_arguments)]
 pub async fn seed_costing_defaults(
     pool: &PgPool,
-    company: Uuid,
     category: Uuid,
     wip: Option<Uuid>,
     fg: Option<Uuid>,
@@ -386,7 +372,6 @@ pub async fn seed_costing_defaults(
             pool,
             &NewCostingDefaultsRow {
                 id: Uuid::new_v4(),
-                company_id: company,
                 product_category_id: category,
                 wip_account_id: wip,
                 fg_account_id: fg,

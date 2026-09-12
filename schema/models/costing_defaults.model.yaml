@@ -1,26 +1,24 @@
 # =============================================================================
 # Domain: Manufacturing — product-category costing defaults (transactional config)
 # Entity: CategoryCostingDefaults
-# Description: Per-company, per-product-category account defaults for manufacturing
+# Description: Per-org-unit, per-product-category account defaults for manufacturing
 # postings. Resolution order everywhere: per-work-order / per-repair explicit
 # override → category default → MissingAccount refusal. Never a hardcoded fallback
-# account and never a silently skipped post. Defaults are company decisions, so
-# company_id is strict NOT NULL.
+# account and never a silently skipped post.
 # =============================================================================
 
 models:
+  # Tenancy: none, by design (ADR-0029). The module is tenant-agnostic; the composing
+  # service's tenancy decorator owns org scoping for this table, including the
+  # org-scoped one-row-per-(org unit, category) unique.
   - name: CategoryCostingDefaults
     collection: category_costing_defaults
-    description: "Per-company GL account defaults for a product category's manufacturing postings"
+    description: "GL account defaults for a product category's manufacturing postings (one row per org unit and category under the composed fence)"
     fields:
       id:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique defaults row id"
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner (defaults are company decisions) # logical FK to organization.Company.id"
       product_category_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
@@ -61,7 +59,6 @@ models:
         type: Metadata
         attributes: ["@audit_metadata"]
         description: "Audit metadata"
-    indexes:
-      - type: unique
-        fields: [company_id, product_category_id]
-        where: "deleted_at IS NULL"
+    # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+    # leading one-row-per-category unique is installed by the composing service's
+    # tenancy decorator, not declared here.

@@ -14,7 +14,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::UnbuildOrder;
 
@@ -42,7 +42,6 @@ impl UnbuildRepository {
 /// `'draft'::unbuild_status` so a new unbuild can only ever start as a draft.
 pub struct NewUnbuildRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub unbuild_number: &'a str,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
@@ -54,7 +53,6 @@ pub struct NewUnbuildRow<'a> {
 /// production has ALREADY been unbuilt by other done unbuilds (this order excluded — a draft
 /// re-executed after other unbuilds must count only against what remains).
 pub struct UnbuildExecuteRow {
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -65,7 +63,9 @@ pub struct UnbuildExecuteRow {
 }
 
 impl UnbuildRepository {
-    /// Insert a draft unbuild order (pool write, RLS-fenced via `execute_scoped`).
+    /// Insert a draft unbuild order — a pool write riding `org_scope::execute_scoped`, which
+    /// binds the ambient org scope (the composing service sets it per request); undecorated
+    /// (module tests) the insert runs plain (ADR-0029).
     ///
     /// Returns the raw `sqlx::Error` deliberately: the caller inspects it for a unique violation
     /// to turn a duplicate unbuild number into a domain error.
@@ -74,14 +74,14 @@ impl UnbuildRepository {
         pool: &PgPool,
         u: &NewUnbuildRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO manufacturing.unbuild_orders
-                     (id, company_id, unbuild_number, work_order_id, item_id, quantity, status)
-                   VALUES ($1,$2,$3,$4,$5,$6,'draft'::unbuild_status)"#,
+                     (id, unbuild_number, work_order_id, item_id, quantity, status)
+                   VALUES ($1,$2,$3,$4,$5,'draft'::unbuild_status)"#,
             )
-            .bind(u.id).bind(u.company_id).bind(u.unbuild_number)
+            .bind(u.id).bind(u.unbuild_number)
             .bind(u.work_order_id).bind(u.item_id).bind(u.quantity),
         )
         .await?;
@@ -99,7 +99,7 @@ impl UnbuildRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT u.company_id, u.work_order_id, u.item_id, u.quantity,
+                r#"SELECT u.work_order_id, u.item_id, u.quantity,
                           u.status::text AS status,
                           w.status::text AS wo_status, w.produced_qty,
                           COALESCE((SELECT SUM(x.quantity) FROM manufacturing.unbuild_orders x
@@ -112,7 +112,6 @@ impl UnbuildRepository {
             .bind(unbuild_id),
         ).await?;
         Ok(row.map(|r| UnbuildExecuteRow {
-            company_id: r.get("company_id"),
             work_order_id: r.get("work_order_id"),
             item_id: r.get("item_id"),
             quantity: r.get("quantity"),
@@ -128,7 +127,8 @@ impl UnbuildRepository {
     ///
     /// The `status='draft'` predicate is the once-only guard on the reverse stock move and its GL
     /// reversal. Takes the CALLER'S connection so the gate, the port reversal and the GL post
-    /// commit as ONE unit; the caller binds the company on it (`bind_company_on`) — don't re-bind.
+    /// commit as ONE unit; the caller relays the ambient org scope on it (`relay_ambient_scope`)
+    /// — don't re-bind (ADR-0029).
     pub async fn gate_execute(
         &self,
         conn: &mut sqlx::PgConnection,

@@ -10,6 +10,11 @@
 //! `AccountingPostEnvelope` reached only through a `GlPostSink`; the ACL adapter (in the composing
 //! service / seam test) maps it into accounting's `PostingRequest`. The shipped library has ZERO
 //! normal Cargo edge to accounting — the envelope is the wire contract, not a shared Rust type.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic and no module statement keys on a company.
+//! The envelope still carries a `company_id` as a documented legacy twin — filled from the
+//! ambient org scope's company echo (the composing service sets the scope per request) for the
+//! accounting side, which still dedupes and posts per company.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -44,6 +49,8 @@ impl GlPostLine {
 pub struct AccountingPostEnvelope {
     /// Producer-stable dedupe key. Accounting dedupes on `(company, source_type, source_id, posting_type)`.
     pub idempotency_key: String,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     /// Posting source discriminator — manufacturing emits "manufacturing".

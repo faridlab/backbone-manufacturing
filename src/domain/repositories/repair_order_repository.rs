@@ -44,7 +44,6 @@ pub struct RepairOrderPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct RepairOrderFilter {
-    pub company_id: Option<Uuid>,
     pub repair_number: Option<String>,
     pub item_id: Option<Uuid>,
     pub product_category_id: Option<Uuid>,
@@ -54,7 +53,7 @@ pub struct RepairOrderFilter {
 impl RepairOrderFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.repair_number.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.status.is_some()
+        self.repair_number.is_some() || self.item_id.is_some() || self.product_category_id.is_some() || self.status.is_some()
     }
 }
 

@@ -1,19 +1,19 @@
-//! BoM versioning + staging: create_bom pins version 1 and bom_type 'normal'; one live BoM per
-//! (company, item, version) — a second hand-authored v1 for the same item collides LOUDLY, and a
-//! staged version bump frees the slot for the next revision.
+//! BoM versioning + staging: create_bom pins version 1 and bom_type 'normal'; revisions stage by
+//! version bump and coexist per item. The one-live-BoM-per-(item, version) slot is installed by
+//! the composing service's tenancy decorator as an org-scoped unique (ADR-0029) — the module
+//! declares no such unique, so undecorated module tests must NOT see collisions.
 
 mod common;
 
 use backbone_manufacturing::application::service::manufacturing_events::LoggingSink;
 use backbone_manufacturing::application::service::manufacturing_write_service::{
-    ManufacturingError, ManufacturingWriteService, NewBom, NewBomItem, NewWorkOrder,
+    ManufacturingWriteService, NewBom, NewBomItem, NewWorkOrder,
 };
 use common::*;
 use uuid::Uuid;
 
-async fn bom_for(svc: &ManufacturingWriteService, company: Uuid, item: Uuid, code: &str) -> Uuid {
+async fn bom_for(svc: &ManufacturingWriteService, item: Uuid, code: &str) -> Uuid {
     svc.create_bom(NewBom {
-        company_id: company,
         item_id: item,
         bom_code: code.into(),
         quantity: dec("1"),
@@ -30,9 +30,8 @@ async fn bom_for(svc: &ManufacturingWriteService, company: Uuid, item: Uuid, cod
 async fn bv1_create_pins_v1_normal() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let item = Uuid::new_v4();
-    let bom = bom_for(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let bom = bom_for(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     let (version, bom_type): (i32, String) = sqlx::query_as(
         "SELECT version, bom_type::text FROM manufacturing.boms WHERE id=$1",
     )
@@ -44,18 +43,17 @@ async fn bv1_create_pins_v1_normal() {
     assert_eq!(bom_type, "normal");
 }
 
-/// BV-2 — one live BoM per (company, item, version): a SECOND v1 for the same item is refused
-/// LOUDLY (the unique holds the slot; the duplicate error names the code).
+/// BV-2 — the module declares no (item, version) slot unique: undecorated, a second v1 for the
+/// same item inserts. This is deliberate (ADR-0029) — the collision guard is the composing
+/// service's decorator (org-scoped unique), probed in the composition's suite, never here.
 #[tokio::test]
-async fn bv2_second_v1_collides() {
+async fn bv2_undecorated_second_v1_inserts_the_decorator_owns_the_slot() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let item = Uuid::new_v4();
-    bom_for(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
-    let err = svc
+    bom_for(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let second = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -63,29 +61,27 @@ async fn bv2_second_v1_collides() {
             items: vec![NewBomItem { item_id: Uuid::new_v4(), quantity: dec("1"), rate: dec("10"), is_phantom: false }],
             operations: vec![],
         })
-        .await
-        .unwrap_err();
+        .await;
     assert!(
-        matches!(err, ManufacturingError::DuplicateNumber(_)),
-        "same (company, item, version) slot is LOUD, got {err:?}"
+        matches!(second, Ok(_)),
+        "no module unique holds the (item, version) slot — got {:?}",
+        second.err()
     );
 }
 
-/// BV-3 — staging the old revision to v2 frees the v1 slot: the next create succeeds and both
-/// revisions coexist.
+/// BV-3 — revisions stage by version bump and coexist per item.
 #[tokio::test]
-async fn bv3_version_bump_frees_slot() {
+async fn bv3_version_bump_coexists() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let item = Uuid::new_v4();
-    let v1 = bom_for(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let v1 = bom_for(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     sqlx::query("UPDATE manufacturing.boms SET version=2 WHERE id=$1")
         .bind(v1)
         .execute(&pool)
         .await
         .unwrap();
-    let v1b = bom_for(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let v1b = bom_for(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     let versions: Vec<i32> = sqlx::query_scalar("SELECT version FROM manufacturing.boms WHERE item_id=$1 ORDER BY version")
         .bind(item)
         .fetch_all(&pool)
@@ -103,12 +99,10 @@ async fn bv4_normal_bom_confirms() {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
     let sink = LoggingSink;
-    let company = Uuid::new_v4();
     let item = Uuid::new_v4();
-    let bom = bom_for(&svc, company, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
+    let bom = bom_for(&svc, item, &format!("BOM-{}", &Uuid::new_v4().to_string()[..8])).await;
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: item,
             bom_id: bom,

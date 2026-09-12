@@ -32,9 +32,6 @@ use crate::domain::entity::AuditMetadata;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRepairTagDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -53,9 +50,6 @@ pub struct CreateRepairTagDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRepairTagDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -74,9 +68,6 @@ pub struct UpdateRepairTagDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchRepairTagDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,7 +77,7 @@ pub struct PatchRepairTagDto {
 impl PatchRepairTagDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.name.is_some()
+        self.name.is_some()
     }
 }
 
@@ -104,8 +95,6 @@ impl PatchRepairTagDto {
 pub struct RepairTagResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
-    pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
     pub metadata: AuditMetadata,
@@ -165,7 +154,6 @@ impl RepairTagListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct RepairTagSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub name: String,
     pub created_at: Option<DateTime<Utc>>,
 }
@@ -178,7 +166,6 @@ impl From<RepairTag> for RepairTagResponseDto {
     fn from(entity: RepairTag) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             metadata: entity.metadata,
         }
@@ -190,7 +177,6 @@ impl From<RepairTag> for RepairTagSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             created_at,
         }
@@ -201,7 +187,6 @@ impl From<CreateRepairTagDto> for RepairTag {
     fn from(dto: CreateRepairTagDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             name: dto.name,
             metadata: AuditMetadata::default(),
         }
@@ -212,7 +197,6 @@ impl From<&RepairTag> for RepairTagResponseDto {
     fn from(entity: &RepairTag) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             name: entity.name.clone(),
             metadata: entity.metadata.clone(),
         }
@@ -227,7 +211,6 @@ impl backbone_core::FromCreateDto<CreateRepairTagDto> for RepairTag {
 
 impl backbone_core::ApplyUpdateDto<UpdateRepairTagDto> for RepairTag {
     fn apply_update(mut self, dto: UpdateRepairTagDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.name = dto.name;
         Ok(self)
     }

@@ -11,20 +11,16 @@ use backbone_manufacturing::application::service::manufacturing_write_service::{
 use common::*;
 use uuid::Uuid;
 
-async fn wo_at(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid, Uuid) {
+async fn wo_at(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let fg_item = Uuid::new_v4();
     let comp = Uuid::new_v4();
-    let acc = wo_accounts(&pool, company).await;
     let inv = FakeInventory::new();
     inv.stock(comp, "1000", "10");
     let _ = inv;
-    let _ = acc;
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: fg_item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -36,7 +32,6 @@ async fn wo_at(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uui
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: fg_item,
             bom_id: bom,
@@ -51,7 +46,7 @@ async fn wo_at(qty: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uui
         })
         .await
         .unwrap();
-    (svc, pool, wo, company, comp)
+    (svc, pool, wo, comp)
 }
 
 async fn status(pool: &sqlx::PgPool, wo: Uuid) -> String {
@@ -73,7 +68,7 @@ async fn jc_status(pool: &sqlx::PgPool, id: Uuid) -> String {
 /// SC-1 — a new work order is `draft` and consumes nothing.
 #[tokio::test]
 async fn sc1_new_wo_is_draft() {
-    let (svc, pool, wo, _c, _i) = wo_at("2").await;
+    let (svc, pool, wo, _comp) = wo_at("2").await;
     let _ = &svc;
     assert_eq!(status(&pool, wo).await, "draft");
 }
@@ -81,7 +76,7 @@ async fn sc1_new_wo_is_draft() {
 /// SC-2 — confirm is a direct write: draft → confirmed; a repeat is LOUD.
 #[tokio::test]
 async fn sc2_confirm_direct_write() {
-    let (svc, pool, wo, _c, _i) = wo_at("2").await;
+    let (svc, pool, wo, _comp) = wo_at("2").await;
     let sink = LoggingSink;
     svc.confirm_work_order(wo, &sink).await.unwrap();
     assert_eq!(status(&pool, wo).await, "confirmed");
@@ -93,9 +88,9 @@ async fn sc2_confirm_direct_write() {
 /// one derives done. No verb writes progress/to_close/done directly.
 #[tokio::test]
 async fn sc3_derived_states() {
-    let (svc, pool, wo, company, comp) = wo_at("4").await;
+    let (svc, pool, wo, comp) = wo_at("4").await;
     let sink = LoggingSink;
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     let inv = FakeInventory::new();
     inv.stock(comp, "1000", "10");
     let gl = CountingGl::new();
@@ -121,7 +116,7 @@ async fn sc3_derived_states() {
 /// SC-4 — cancel is direct-write and STICKY: draft|confirmed only, terminal, repeat is LOUD.
 #[tokio::test]
 async fn sc4_cancel_sticky() {
-    let (svc, pool, wo, _c, _i) = wo_at("2").await;
+    let (svc, pool, wo, _comp) = wo_at("2").await;
     let sink = LoggingSink;
     svc.cancel_work_order(wo, &sink).await.unwrap();
     assert_eq!(status(&pool, wo).await, "cancel");
@@ -132,9 +127,9 @@ async fn sc4_cancel_sticky() {
 /// SC-5 — an order that has consumed (progress) or produced (to_close/done) can NEVER cancel.
 #[tokio::test]
 async fn sc5_cancel_refused_after_wip() {
-    let (svc, pool, wo, company, comp) = wo_at("2").await;
+    let (svc, pool, wo, comp) = wo_at("2").await;
     let sink = LoggingSink;
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     let inv = FakeInventory::new();
     inv.stock(comp, "1000", "10");
     let gl = CountingGl::new();
@@ -151,9 +146,9 @@ async fn sc5_cancel_refused_after_wip() {
 /// cancel is refused on a done card. The parent order must be confirmed before floor work starts.
 #[tokio::test]
 async fn sc6_job_card_states() {
-    let (svc, pool, wo, company, _comp) = wo_at("2").await;
+    let (svc, pool, wo, _comp) = wo_at("2").await;
     let sink = LoggingSink;
-    let acc = wo_accounts(&pool, company).await;
+    let acc = wo_accounts(&pool).await;
     // Completion charges conversion cost to WIP — wire the accounts the card will resolve.
     sqlx::query("UPDATE manufacturing.work_orders SET wip_account_id=$2, conversion_cost_account_id=$3 WHERE id=$1")
         .bind(wo).bind(acc.wip).bind(acc.conversion)
@@ -161,7 +156,6 @@ async fn sc6_job_card_states() {
     svc.confirm_work_order(wo, &sink).await.unwrap();
     let jc = svc
         .add_job_card(NewJobCard {
-            company_id: svc_job_card_company(&pool, wo).await,
             work_order_id: wo,
             operation_id: Uuid::new_v4(),
             workstation_id: Uuid::new_v4(),
@@ -180,14 +174,6 @@ async fn sc6_job_card_states() {
     assert_eq!(gl.count("operate"), 1, "conversion charged exactly once");
     let err = svc.cancel_job_card(jc).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::InvalidState(_)), "done card cannot cancel");
-}
-
-async fn svc_job_card_company(pool: &sqlx::PgPool, wo: Uuid) -> Uuid {
-    sqlx::query_scalar("SELECT company_id FROM manufacturing.work_orders WHERE id=$1")
-        .bind(wo)
-        .fetch_one(pool)
-        .await
-        .unwrap()
 }
 
 /// SC-7 — availability lives ONLY in reservation_state; no column named `availability` exists.

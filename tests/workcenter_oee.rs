@@ -11,18 +11,16 @@ use backbone_manufacturing::domain::entity::LossType;
 use common::*;
 use uuid::Uuid;
 
-/// Seed a workstation + the four loss reasons; returns (svc, pool, company, workstation).
-async fn station() -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid) {
+/// Seed a workstation + the four loss reasons; returns (svc, pool, workstation).
+async fn station() -> (ManufacturingWriteService, sqlx::PgPool, Uuid) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let ws = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO manufacturing.workstations (id, company_id, workstation_name, hour_rate)
-           VALUES ($1, $2, 'OEE-probe', 60)"#,
+        r#"INSERT INTO manufacturing.workstations (id, workstation_name, hour_rate)
+           VALUES ($1, 'OEE-probe', 60)"#,
     )
     .bind(ws)
-    .bind(company)
     .execute(&pool)
     .await
     .unwrap();
@@ -33,14 +31,13 @@ async fn station() -> (ManufacturingWriteService, sqlx::PgPool, Uuid, Uuid) {
         ("scrap-rework", LossType::Quality),
     ] {
         svc.create_workstation_loss(NewWorkstationLoss {
-            company_id: Some(company),
             name: name.into(),
             loss_type: lt,
         })
         .await
         .unwrap();
     }
-    (svc, pool, company, ws)
+    (svc, pool, ws)
 }
 
 /// A fixture timestamp at `minute_of_day` on a FIXED anchor day: the UTC day BEFORE today,
@@ -58,11 +55,10 @@ fn at(minute_of_day: i64) -> chrono::DateTime<chrono::Utc> {
 /// A = 0.875, P = 0.9375, Q = 0.9375, OEE = A×P×Q.
 #[tokio::test]
 async fn woee1_bucket_ratios() {
-    let (svc, _pool, company, ws) = station().await;
+    let (svc, _pool, ws) = station().await;
     let base = 600; // 10:00 — every stretch below is offset from midnight for stability
     for (name, mins) in [("run", 60), ("breakdown", 10), ("slow-cycle", 5), ("scrap-rework", 5)] {
         svc.record_productivity(NewProductivity {
-            company_id: company,
             workstation_id: ws,
             job_card_id: None,
             loss_name: name.into(),
@@ -74,7 +70,7 @@ async fn woee1_bucket_ratios() {
         .unwrap();
     }
     let report = svc
-        .workstation_oee(company, ws, at(0), at(1439))
+        .workstation_oee(ws, at(0), at(1439))
         .await
         .unwrap();
     assert_eq!(report.total_seconds, dec("4800"));
@@ -88,12 +84,11 @@ async fn woee1_bucket_ratios() {
 /// part. A 60-minute run centered on the window edge contributes 30 minutes to the window.
 #[tokio::test]
 async fn woee2_window_clamping() {
-    let (svc, _pool, company, ws) = station().await;
+    let (svc, _pool, ws) = station().await;
     let from = 600;
     let to = 660; // a 60-minute window
     // Runs 12:29:30→13:30:30? Use whole minutes: 09:30→10:30 straddles 10:00 by 30 minutes inside.
     svc.record_productivity(NewProductivity {
-        company_id: company,
         workstation_id: ws,
         job_card_id: None,
         loss_name: "run".into(),
@@ -103,7 +98,7 @@ async fn woee2_window_clamping() {
     })
     .await
     .unwrap();
-    let report = svc.workstation_oee(company, ws, at(from), at(to)).await.unwrap();
+    let report = svc.workstation_oee(ws, at(from), at(to)).await.unwrap();
     assert_eq!(report.total_seconds, dec("1800"), "only the inside half counts");
     assert_eq!(report.availability, dec("1"), "no availability loss inside");
     assert_eq!(report.oee, dec("1"));
@@ -112,11 +107,10 @@ async fn woee2_window_clamping() {
 /// WOEE-3 — an OPEN stretch (date_end NULL, station still down) counts up to the window edge.
 #[tokio::test]
 async fn woee3_open_stretch_counts_to_edge() {
-    let (svc, _pool, company, ws) = station().await;
+    let (svc, _pool, ws) = station().await;
     let from = 700;
     let to = 710; // 10 minutes
     svc.record_productivity(NewProductivity {
-        company_id: company,
         workstation_id: ws,
         job_card_id: None,
         loss_name: "breakdown".into(),
@@ -126,7 +120,7 @@ async fn woee3_open_stretch_counts_to_edge() {
     })
     .await
     .unwrap();
-    let report = svc.workstation_oee(company, ws, at(from), at(to)).await.unwrap();
+    let report = svc.workstation_oee(ws, at(from), at(to)).await.unwrap();
     assert_eq!(report.total_seconds, dec("600"), "clamped to [from, to]");
     assert_eq!(report.availability, dec("0"), "the whole window was breakdown");
 }
@@ -135,25 +129,26 @@ async fn woee3_open_stretch_counts_to_edge() {
 /// overstate an unmeasured station), and an inverted window is refused.
 #[tokio::test]
 async fn woee4_zero_booked_and_inverted_window() {
-    let (svc, _pool, company, ws) = station().await;
-    let report = svc.workstation_oee(company, ws, at(0), at(30)).await.unwrap();
+    let (svc, _pool, ws) = station().await;
+    let report = svc.workstation_oee(ws, at(0), at(30)).await.unwrap();
     assert_eq!(report.total_seconds, dec("0"));
     assert_eq!(report.availability, dec("0"));
     assert_eq!(report.performance, dec("0"));
     assert_eq!(report.quality, dec("0"));
     assert_eq!(report.oee, dec("0"));
-    let err = svc.workstation_oee(company, ws, at(30), at(0)).await.unwrap_err();
+    let err = svc.workstation_oee(ws, at(30), at(0)).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::Invalid(_)), "inverted window refused");
 }
 
-/// WOEE-5 — loss reasons are master data: an unknown name is refused LOUDLY, and a shared
-/// (company-NULL) reason resolves for a company session.
+/// WOEE-5 — loss reasons are root-anchored master data: an unknown name is refused LOUDLY, and a
+/// reason seeded outside this test's own creations (the tenant root's shared master set, whose
+/// one-namespace-per-org-unit guard the composing decorator installs — ADR-0029) resolves for
+/// any booking.
 #[tokio::test]
 async fn woee5_loss_reasons_are_master_data() {
-    let (svc, pool, company, ws) = station().await;
+    let (svc, pool, ws) = station().await;
     let err = svc
         .record_productivity(NewProductivity {
-            company_id: company,
             workstation_id: ws,
             job_card_id: None,
             loss_name: "no-such-reason".into(),
@@ -164,15 +159,14 @@ async fn woee5_loss_reasons_are_master_data() {
         .await
         .unwrap_err();
     assert!(matches!(err, ManufacturingError::Invalid(_)), "unknown loss reason is LOUD");
-    // A shared reason (NULL company, seeded directly) resolves for the company's bookings. The
-    // seed is idempotent: the shared (NULL, name) slot survives across runs under the
-    // NULLS NOT DISTINCT unique, so a rerun must not collide on it.
+    // A reason seeded directly — the module keeps one master namespace, so the seed is
+    // idempotent by name across reruns (no module-level unique holds the slot; the decorator's
+    // (org unit, name) unique does, decorated).
     sqlx::query(
-        r#"INSERT INTO manufacturing.workstation_losses (id, company_id, name, loss_type)
-           SELECT $1, NULL, 'planned-shared', 'availability'::loss_type
+        r#"INSERT INTO manufacturing.workstation_losses (id, name, loss_type)
+           SELECT $1, 'planned-shared', 'availability'::loss_type
            WHERE NOT EXISTS (
-               SELECT 1 FROM manufacturing.workstation_losses
-                WHERE company_id IS NULL AND name = 'planned-shared'
+               SELECT 1 FROM manufacturing.workstation_losses WHERE name = 'planned-shared'
            )"#,
     )
     .bind(Uuid::new_v4())
@@ -180,7 +174,6 @@ async fn woee5_loss_reasons_are_master_data() {
     .await
     .unwrap();
     svc.record_productivity(NewProductivity {
-        company_id: company,
         workstation_id: ws,
         job_card_id: None,
         loss_name: "planned-shared".into(),

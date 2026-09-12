@@ -41,7 +41,6 @@ impl BomOperationRepository {
 /// the write service (`money(time_in_mins / 60 * hour_rate)`), not re-derived here.
 pub struct NewBomOperationRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub bom_id: Uuid,
     pub operation_id: Uuid,
     pub workstation_id: Uuid,
@@ -55,9 +54,8 @@ impl BomOperationRepository {
     /// Insert one BOM operation.
     ///
     /// Takes the CALLER'S connection so the operation commits in the SAME transaction as its header.
-    /// The caller binds the company on that connection (`bind_company_on`) before calling — don't
-    /// re-bind. The explicit `company_id` bind (denormalized from the parent BOM) stays as
-    /// defense-in-depth behind the RLS fence (ADR-0010 Decision A).
+    /// The caller relays the ambient org scope onto that connection (`relay_ambient_scope`) before
+    /// calling — don't re-bind (ADR-0029).
     pub async fn insert_operation(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -65,10 +63,10 @@ impl BomOperationRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.bom_operations
-                 (id, company_id, bom_id, operation_id, workstation_id, time_in_mins, hour_rate, operating_cost)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
+                 (id, bom_id, operation_id, workstation_id, time_in_mins, hour_rate, operating_cost)
+               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
         )
-        .bind(o.id).bind(o.company_id).bind(o.bom_id).bind(o.operation_id).bind(o.workstation_id)
+        .bind(o.id).bind(o.bom_id).bind(o.operation_id).bind(o.workstation_id)
         .bind(o.time_in_mins).bind(o.hour_rate).bind(o.operating_cost)
         .execute(conn)
         .await?;

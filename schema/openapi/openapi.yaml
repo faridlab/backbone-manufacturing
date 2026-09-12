@@ -6653,10 +6653,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         workstation_name:
           type: string
           maxLength: 140
@@ -6694,10 +6690,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         workstation_name:
           type: string
           maxLength: 140
@@ -6722,10 +6714,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         workstation_name:
           type: string
           maxLength: 140
@@ -6743,10 +6731,6 @@ components:
     PatchWorkstationRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         workstation_name:
           type: string
           maxLength: 140
@@ -6782,10 +6766,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -6814,10 +6794,6 @@ components:
         - loss_type
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -6833,10 +6809,6 @@ components:
         - loss_type
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -6848,10 +6820,6 @@ components:
     PatchWorkstationLossRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -6874,16 +6842,12 @@ components:
       type: object
       required:
         - id
-        - company_id
         - workstation_id
         - loss_id
         - date_start
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         workstation_id:
@@ -6925,15 +6889,11 @@ components:
     CreateWorkstationProductivityRequest:
       type: object
       required:
-        - company_id
         - workstation_id
         - loss_id
         - date_start
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         workstation_id:
           type: string
           format: uuid
@@ -6960,15 +6920,11 @@ components:
     UpdateWorkstationProductivityRequest:
       type: object
       required:
-        - company_id
         - workstation_id
         - loss_id
         - date_start
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         workstation_id:
           type: string
           format: uuid
@@ -6995,9 +6951,6 @@ components:
     PatchWorkstationProductivityRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         workstation_id:
           type: string
           format: uuid
@@ -7042,10 +6995,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         operation_name:
           type: string
           maxLength: 140
@@ -7078,10 +7027,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         operation_name:
           type: string
           maxLength: 140
@@ -7101,10 +7046,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         operation_name:
           type: string
           maxLength: 140
@@ -7120,10 +7061,6 @@ components:
     PatchOperationRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         operation_name:
           type: string
           maxLength: 140
@@ -7164,10 +7101,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
-          nullable: true
           type: string
           format: uuid
         item_id:
@@ -7231,10 +7164,6 @@ components:
         - is_default
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         item_id:
           type: string
           format: uuid
@@ -7283,10 +7212,6 @@ components:
         - is_default
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         item_id:
           type: string
           format: uuid
@@ -7322,10 +7247,6 @@ components:
     PatchBomRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         item_id:
           type: string
           format: uuid
@@ -7383,10 +7304,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7428,10 +7345,6 @@ components:
         - is_phantom
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7460,10 +7373,6 @@ components:
         - is_phantom
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7484,10 +7393,6 @@ components:
     PatchBomItemRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7528,10 +7433,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
-          nullable: true
           type: string
           format: uuid
         bom_id:
@@ -7576,10 +7477,6 @@ components:
         - operating_cost
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7609,10 +7506,6 @@ components:
         - operating_cost
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7634,10 +7527,6 @@ components:
     PatchBomOperationRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7679,10 +7568,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7722,10 +7607,6 @@ components:
         - cost_share
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7752,10 +7633,6 @@ components:
         - cost_share
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7776,10 +7653,6 @@ components:
     PatchBomByproductRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7818,10 +7691,6 @@ components:
         id:
           type: string
           format: uuid
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7851,10 +7720,6 @@ components:
         - partner_id
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7871,10 +7736,6 @@ components:
         - partner_id
         - metadata
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7887,10 +7748,6 @@ components:
     PatchBomSubcontractorRequest:
       type: object
       properties:
-        company_id:
-          nullable: true
-          type: string
-          format: uuid
         bom_id:
           type: string
           format: uuid
@@ -7914,14 +7771,10 @@ components:
       type: object
       required:
         - id
-        - company_id
         - product_category_id
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         product_category_id:
@@ -7978,13 +7831,9 @@ components:
     CreateCategoryCostingDefaultsRequest:
       type: object
       required:
-        - company_id
         - product_category_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         product_category_id:
           type: string
           format: uuid
@@ -8026,13 +7875,9 @@ components:
     UpdateCategoryCostingDefaultsRequest:
       type: object
       required:
-        - company_id
         - product_category_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         product_category_id:
           type: string
           format: uuid
@@ -8074,9 +7919,6 @@ components:
     PatchCategoryCostingDefaultsRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         product_category_id:
           type: string
           format: uuid
@@ -8129,7 +7971,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - repair_number
         - item_id
         - quantity
@@ -8137,9 +7978,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         repair_number:
@@ -8175,16 +8013,12 @@ components:
     CreateRepairOrderRequest:
       type: object
       required:
-        - company_id
         - repair_number
         - item_id
         - quantity
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_number:
           type: string
           maxLength: 40
@@ -8205,16 +8039,12 @@ components:
     UpdateRepairOrderRequest:
       type: object
       required:
-        - company_id
         - repair_number
         - item_id
         - quantity
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_number:
           type: string
           maxLength: 40
@@ -8235,9 +8065,6 @@ components:
     PatchRepairOrderRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_number:
           type: string
           maxLength: 40
@@ -8269,7 +8096,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - repair_order_id
         - item_id
         - line_type
@@ -8278,9 +8104,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         repair_order_id:
@@ -8318,7 +8141,6 @@ components:
     CreateRepairPartRequest:
       type: object
       required:
-        - company_id
         - repair_order_id
         - item_id
         - line_type
@@ -8326,9 +8148,6 @@ components:
         - rate
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_order_id:
           type: string
           format: uuid
@@ -8351,7 +8170,6 @@ components:
     UpdateRepairPartRequest:
       type: object
       required:
-        - company_id
         - repair_order_id
         - item_id
         - line_type
@@ -8359,9 +8177,6 @@ components:
         - rate
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_order_id:
           type: string
           format: uuid
@@ -8384,9 +8199,6 @@ components:
     PatchRepairPartRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         repair_order_id:
           type: string
           format: uuid
@@ -8420,14 +8232,10 @@ components:
       type: object
       required:
         - id
-        - company_id
         - name
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         name:
@@ -8452,13 +8260,9 @@ components:
     CreateRepairTagRequest:
       type: object
       required:
-        - company_id
         - name
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -8468,13 +8272,9 @@ components:
     UpdateRepairTagRequest:
       type: object
       required:
-        - company_id
         - name
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -8484,9 +8284,6 @@ components:
     PatchRepairTagRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         name:
           type: string
           maxLength: 140
@@ -8507,7 +8304,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - unbuild_number
         - work_order_id
         - item_id
@@ -8516,9 +8312,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         unbuild_number:
@@ -8553,7 +8346,6 @@ components:
     CreateUnbuildOrderRequest:
       type: object
       required:
-        - company_id
         - unbuild_number
         - work_order_id
         - item_id
@@ -8561,9 +8353,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         unbuild_number:
           type: string
           maxLength: 40
@@ -8583,7 +8372,6 @@ components:
     UpdateUnbuildOrderRequest:
       type: object
       required:
-        - company_id
         - unbuild_number
         - work_order_id
         - item_id
@@ -8591,9 +8379,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         unbuild_number:
           type: string
           maxLength: 40
@@ -8613,9 +8398,6 @@ components:
     PatchUnbuildOrderRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         unbuild_number:
           type: string
           maxLength: 40
@@ -8646,7 +8428,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - work_order_number
         - item_id
         - bom_id
@@ -8658,9 +8439,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         work_order_number:
@@ -8736,7 +8514,6 @@ components:
     CreateWorkOrderRequest:
       type: object
       required:
-        - company_id
         - work_order_number
         - item_id
         - bom_id
@@ -8747,9 +8524,6 @@ components:
         - operating_cost
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_number:
           type: string
           maxLength: 40
@@ -8810,7 +8584,6 @@ components:
     UpdateWorkOrderRequest:
       type: object
       required:
-        - company_id
         - work_order_number
         - item_id
         - bom_id
@@ -8821,9 +8594,6 @@ components:
         - operating_cost
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_number:
           type: string
           maxLength: 40
@@ -8884,9 +8654,6 @@ components:
     PatchWorkOrderRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_number:
           type: string
           maxLength: 40
@@ -8958,7 +8725,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -8967,9 +8733,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         work_order_id:
@@ -9003,7 +8766,6 @@ components:
     CreateWorkOrderItemRequest:
       type: object
       required:
-        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -9011,9 +8773,6 @@ components:
         - rate
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9032,7 +8791,6 @@ components:
     UpdateWorkOrderItemRequest:
       type: object
       required:
-        - company_id
         - work_order_id
         - item_id
         - required_qty
@@ -9040,9 +8798,6 @@ components:
         - rate
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9061,9 +8816,6 @@ components:
     PatchWorkOrderItemRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9093,7 +8845,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - work_order_id
         - operation_id
         - workstation_id
@@ -9104,9 +8855,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         work_order_id:
@@ -9145,7 +8893,6 @@ components:
     CreateJobCardRequest:
       type: object
       required:
-        - company_id
         - work_order_id
         - operation_id
         - workstation_id
@@ -9155,9 +8902,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9181,7 +8925,6 @@ components:
     UpdateJobCardRequest:
       type: object
       required:
-        - company_id
         - work_order_id
         - operation_id
         - workstation_id
@@ -9191,9 +8934,6 @@ components:
         - status
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9217,9 +8957,6 @@ components:
     PatchJobCardRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         work_order_id:
           type: string
           format: uuid
@@ -9254,15 +8991,11 @@ components:
       type: object
       required:
         - id
-        - company_id
         - purchase_order_id
         - work_order_id
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         purchase_order_id:
@@ -9290,14 +9023,10 @@ components:
     CreateSubcontractMoLinkRequest:
       type: object
       required:
-        - company_id
         - purchase_order_id
         - work_order_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         purchase_order_id:
           type: string
           format: uuid
@@ -9310,14 +9039,10 @@ components:
     UpdateSubcontractMoLinkRequest:
       type: object
       required:
-        - company_id
         - purchase_order_id
         - work_order_id
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         purchase_order_id:
           type: string
           format: uuid
@@ -9330,9 +9055,6 @@ components:
     PatchSubcontractMoLinkRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         purchase_order_id:
           type: string
           format: uuid

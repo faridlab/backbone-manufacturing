@@ -44,7 +44,6 @@ pub struct JobCardPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct JobCardFilter {
-    pub company_id: Option<Uuid>,
     pub work_order_id: Option<Uuid>,
     pub operation_id: Option<Uuid>,
     pub workstation_id: Option<Uuid>,
@@ -54,7 +53,7 @@ pub struct JobCardFilter {
 impl JobCardFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.work_order_id.is_some() || self.operation_id.is_some() || self.workstation_id.is_some() || self.status.is_some()
+        self.work_order_id.is_some() || self.operation_id.is_some() || self.workstation_id.is_some() || self.status.is_some()
     }
 }
 

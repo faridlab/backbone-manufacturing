@@ -6,6 +6,11 @@
 //! State vocabulary note: the confirm verb (and its `WorkOrderConfirmed` event) replaced the old
 //! release wording — `confirmed` is one of the three hand-gated direct writes; `progress` /
 //! `to_close` / `done` are derived by the consume / receive gates.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic and no module statement keys on a company.
+//! Every event below still carries a `company_id` as a documented legacy twin — filled from the
+//! ambient org scope's company echo (the composing service sets the scope per request) for
+//! consumers that still read a tenant off the wire.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -15,6 +20,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkOrderConfirmed {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -24,6 +31,8 @@ pub struct WorkOrderConfirmed {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkOrderCancelled {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
 }
 
@@ -31,6 +40,8 @@ pub struct WorkOrderCancelled {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MaterialsConsumed {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub raw_material_value: Decimal,
 }
@@ -40,6 +51,8 @@ pub struct MaterialsConsumed {
 pub struct ConversionCharged {
     pub job_card_id: Uuid,
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub operating_cost: Decimal,
 }
@@ -48,6 +61,8 @@ pub struct ConversionCharged {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FinishedGoodsReceived {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub produced_qty: Decimal,
@@ -58,6 +73,8 @@ pub struct FinishedGoodsReceived {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkOrderCompleted {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub total_cost: Decimal,
 }
@@ -67,6 +84,8 @@ pub struct WorkOrderCompleted {
 pub struct UnbuildExecuted {
     pub unbuild_order_id: Uuid,
     pub source_work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub quantity: Decimal,
@@ -77,6 +96,8 @@ pub struct UnbuildExecuted {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RepairCompleted {
     pub repair_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub item_id: Uuid,
     pub repair_expense: Decimal,
@@ -88,6 +109,8 @@ pub struct RepairCompleted {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SubcontractMoMinted {
     pub work_order_id: Uuid,
+    /// Legacy twin (ADR-0029): filled from the ambient org scope's company echo for consumers
+    /// that still read a tenant off the wire. No module statement keys on it.
     pub company_id: Uuid,
     pub purchase_order_id: Uuid,
     pub supplier_id: Uuid,

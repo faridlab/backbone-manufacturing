@@ -24,7 +24,6 @@ impl TestDataGenerator for WorkstationLossTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": null,
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "loss_type": "productive",
             "metadata": json!({}),
@@ -35,7 +34,6 @@ impl TestDataGenerator for WorkstationLossTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": null,
             "name": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "loss_type": "productive",
             "metadata": json!({}),

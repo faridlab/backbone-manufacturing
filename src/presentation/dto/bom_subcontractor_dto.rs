@@ -32,8 +32,6 @@ use crate::domain::entity::AuditMetadata;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBomSubcontractorDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -55,8 +53,6 @@ pub struct CreateBomSubcontractorDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBomSubcontractorDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
@@ -78,8 +74,6 @@ pub struct UpdateBomSubcontractorDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchBomSubcontractorDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "bom_id")]
     pub bom_id: Option<Uuid>,
@@ -91,7 +85,7 @@ pub struct PatchBomSubcontractorDto {
 impl PatchBomSubcontractorDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.partner_id.is_some()
+        self.bom_id.is_some() || self.partner_id.is_some()
     }
 }
 
@@ -109,7 +103,6 @@ impl PatchBomSubcontractorDto {
 pub struct BomSubcontractorResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub bom_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
@@ -171,7 +164,6 @@ impl BomSubcontractorListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct BomSubcontractorSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub partner_id: Uuid,
     pub created_at: Option<DateTime<Utc>>,
@@ -185,7 +177,6 @@ impl From<BomSubcontractor> for BomSubcontractorResponseDto {
     fn from(entity: BomSubcontractor) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             partner_id: entity.partner_id,
             metadata: entity.metadata,
@@ -198,7 +189,6 @@ impl From<BomSubcontractor> for BomSubcontractorSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             bom_id: entity.bom_id,
             partner_id: entity.partner_id,
             created_at,
@@ -210,7 +200,6 @@ impl From<CreateBomSubcontractorDto> for BomSubcontractor {
     fn from(dto: CreateBomSubcontractorDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             bom_id: dto.bom_id,
             partner_id: dto.partner_id,
             metadata: AuditMetadata::default(),
@@ -222,7 +211,6 @@ impl From<&BomSubcontractor> for BomSubcontractorResponseDto {
     fn from(entity: &BomSubcontractor) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             bom_id: entity.bom_id.clone(),
             partner_id: entity.partner_id.clone(),
             metadata: entity.metadata.clone(),
@@ -238,7 +226,6 @@ impl backbone_core::FromCreateDto<CreateBomSubcontractorDto> for BomSubcontracto
 
 impl backbone_core::ApplyUpdateDto<UpdateBomSubcontractorDto> for BomSubcontractor {
     fn apply_update(mut self, dto: UpdateBomSubcontractorDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.bom_id = dto.bom_id;
         self.partner_id = dto.partner_id;
         Ok(self)

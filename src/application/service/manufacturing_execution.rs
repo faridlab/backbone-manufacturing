@@ -18,8 +18,13 @@
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on `WorkOrderRepository`
 //! / `WorkOrderItemRepository`, whose gate methods take THIS service's transaction so the consume /
 //! receive commits as one unit (the once-only guard).
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no company argument exists on any verb
+//! here. Transactions relay the ambient org scope (the composing service sets it per request);
+//! pool reads ride the caller-scoped helpers undecorated. Wire payloads (inventory issues,
+//! receipts, GL posts, events) keep a legacy company twin filled from the ambient scope's echo
+//! for consumers that still read a tenant off the wire.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -27,8 +32,8 @@ use super::manufacturing_events::*;
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostLine, GlPostSink};
 use super::manufacturing_ports::{CostPosture, FinishedReceipt, InventoryPort, IssueLine, MaterialIssue, ReceiptByproduct};
 use super::manufacturing_write_service::{
-    money, ConsumeOutcome, ManufacturingError, ManufacturingWriteService, ReceiveFinishedOrder,
-    ReceiveOutcome,
+    legacy_company_echo, money, relay_ambient_scope, ConsumeOutcome, ManufacturingError,
+    ManufacturingWriteService, ReceiveFinishedOrder, ReceiveOutcome,
 };
 
 impl ManufacturingWriteService {
@@ -51,31 +56,18 @@ impl ManufacturingWriteService {
             return Err(ManufacturingError::InvalidState("work order is not confirmed"));
         }
         let wip = self
-            .resolve_account(
-                "wip",
-                wo.wip_account_id,
-                wo.company_id,
-                wo.product_category_id,
-                |d| d.wip_account_id,
-            )
+            .resolve_account("wip", wo.wip_account_id, wo.product_category_id, |d| d.wip_account_id)
             .await?;
         let raw_acct = self
-            .resolve_account(
-                "raw_material",
-                wo.raw_material_account_id,
-                wo.company_id,
-                wo.product_category_id,
-                |d| d.raw_material_account_id,
-            )
+            .resolve_account("raw_material", wo.raw_material_account_id, wo.product_category_id, |d| {
+                d.raw_material_account_id
+            })
             .await?;
 
-        // RLS scope (ADR-0008): `load_wo` read the work order (fenced by the request connection), so its
-        // company is known here — bind it explicitly for the line read and the transaction below.
-        let items = company_scope::with_company_scope(
-            Some(wo.company_id),
-            self.work_order_items.list_requirements(&self.pool, wo_id),
-        )
-        .await?;
+        // The line read rides the caller-scoped helper (ADR-0029): under the composed decorator
+        // the org fence scopes the requirements to the caller's unit on the request-dedicated
+        // connection; undecorated (module tests) the read runs plain.
+        let items = self.work_order_items.list_requirements(&self.pool, wo_id).await?;
         let mut lines = Vec::new();
         for it in &items {
             let remaining = it.required_qty - it.consumed_qty;
@@ -87,9 +79,14 @@ impl ManufacturingWriteService {
             return Ok(ConsumeOutcome { raw_material_value: wo.raw_material_cost, already: true });
         }
 
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for the
+        // wire consumers below (inventory issue, GL post, event) that still read a tenant off the
+        // wire. No module statement keys on it.
+        let legacy_company = legacy_company_echo();
+
         // Drive real inventory to remove the components and tell us what they were worth.
         let issue = MaterialIssue {
-            company_id: wo.company_id,
+            company_id: legacy_company,
             work_order_id: wo_id,
             warehouse_id: raw_warehouse_id,
             idempotency_key: format!("consume:{wo_id}"),
@@ -104,7 +101,7 @@ impl ManufacturingWriteService {
         // Emit the consume post: Dr WIP · Cr Raw-Material Stock.
         let env = AccountingPostEnvelope {
             idempotency_key: format!("consume:{wo_id}"),
-            company_id: wo.company_id,
+            company_id: legacy_company,
             branch_id: None,
             source_type: "manufacturing".into(),
             // Each manufacturing post is a distinct voucher; accounting dedups on (company, source_type,
@@ -124,7 +121,9 @@ impl ManufacturingWriteService {
 
         // Record consumption + advance state, gated on confirmed → progress.
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, wo.company_id).await?;
+        // The ambient org scope — the consume gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.work_orders.gate_consume(&mut tx, wo_id, raw_value).await?;
         if moved != 1 {
             // Someone else consumed concurrently — the post deduped; don't double-book state.
@@ -138,7 +137,7 @@ impl ManufacturingWriteService {
         tx.commit().await?;
         sink.publish(&ManufacturingEvent::MaterialsConsumed(MaterialsConsumed {
             work_order_id: wo_id,
-            company_id: wo.company_id,
+            company_id: legacy_company,
             raw_material_value: raw_value,
         }));
         Ok(ConsumeOutcome { raw_material_value: raw_value, already: false })
@@ -188,22 +187,10 @@ impl ManufacturingWriteService {
             return Err(ManufacturingError::OverProduce { producing: produced_qty, ordered: wo.quantity });
         }
         let fg = self
-            .resolve_account(
-                "finished_goods",
-                wo.fg_account_id,
-                wo.company_id,
-                wo.product_category_id,
-                |d| d.fg_account_id,
-            )
+            .resolve_account("finished_goods", wo.fg_account_id, wo.product_category_id, |d| d.fg_account_id)
             .await?;
         let wip = self
-            .resolve_account(
-                "wip",
-                wo.wip_account_id,
-                wo.company_id,
-                wo.product_category_id,
-                |d| d.wip_account_id,
-            )
+            .resolve_account("wip", wo.wip_account_id, wo.product_category_id, |d| d.wip_account_id)
             .await?;
         let fg_wh = wo.fg_warehouse_id.ok_or(ManufacturingError::MissingAccount("fg_warehouse"))?;
         let extra = order.extra_cost.unwrap_or(Decimal::ZERO);
@@ -212,7 +199,6 @@ impl ManufacturingWriteService {
                 self.resolve_account(
                     "subcontract_interim",
                     None,
-                    wo.company_id,
                     wo.product_category_id,
                     |d| d.subcontract_interim_account_id,
                 )
@@ -223,11 +209,8 @@ impl ManufacturingWriteService {
         };
 
         // BoM byproduct legs + their cost shares; the family may not carry off more than the batch.
-        let bom_byproducts = company_scope::with_company_scope(
-            Some(wo.company_id),
-            self.bom_byproducts.find_by_bom(&self.pool, wo.bom_id),
-        )
-        .await?;
+        // The read rides the caller-scoped helper (ADR-0029) — the fence decides under composition.
+        let bom_byproducts = self.bom_byproducts.find_by_bom(&self.pool, wo.bom_id).await?;
         let mut share_sum = Decimal::ZERO;
         for b in &bom_byproducts {
             share_sum += b.cost_share;
@@ -274,7 +257,6 @@ impl ManufacturingWriteService {
                 .resolve_account(
                     "finished_goods",
                     wo.fg_account_id,
-                    wo.company_id,
                     bom_leg.product_category_id.or(wo.product_category_id),
                     |d| d.fg_account_id,
                 )
@@ -293,7 +275,6 @@ impl ManufacturingWriteService {
                     .resolve_account(
                         "cost_variance",
                         None,
-                        wo.company_id,
                         wo.product_category_id,
                         |d| d.cost_variance_account_id,
                     )
@@ -308,6 +289,11 @@ impl ManufacturingWriteService {
             }
         }
 
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for the
+        // wire consumers below (receipt, GL post, events) that still read a tenant off the wire.
+        // No module statement keys on it.
+        let legacy_company = legacy_company_echo();
+
         // SIDE EFFECTS BEFORE THE GATE (mirrors consume/operate) — both are idempotent, keyed by the
         // cumulative produced qty, so a crash/error before the gate commits is safe to retry: the WO
         // is still `progress`, the retry re-drives, and WIP always clears. Committing the completion
@@ -318,7 +304,7 @@ impl ManufacturingWriteService {
         // 1) Drive inventory to receive the FG + byproduct legs at these values (idempotent per `dedup`).
         inventory
             .receive_finished(&FinishedReceipt {
-                company_id: wo.company_id,
+                company_id: legacy_company,
                 work_order_id: wo_id,
                 warehouse_id: fg_wh,
                 item_id: wo.item_id,
@@ -359,7 +345,7 @@ impl ManufacturingWriteService {
         }
         let env = AccountingPostEnvelope {
             idempotency_key: dedup.clone(),
-            company_id: wo.company_id,
+            company_id: legacy_company,
             branch_id: None,
             source_type: "manufacturing".into(),
             source_id: Uuid::new_v5(&wo_id, format!("manufacturing:{dedup}").as_bytes()),
@@ -375,7 +361,9 @@ impl ManufacturingWriteService {
         // 3) THE GATE, last: advance produced qty / derive to_close|done. Concurrent double-receive →
         //    one wins; the loser's (idempotent) side effects were harmless dups.
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, wo.company_id).await?;
+        // The ambient org scope — the receive gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.work_orders.gate_receive(&mut tx, wo_id, produced_qty).await?;
         if moved != 1 {
             // Another receive won the race (its side effects deduped ours) — not an error.
@@ -393,7 +381,7 @@ impl ManufacturingWriteService {
         let completed = wo.produced_qty + produced_qty >= wo.quantity;
         sink.publish(&ManufacturingEvent::FinishedGoodsReceived(FinishedGoodsReceived {
             work_order_id: wo_id,
-            company_id: wo.company_id,
+            company_id: legacy_company,
             item_id: wo.item_id,
             produced_qty,
             finished_value: fg_value,
@@ -401,7 +389,7 @@ impl ManufacturingWriteService {
         if completed {
             sink.publish(&ManufacturingEvent::WorkOrderCompleted(WorkOrderCompleted {
                 work_order_id: wo_id,
-                company_id: wo.company_id,
+                company_id: legacy_company,
                 total_cost: money(wo.raw_material_cost + wo.operating_cost),
             }));
         }

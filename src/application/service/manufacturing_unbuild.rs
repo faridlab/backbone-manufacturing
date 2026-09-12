@@ -20,8 +20,12 @@
 //!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on `UnbuildRepository`
 //! / `WorkOrderRepository` / `WorkOrderItemRepository`.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — no company argument exists on any verb
+//! here. Transactions relay the ambient org scope (the composing service sets it per request);
+//! pool reads ride the caller-scoped helpers undecorated. Wire payloads (the reversal, the GL
+//! post, the event) keep a legacy company twin filled from the ambient scope's echo.
 
-use backbone_orm::company_scope;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -31,7 +35,8 @@ use super::manufacturing_events::*;
 use super::manufacturing_gl::{AccountingPostEnvelope, GlPostLine, GlPostSink};
 use super::manufacturing_ports::{InventoryPort, IssueLine, UnbuildReversal};
 use super::manufacturing_write_service::{
-    money, is_dup, ManufacturingError, ManufacturingWriteService, NewUnbuild, UnbuildOutcome,
+    is_dup, legacy_company_echo, money, relay_ambient_scope, ManufacturingError,
+    ManufacturingWriteService, NewUnbuild, UnbuildOutcome,
 };
 
 impl ManufacturingWriteService {
@@ -42,19 +47,18 @@ impl ManufacturingWriteService {
             return Err(ManufacturingError::Invalid("unbuild quantity must be positive".into()));
         }
         let id = Uuid::new_v4();
-        // RLS scope (ADR-0008): company on the DTO — scope the insert so it passes the WITH CHECK fence.
-        let r = company_scope::with_company_scope(
-            Some(o.company_id),
-            self.unbuilds.insert_draft(&self.pool, &NewUnbuildRow {
+        // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
+        // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
+        let r = self
+            .unbuilds
+            .insert_draft(&self.pool, &NewUnbuildRow {
                 id,
-                company_id: o.company_id,
                 unbuild_number: &o.unbuild_number,
                 work_order_id: o.work_order_id,
                 item_id: o.item_id,
                 quantity: o.quantity,
-            }),
-        )
-        .await;
+            })
+            .await;
         if let Err(e) = r {
             return Err(if is_dup(&e) { ManufacturingError::DuplicateNumber(o.unbuild_number) } else { e.into() });
         }
@@ -96,27 +100,27 @@ impl ManufacturingWriteService {
             });
         }
 
-        // The source order's own projection (estate value + warehouses + accounts). Scoped read:
-        // the unbuild's company was read above, bind it for this second hop.
-        let wo = company_scope::with_company_scope(Some(u.company_id), self.load_wo(u.work_order_id)).await?;
+        // The source order's own projection (estate value + warehouses + accounts). ID-only read
+        // (ADR-0029): it rides the request-dedicated connection — under the composed decorator
+        // the org fence scopes the second hop to the caller's unit.
+        let wo = self.load_wo(u.work_order_id).await?;
         if wo.status != "done" {
             return Err(ManufacturingError::UnbuildSourceNotDone);
         }
         let fg_wh = wo.fg_warehouse_id
             .ok_or(ManufacturingError::MissingAccount("fg_warehouse"))?;
         let fg_acct = self
-            .resolve_account("finished_goods", wo.fg_account_id, wo.company_id, wo.product_category_id, |d| d.fg_account_id)
+            .resolve_account("finished_goods", wo.fg_account_id, wo.product_category_id, |d| d.fg_account_id)
             .await?;
         let raw_acct = self
-            .resolve_account("raw_material", wo.raw_material_account_id, wo.company_id, wo.product_category_id, |d| d.raw_material_account_id)
+            .resolve_account("raw_material", wo.raw_material_account_id, wo.product_category_id, |d| {
+                d.raw_material_account_id
+            })
             .await?;
 
         // Components back = the order's ACTUAL per-unit consumption, prorated by the unbuilt share.
-        let items = company_scope::with_company_scope(
-            Some(u.company_id),
-            self.work_order_items.list_requirements(&self.pool, u.work_order_id),
-        )
-        .await?;
+        // The read rides the caller-scoped helper (ADR-0029) — the fence decides under composition.
+        let items = self.work_order_items.list_requirements(&self.pool, u.work_order_id).await?;
         let share = if u.produced_qty > Decimal::ZERO { u.quantity / u.produced_qty } else { Decimal::ZERO };
         let components: Vec<IssueLine> = items
             .iter()
@@ -132,11 +136,16 @@ impl ManufacturingWriteService {
         // mirrors the stock move exactly (Dr Raw Σ · Cr FG Σ), so no value is created or destroyed.
         let reversed_value = money((wo.raw_material_cost + wo.operating_cost) * share);
 
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for the
+        // wire consumers below (reversal, GL post, event) that still read a tenant off the wire.
+        // No module statement keys on it.
+        let legacy_company = legacy_company_echo();
+
         // SIDE EFFECTS BEFORE THE GATE — idempotent on `unbuild:{id}`.
         let dedup = format!("unbuild:{unbuild_id}");
         inventory
             .reverse_production(&UnbuildReversal {
-                company_id: u.company_id,
+                company_id: legacy_company,
                 unbuild_order_id: unbuild_id,
                 source_work_order_id: u.work_order_id,
                 fg_warehouse_id: fg_wh,
@@ -152,7 +161,7 @@ impl ManufacturingWriteService {
 
         let env = AccountingPostEnvelope {
             idempotency_key: dedup.clone(),
-            company_id: u.company_id,
+            company_id: legacy_company,
             branch_id: None,
             source_type: "manufacturing".into(),
             source_id: Uuid::new_v5(&unbuild_id, b"manufacturing:unbuild"),
@@ -170,7 +179,9 @@ impl ManufacturingWriteService {
 
         // THE GATE, last: draft → done (the once-only guard on the reversal).
         let mut tx = self.pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, u.company_id).await?;
+        // The ambient org scope — the execute gate rides the composed decorator's fence
+        // (ADR-0029). Undecorated, the tx stays plain.
+        relay_ambient_scope(&mut tx).await?;
         let moved = self.unbuilds.gate_execute(&mut tx, unbuild_id).await?;
         if moved != 1 {
             tx.rollback().await?;
@@ -181,7 +192,7 @@ impl ManufacturingWriteService {
         sink.publish(&ManufacturingEvent::UnbuildExecuted(UnbuildExecuted {
             unbuild_order_id: unbuild_id,
             source_work_order_id: u.work_order_id,
-            company_id: u.company_id,
+            company_id: legacy_company,
             item_id: u.item_id,
             quantity: u.quantity,
             reversed_value,

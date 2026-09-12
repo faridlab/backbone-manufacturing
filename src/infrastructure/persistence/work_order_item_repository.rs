@@ -43,7 +43,6 @@ impl WorkOrderItemRepository {
 /// statement pins it to 0; only [`WorkOrderItemRepository::add_consumed_qty`] ever moves it.
 pub struct NewWorkOrderItemRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_id: Uuid,
     pub item_id: Uuid,
     pub required_qty: Decimal,
@@ -63,10 +62,9 @@ impl WorkOrderItemRepository {
     /// Insert one exploded material requirement.
     ///
     /// Takes the CALLER'S connection so the requirement commits in the SAME transaction as the
-    /// release gate — that gate is what makes this write once-only. The caller binds the company on
-    /// that connection (`bind_company_on`) before calling — don't re-bind. The explicit `company_id`
-    /// bind (denormalized from the parent work order) stays as defense-in-depth behind the RLS fence
-    /// (ADR-0010 Decision A).
+    /// release gate — that gate is what makes this write once-only. The caller relays the ambient
+    /// org scope on that connection (`relay_ambient_scope`) before calling — don't re-bind
+    /// (ADR-0029).
     pub async fn insert_requirement(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -74,10 +72,10 @@ impl WorkOrderItemRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.work_order_items
-                 (id, company_id, work_order_id, item_id, required_qty, consumed_qty, rate)
-               VALUES ($1,$2,$3,$4,$5,0,$6)"#,
+                 (id, work_order_id, item_id, required_qty, consumed_qty, rate)
+               VALUES ($1,$2,$3,$4,0,$5)"#,
         )
-        .bind(r.id).bind(r.company_id).bind(r.work_order_id).bind(r.item_id).bind(r.required_qty).bind(r.rate)
+        .bind(r.id).bind(r.work_order_id).bind(r.item_id).bind(r.required_qty).bind(r.rate)
         .execute(conn)
         .await?;
         Ok(())
@@ -85,9 +83,9 @@ impl WorkOrderItemRepository {
 
     /// Read a work order's material requirements.
     ///
-    /// A read outside any transaction: takes the pool and runs `fetch_all_rows_scoped` so the RLS
-    /// fence (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` — the
-    /// work order was already read, so its company is known.
+    /// A read outside any transaction: takes the pool and runs `fetch_all_rows_scoped` so it rides
+    /// the request-dedicated connection — under the composed decorator the org fence applies;
+    /// undecorated (module tests) the read runs plain (ADR-0029).
     pub async fn list_requirements(
         &self,
         pool: &PgPool,

@@ -44,7 +44,6 @@ pub struct OperationPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct OperationFilter {
-    pub company_id: Option<Uuid>,
     pub operation_name: Option<String>,
     pub default_workstation_id: Option<Uuid>,
     pub status: Option<OperationStatus>,
@@ -53,7 +52,7 @@ pub struct OperationFilter {
 impl OperationFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.operation_name.is_some() || self.default_workstation_id.is_some() || self.status.is_some()
+        self.operation_name.is_some() || self.default_workstation_id.is_some() || self.status.is_some()
     }
 }
 

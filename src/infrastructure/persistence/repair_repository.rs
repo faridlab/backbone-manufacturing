@@ -16,7 +16,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::{RepairOrder, RepairPart, RepairTag};
 
@@ -65,7 +65,6 @@ impl RepairRepository {
 /// `'draft'::repair_status`.
 pub struct NewRepairOrderRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub repair_number: &'a str,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
@@ -76,7 +75,6 @@ pub struct NewRepairOrderRow<'a> {
 /// authoring decision, not a derived one.
 pub struct NewRepairPartRow {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub repair_order_id: Uuid,
     pub item_id: Uuid,
     pub warehouse_id: Option<Uuid>,
@@ -87,7 +85,6 @@ pub struct NewRepairPartRow {
 
 /// A repair-order header the verbs read.
 pub struct RepairOrderRow {
-    pub company_id: Uuid,
     pub item_id: Uuid,
     pub product_category_id: Option<Uuid>,
     pub quantity: Decimal,
@@ -104,7 +101,9 @@ pub struct RepairPartRow {
 }
 
 impl RepairRepository {
-    /// Insert a draft repair order (pool write, RLS-fenced via `execute_scoped`).
+    /// Insert a draft repair order — a pool write riding `org_scope::execute_scoped`, which binds
+    /// the ambient org scope (the composing service sets it per request); undecorated (module
+    /// tests) the insert runs plain (ADR-0029).
     ///
     /// Returns the raw `sqlx::Error` deliberately: the caller inspects it for a unique violation
     /// to turn a duplicate repair number into a domain error.
@@ -113,35 +112,36 @@ impl RepairRepository {
         pool: &PgPool,
         o: &NewRepairOrderRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO manufacturing.repair_orders
-                     (id, company_id, repair_number, item_id, product_category_id, quantity, status)
-                   VALUES ($1,$2,$3,$4,$5,$6,'draft'::repair_status)"#,
+                     (id, repair_number, item_id, product_category_id, quantity, status)
+                   VALUES ($1,$2,$3,$4,$5,'draft'::repair_status)"#,
             )
-            .bind(o.id).bind(o.company_id).bind(o.repair_number)
+            .bind(o.id).bind(o.repair_number)
             .bind(o.item_id).bind(o.product_category_id).bind(o.quantity),
         )
         .await?;
         Ok(())
     }
 
-    /// Insert a repair part line (pool write, RLS-fenced via `execute_scoped`).
+    /// Insert a repair part line — a pool write riding `org_scope::execute_scoped`
+    /// (ADR-0029; see `insert_repair_order`).
     pub async fn insert_repair_part(
         &self,
         pool: &PgPool,
         p: &NewRepairPartRow,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO manufacturing.repair_parts
-                     (id, company_id, repair_order_id, item_id, warehouse_id, line_type,
+                     (id, repair_order_id, item_id, warehouse_id, line_type,
                       quantity, rate)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8)"#,
+                   VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
             )
-            .bind(p.id).bind(p.company_id).bind(p.repair_order_id).bind(p.item_id)
+            .bind(p.id).bind(p.repair_order_id).bind(p.item_id)
             .bind(p.warehouse_id).bind(p.line_type).bind(p.quantity).bind(p.rate),
         )
         .await?;
@@ -158,14 +158,13 @@ impl RepairRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, item_id, product_category_id, quantity, status::text AS status
+                r#"SELECT item_id, product_category_id, quantity, status::text AS status
                    FROM manufacturing.repair_orders
                    WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(repair_id),
         ).await?;
         Ok(row.map(|r| RepairOrderRow {
-            company_id: r.get("company_id"),
             item_id: r.get("item_id"),
             product_category_id: r.get("product_category_id"),
             quantity: r.get("quantity"),
@@ -294,41 +293,40 @@ impl RepairRepository {
         Ok(done.rows_affected())
     }
 
-    /// Find a tag by name within a company — the G-MEX7 tenant-scoped uniqueness probe
-    /// ((company_id, name) unique; two companies MAY share a tag name, one company may not).
+    /// Find a tag by name — ID-only (ADR-0029): the module declares no tenant axis; under the
+    /// composed decorator the org fence scopes the lookup to the caller's unit and the decorator's
+    /// re-declared (org unit, name) unique keeps one namespace per unit.
     pub async fn find_tag_by_name(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         name: &str,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         company_scope::fetch_optional_scalar_scoped(
             pool,
             sqlx::query_scalar(
                 r#"SELECT id FROM manufacturing.repair_tags
-                   WHERE company_id=$1 AND name=$2 AND (metadata->>'deleted_at') IS NULL"#,
+                   WHERE name=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
-            .bind(company_id)
             .bind(name),
         ).await
     }
 
-    /// Insert a tag (pool write, RLS-fenced). Returns the raw `sqlx::Error` so the caller can
-    /// turn the (company_id, name) unique violation into a domain error.
+    /// Insert a tag — a pool write riding `org_scope::execute_scoped` (ADR-0029). Returns the raw
+    /// `sqlx::Error` so the caller can turn the org-scoped name unique violation into a domain
+    /// error.
     pub async fn insert_tag(
         &self,
         pool: &PgPool,
         id: Uuid,
-        company_id: Uuid,
         name: &str,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
-                r#"INSERT INTO manufacturing.repair_tags (id, company_id, name)
-                   VALUES ($1,$2,$3)"#,
+                r#"INSERT INTO manufacturing.repair_tags (id, name)
+                   VALUES ($1,$2)"#,
             )
-            .bind(id).bind(company_id).bind(name),
+            .bind(id).bind(name),
         )
         .await?;
         Ok(())

@@ -35,8 +35,6 @@ use crate::domain::entity::BomType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateBomDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
@@ -79,8 +77,6 @@ pub struct CreateBomDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateBomDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
@@ -123,8 +119,6 @@ pub struct UpdateBomDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchBomDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "item_id")]
     pub item_id: Option<Uuid>,
@@ -161,7 +155,7 @@ pub struct PatchBomDto {
 impl PatchBomDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.item_id.is_some() || self.bom_code.is_some() || self.version.is_some() || self.bom_type.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.status.is_some() || self.is_default.is_some()
+        self.item_id.is_some() || self.bom_code.is_some() || self.version.is_some() || self.bom_type.is_some() || self.quantity.is_some() || self.uom.is_some() || self.currency.is_some() || self.raw_material_cost.is_some() || self.operating_cost.is_some() || self.total_cost.is_some() || self.status.is_some() || self.is_default.is_some()
     }
 }
 
@@ -179,7 +173,6 @@ impl PatchBomDto {
 pub struct BomResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub item_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -254,9 +247,9 @@ impl BomListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct BomSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub item_id: Uuid,
     pub bom_code: String,
+    pub version: i32,
     pub created_at: Option<DateTime<Utc>>,
 }
 
@@ -268,7 +261,6 @@ impl From<Bom> for BomResponseDto {
     fn from(entity: Bom) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             item_id: entity.item_id,
             bom_code: entity.bom_code,
             version: entity.version,
@@ -291,9 +283,9 @@ impl From<Bom> for BomSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             item_id: entity.item_id,
             bom_code: entity.bom_code,
+            version: entity.version,
             created_at,
         }
     }
@@ -303,7 +295,6 @@ impl From<CreateBomDto> for Bom {
     fn from(dto: CreateBomDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             item_id: dto.item_id,
             bom_code: dto.bom_code,
             version: dto.version,
@@ -325,7 +316,6 @@ impl From<&Bom> for BomResponseDto {
     fn from(entity: &Bom) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             item_id: entity.item_id.clone(),
             bom_code: entity.bom_code.clone(),
             version: entity.version.clone(),
@@ -351,7 +341,6 @@ impl backbone_core::FromCreateDto<CreateBomDto> for Bom {
 
 impl backbone_core::ApplyUpdateDto<UpdateBomDto> for Bom {
     fn apply_update(mut self, dto: UpdateBomDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.item_id = dto.item_id;
         self.bom_code = dto.bom_code;
         self.version = dto.version;

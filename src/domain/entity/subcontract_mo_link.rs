@@ -48,7 +48,6 @@ impl std::ops::Deref for SubcontractMoLinkId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct SubcontractMoLink {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub purchase_order_id: Uuid,
     pub work_order_id: Uuid,
     #[serde(default)]
@@ -63,10 +62,9 @@ impl SubcontractMoLink {
     }
 
     /// Create a new SubcontractMoLink with required fields
-    pub fn new(company_id: Uuid, purchase_order_id: Uuid, work_order_id: Uuid) -> Self {
+    pub fn new(purchase_order_id: Uuid, work_order_id: Uuid) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             purchase_order_id,
             work_order_id,
             metadata: AuditMetadata::default(),
@@ -132,9 +130,6 @@ impl SubcontractMoLink {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
-                }
                 "purchase_order_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.purchase_order_id = v; }
                 }
@@ -195,16 +190,12 @@ impl backbone_orm::EntityRepoMeta for SubcontractMoLink {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("purchase_order_id".to_string(), "uuid".to_string());
         m.insert("work_order_id".to_string(), "uuid".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -214,18 +205,11 @@ impl backbone_orm::EntityRepoMeta for SubcontractMoLink {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct SubcontractMoLinkBuilder {
-    company_id: Option<Uuid>,
     purchase_order_id: Option<Uuid>,
     work_order_id: Option<Uuid>,
 }
 
 impl SubcontractMoLinkBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the purchase_order_id field (required)
     pub fn purchase_order_id(mut self, value: Uuid) -> Self {
         self.purchase_order_id = Some(value);
@@ -242,13 +226,11 @@ impl SubcontractMoLinkBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<SubcontractMoLink, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let purchase_order_id = self.purchase_order_id.ok_or_else(|| "purchase_order_id is required".to_string())?;
         let work_order_id = self.work_order_id.ok_or_else(|| "work_order_id is required".to_string())?;
 
         Ok(SubcontractMoLink {
             id: Uuid::new_v4(),
-            company_id,
             purchase_order_id,
             work_order_id,
             metadata: AuditMetadata::default(),

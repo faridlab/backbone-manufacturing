@@ -24,13 +24,13 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
+
 // <<< CUSTOM
 // Hand-written validated command surface (`src/write_api.rs` is declared under
 // `user_owned` in metaphor.codegen.yaml). Declared inside this marker so schema
 // regeneration preserves the declaration alongside the generated module list.
 pub mod write_api;
 // END CUSTOM
-
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
 

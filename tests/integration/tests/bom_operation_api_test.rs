@@ -24,7 +24,6 @@ impl TestDataGenerator for BomOperationTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": null,
             "bom_id": Uuid::new_v4().to_string(),
             "operation_id": Uuid::new_v4().to_string(),
             "workstation_id": Uuid::new_v4().to_string(),
@@ -39,7 +38,6 @@ impl TestDataGenerator for BomOperationTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": null,
             "bom_id": Uuid::new_v4().to_string(),
             "operation_id": Uuid::new_v4().to_string(),
             "workstation_id": Uuid::new_v4().to_string(),

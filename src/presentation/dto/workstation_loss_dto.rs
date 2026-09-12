@@ -33,8 +33,6 @@ use crate::domain::entity::LossType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateWorkstationLossDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -55,8 +53,6 @@ pub struct CreateWorkstationLossDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWorkstationLossDto {
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
@@ -77,8 +73,6 @@ pub struct UpdateWorkstationLossDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchWorkstationLossDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 140)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -90,7 +84,7 @@ pub struct PatchWorkstationLossDto {
 impl PatchWorkstationLossDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.name.is_some() || self.loss_type.is_some()
+        self.name.is_some() || self.loss_type.is_some()
     }
 }
 
@@ -108,7 +102,6 @@ impl PatchWorkstationLossDto {
 pub struct WorkstationLossResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
     pub loss_type: LossType,
@@ -169,7 +162,6 @@ impl WorkstationLossListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct WorkstationLossSummaryDto {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub name: String,
     pub loss_type: LossType,
     pub created_at: Option<DateTime<Utc>>,
@@ -183,7 +175,6 @@ impl From<WorkstationLoss> for WorkstationLossResponseDto {
     fn from(entity: WorkstationLoss) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             loss_type: entity.loss_type,
             metadata: entity.metadata,
@@ -196,7 +187,6 @@ impl From<WorkstationLoss> for WorkstationLossSummaryDto {
         let created_at = backbone_core::PersistentEntity::created_at(&entity);
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             name: entity.name,
             loss_type: entity.loss_type,
             created_at,
@@ -208,7 +198,6 @@ impl From<CreateWorkstationLossDto> for WorkstationLoss {
     fn from(dto: CreateWorkstationLossDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             name: dto.name,
             loss_type: dto.loss_type,
             metadata: AuditMetadata::default(),
@@ -220,7 +209,6 @@ impl From<&WorkstationLoss> for WorkstationLossResponseDto {
     fn from(entity: &WorkstationLoss) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             name: entity.name.clone(),
             loss_type: entity.loss_type.clone(),
             metadata: entity.metadata.clone(),
@@ -236,7 +224,6 @@ impl backbone_core::FromCreateDto<CreateWorkstationLossDto> for WorkstationLoss 
 
 impl backbone_core::ApplyUpdateDto<UpdateWorkstationLossDto> for WorkstationLoss {
     fn apply_update(mut self, dto: UpdateWorkstationLossDto) -> backbone_core::ServiceResult<Self> {
-        self.company_id = dto.company_id;
         self.name = dto.name;
         self.loss_type = dto.loss_type;
         Ok(self)

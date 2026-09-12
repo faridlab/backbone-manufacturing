@@ -37,24 +37,23 @@ impl BomSubcontractorRepository {
 /// unique index enforces it at the DB.
 pub struct NewBomSubcontractorRow {
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub bom_id: Uuid,
     pub partner_id: Uuid,
 }
 
 impl BomSubcontractorRepository {
-    /// Insert a subcontractor link. Takes the CALLER'S connection; the caller binds the company
-    /// on it (`bind_company_on`) — don't re-bind.
+    /// Insert a subcontractor link. Takes the CALLER'S connection; the caller relays the ambient
+    /// org scope on it (`relay_ambient_scope`) — don't re-bind (ADR-0029).
     pub async fn insert_subcontractor(
         &self,
         conn: &mut sqlx::PgConnection,
         s: &NewBomSubcontractorRow,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            r#"INSERT INTO manufacturing.bom_subcontractors (id, company_id, bom_id, partner_id)
-               VALUES ($1,$2,$3,$4)"#,
+            r#"INSERT INTO manufacturing.bom_subcontractors (id, bom_id, partner_id)
+               VALUES ($1,$2,$3)"#,
         )
-        .bind(s.id).bind(s.company_id).bind(s.bom_id).bind(s.partner_id)
+        .bind(s.id).bind(s.bom_id).bind(s.partner_id)
         .execute(conn)
         .await?;
         Ok(())

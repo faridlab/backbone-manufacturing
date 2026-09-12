@@ -44,7 +44,6 @@ pub struct BomByproductPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct BomByproductFilter {
-    pub company_id: Option<Uuid>,
     pub bom_id: Option<Uuid>,
     pub item_id: Option<Uuid>,
     pub product_category_id: Option<Uuid>,
@@ -53,7 +52,7 @@ pub struct BomByproductFilter {
 impl BomByproductFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.bom_id.is_some() || self.item_id.is_some() || self.product_category_id.is_some()
+        self.bom_id.is_some() || self.item_id.is_some() || self.product_category_id.is_some()
     }
 }
 

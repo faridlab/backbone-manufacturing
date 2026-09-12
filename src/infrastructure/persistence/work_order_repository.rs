@@ -20,7 +20,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::{company_scope, org_scope};
 
 use crate::domain::entity::WorkOrder;
 use crate::domain::entity::ReservationState;
@@ -57,7 +57,6 @@ impl WorkOrderRepository {
 /// costing defaults that fill any unset account override.
 pub struct NewWorkOrderRow<'a> {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub work_order_number: &'a str,
     pub item_id: Uuid,
     pub bom_id: Uuid,
@@ -71,11 +70,9 @@ pub struct NewWorkOrderRow<'a> {
     pub conversion_cost_account_id: Option<Uuid>,
 }
 
-/// The work-order header `confirm_work_order` reads BEFORE it opens its transaction — the company
-/// must be known to bind the scope. `status` is read as `::text` so an unknown state fails the draft
-/// check rather than panicking in a decode.
+/// The work-order header `confirm_work_order` reads BEFORE it opens its transaction. `status` is
+/// read as `::text` so an unknown state fails the draft check rather than panicking in a decode.
 pub struct ConfirmSourceRow {
-    pub company_id: Uuid,
     pub item_id: Uuid,
     pub bom_id: Uuid,
     pub quantity: Decimal,
@@ -84,7 +81,6 @@ pub struct ConfirmSourceRow {
 
 /// The full work-order projection the execution path reads (`load_wo`).
 pub struct WorkOrderRow {
-    pub company_id: Uuid,
     pub work_order_number: String,
     pub item_id: Uuid,
     pub bom_id: Uuid,
@@ -108,9 +104,10 @@ pub struct WorkOrderRow {
 impl WorkOrderRepository {
     /// Insert a draft work order.
     ///
-    /// A write outside any transaction: takes the pool and runs `execute_scoped` so the RLS fence
-    /// (ADR-0008) applies. The caller wraps this in `with_company_scope(Some(company))` — the company
-    /// is on the DTO, and that scope is what satisfies the INSERT's WITH CHECK fence.
+    /// A write outside any transaction: takes the pool and runs `org_scope::execute_scoped`, which
+    /// binds the ambient org scope (the composing service sets it per request) so the decorator's
+    /// org-unit fill and fence see the INSERT. Undecorated (module tests) the insert runs plain
+    /// (ADR-0029).
     ///
     /// Returns the raw `sqlx::Error` deliberately: the caller inspects it for a unique violation to
     /// turn a duplicate work-order number into a domain error.
@@ -119,17 +116,17 @@ impl WorkOrderRepository {
         pool: &PgPool,
         o: &NewWorkOrderRow<'_>,
     ) -> Result<(), sqlx::Error> {
-        company_scope::execute_scoped(
+        org_scope::execute_scoped(
             pool,
             sqlx::query(
                 r#"INSERT INTO manufacturing.work_orders
-                     (id, company_id, work_order_number, item_id, bom_id, quantity, status,
+                     (id, work_order_number, item_id, bom_id, quantity, status,
                       product_category_id,
                       wip_warehouse_id, fg_warehouse_id, wip_account_id, fg_account_id,
                       raw_material_account_id, conversion_cost_account_id)
-                   VALUES ($1,$2,$3,$4,$5,$6,'draft'::work_order_state,$7,$8,$9,$10,$11,$12,$13)"#,
+                   VALUES ($1,$2,$3,$4,$5,'draft'::work_order_state,$6,$7,$8,$9,$10,$11,$12)"#,
             )
-            .bind(o.id).bind(o.company_id).bind(o.work_order_number).bind(o.item_id).bind(o.bom_id)
+            .bind(o.id).bind(o.work_order_number).bind(o.item_id).bind(o.bom_id)
             .bind(o.quantity).bind(o.product_category_id)
             .bind(o.wip_warehouse_id).bind(o.fg_warehouse_id).bind(o.wip_account_id)
             .bind(o.fg_account_id).bind(o.raw_material_account_id).bind(o.conversion_cost_account_id),
@@ -142,9 +139,9 @@ impl WorkOrderRepository {
     ///
     /// Takes the CALLER'S connection so the mint, its exploded component requirements and the
     /// subcontract link row commit as ONE unit (a minted order without its link would break the
-    /// replay backstop). The caller binds the company on that connection (`bind_company_on`)
-    /// before calling — don't re-bind. `status` is pinned by the statement: only the subcontract
-    /// receipt path may create an order that skips draft.
+    /// replay backstop). The caller relays the ambient org scope onto that connection
+    /// (`relay_ambient_scope`) before calling — don't re-bind (ADR-0029). `status` is pinned by the
+    /// statement: only the subcontract receipt path may create an order that skips draft.
     pub async fn insert_confirmed(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -152,13 +149,13 @@ impl WorkOrderRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"INSERT INTO manufacturing.work_orders
-                 (id, company_id, work_order_number, item_id, bom_id, quantity, status,
+                 (id, work_order_number, item_id, bom_id, quantity, status,
                   product_category_id,
                   wip_warehouse_id, fg_warehouse_id, wip_account_id, fg_account_id,
                   raw_material_account_id, conversion_cost_account_id)
-               VALUES ($1,$2,$3,$4,$5,$6,'confirmed'::work_order_state,$7,$8,$9,$10,$11,$12,$13)"#,
+               VALUES ($1,$2,$3,$4,$5,'confirmed'::work_order_state,$6,$7,$8,$9,$10,$11,$12)"#,
         )
-        .bind(o.id).bind(o.company_id).bind(o.work_order_number).bind(o.item_id).bind(o.bom_id)
+        .bind(o.id).bind(o.work_order_number).bind(o.item_id).bind(o.bom_id)
         .bind(o.quantity).bind(o.product_category_id)
         .bind(o.wip_warehouse_id).bind(o.fg_warehouse_id).bind(o.wip_account_id)
         .bind(o.fg_account_id).bind(o.raw_material_account_id).bind(o.conversion_cost_account_id)
@@ -169,10 +166,10 @@ impl WorkOrderRepository {
 
     /// Read the header `confirm_work_order` needs before it can open its transaction.
     ///
-    /// ID-only: no company argument to scope from up front, so this read rides the REQUEST-dedicated
-    /// connection carrying the caller's `app.company_id` — RLS fences it so another company's work
-    /// order simply isn't found. This read is deliberately OUTSIDE the confirm transaction: its
-    /// company is what the caller then binds onto that transaction.
+    /// ID-only (ADR-0029): the read rides the request-dedicated connection — under the composed
+    /// decorator the org fence scopes it to the caller's unit; undecorated (module tests) the read
+    /// runs plain. This read is deliberately OUTSIDE the confirm transaction: it decides whether
+    /// the confirm may proceed at all before any state is claimed.
     pub async fn find_confirm_source(
         &self,
         pool: &PgPool,
@@ -181,13 +178,12 @@ impl WorkOrderRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, item_id, bom_id, quantity, status::text AS status
+                r#"SELECT item_id, bom_id, quantity, status::text AS status
                    FROM manufacturing.work_orders WHERE id=$1 AND (metadata->>'deleted_at') IS NULL"#,
             )
             .bind(wo_id),
         ).await?;
         Ok(row.map(|r| ConfirmSourceRow {
-            company_id: r.get("company_id"),
             item_id: r.get("item_id"),
             bom_id: r.get("bom_id"),
             quantity: r.get("quantity"),
@@ -200,7 +196,8 @@ impl WorkOrderRepository {
     /// This statement — not the header read above — is the once-only guard: the `status='draft'`
     /// predicate is what makes a concurrent/repeat confirm a no-op, so the BOM explosion is written
     /// exactly once. Takes the CALLER'S connection so the gate and the explosion commit as ONE unit;
-    /// the caller binds the company on it (`bind_company_on`) before calling — don't re-bind.
+    /// the caller relays the ambient org scope on it (`relay_ambient_scope`) before calling — don't
+    /// re-bind (ADR-0029).
     pub async fn gate_confirm(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -222,8 +219,8 @@ impl WorkOrderRepository {
     ///
     /// `progress` is DERIVED: the first issue of materials to WIP is what puts the order in
     /// progress — there is no hand-written "start" verb. Takes the CALLER'S connection so the gate
-    /// and the per-line consumption commit as ONE unit; the caller binds the company on it
-    /// (`bind_company_on`) before calling — don't re-bind.
+    /// and the per-line consumption commit as ONE unit; the caller relays the ambient org scope on
+    /// it (`relay_ambient_scope`) before calling — don't re-bind (ADR-0029).
     pub async fn gate_consume(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -252,8 +249,8 @@ impl WorkOrderRepository {
     /// under concurrency rather than only by the service's pre-check. The WHERE predicate admits
     /// `progress` AND `to_close` — receipts only count against an order that has consumed
     /// materials, and a partially-received order stays receivable until it is done.
-    /// Takes the CALLER'S connection; the caller binds the company on it (`bind_company_on`)
-    /// before calling — don't re-bind.
+    /// Takes the CALLER'S connection; the caller relays the ambient org scope on it
+    /// (`relay_ambient_scope`) before calling — don't re-bind (ADR-0029).
     pub async fn gate_receive(
         &self,
         conn: &mut sqlx::PgConnection,
@@ -306,7 +303,6 @@ impl WorkOrderRepository {
     pub async fn write_reservation_state(
         &self,
         pool: &PgPool,
-        company_id: Uuid,
         wo_id: Uuid,
         state: ReservationState,
     ) -> Result<u64, sqlx::Error> {
@@ -316,13 +312,18 @@ impl WorkOrderRepository {
         // Cards in progress/done/cancel are never touched — the flip only applies to queued work.
         let flip_to = if state == ReservationState::Assigned { "ready" } else { "blocked" };
         let mut tx = pool.begin().await?;
-        company_scope::bind_company_on(&mut tx, company_id).await?;
+        // Tenancy posture (ADR-0029): the module owns no scoping column — the composing service's
+        // tenancy decorator does. Relay the AMBIENT request scope onto this transaction when the
+        // caller bound one, so the decorator's org-unit fill and its row-level fence see this
+        // transaction's statements. An undecorated deployment has no ambient scope and skips this.
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope).await?;
+        }
         let done = sqlx::query(
-            r#"UPDATE manufacturing.work_orders SET reservation_state=$3
-               WHERE id=$1 AND company_id=$2"#,
+            r#"UPDATE manufacturing.work_orders SET reservation_state=$2
+               WHERE id=$1"#,
         )
         .bind(wo_id)
-        .bind(company_id)
         .bind(state)
         .execute(&mut *tx)
         .await?;
@@ -362,9 +363,9 @@ impl WorkOrderRepository {
 
     /// Read a work order's full execution projection.
     ///
-    /// ID-only: no company argument — the read rides the request-dedicated connection, so RLS fences
-    /// it to the caller's tenant. Callers that are EVENT-driven (not on a request) must wrap the call
-    /// in `with_company_scope(Some(event.company_id))` or this read fails closed.
+    /// ID-only (ADR-0029): the read rides the request-dedicated connection — under the composed
+    /// decorator the org fence scopes it to the caller's unit; undecorated (module tests) the read
+    /// runs plain.
     pub async fn load(
         &self,
         pool: &PgPool,
@@ -373,7 +374,7 @@ impl WorkOrderRepository {
         let row = company_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
-                r#"SELECT company_id, work_order_number, item_id, bom_id, quantity, produced_qty,
+                r#"SELECT work_order_number, item_id, bom_id, quantity, produced_qty,
                           status::text AS status, reservation_state::text AS reservation_state,
                           product_category_id, raw_material_cost, operating_cost,
                           wip_warehouse_id, fg_warehouse_id, wip_account_id, fg_account_id,
@@ -383,7 +384,6 @@ impl WorkOrderRepository {
             .bind(wo_id),
         ).await?;
         Ok(row.map(|r| WorkOrderRow {
-            company_id: r.get("company_id"),
             work_order_number: r.get("work_order_number"),
             item_id: r.get("item_id"),
             bom_id: r.get("bom_id"),

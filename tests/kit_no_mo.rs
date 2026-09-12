@@ -14,11 +14,9 @@ use uuid::Uuid;
 async fn wo_on_typed_bom(bom_type: &str) -> (ManufacturingWriteService, sqlx::PgPool, Uuid) {
     let pool = pool().await;
     let svc = ManufacturingWriteService::new(pool.clone());
-    let company = Uuid::new_v4();
     let item = Uuid::new_v4();
     let bom = svc
         .create_bom(NewBom {
-            company_id: company,
             item_id: item,
             bom_code: format!("BOM-{}", &Uuid::new_v4().to_string()[..8]),
             quantity: dec("1"),
@@ -36,7 +34,6 @@ async fn wo_on_typed_bom(bom_type: &str) -> (ManufacturingWriteService, sqlx::Pg
         .unwrap();
     let wo = svc
         .create_work_order(NewWorkOrder {
-            company_id: company,
             work_order_number: format!("WO-{}", &Uuid::new_v4().to_string()[..8]),
             item_id: item,
             bom_id: bom,

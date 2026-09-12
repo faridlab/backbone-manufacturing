@@ -13,13 +13,18 @@
 //! buying side, and NEVER writes stock-valuation layers — inventory moves ride the normal
 //! consume/receive verbs on the minted order.
 //!
-//! Idempotency backstop: the link table's unique `(company_id, purchase_order_id)`. A replayed
-//! receipt finds the existing link and returns the work order it minted — no second MO, no second
-//! cost leg. Concurrent double-delivery collapses onto the same constraint inside the mint
-//! transaction.
+//! Idempotency backstop: the link table's (org unit, purchase order) unique — installed by the
+//! composing service's tenancy decorator (ADR-0029). A replayed receipt finds the existing link
+//! and returns the work order it minted — no second MO, no second cost leg. Concurrent
+//! double-delivery collapses onto the same constraint inside the mint transaction.
 //!
 //! Per the module's 4-layer rule this file holds no SQL — the statements live on
 //! `WorkOrderRepository` / `BomRepository` / `SubcontractLinkRepository`.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — the mint takes no company argument and
+//! keys on the purchase-order id alone. The mint transaction relays the ambient org scope (the
+//! composing service sets it per request when delivering the event). The wire event and the
+//! minted event keep a legacy company twin filled from the ambient scope's echo.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -28,7 +33,9 @@ use uuid::Uuid;
 use crate::infrastructure::persistence::{NewSubcontractLinkRow, NewWorkOrderItemRow, NewWorkOrderRow};
 
 use super::manufacturing_events::*;
-use super::manufacturing_write_service::{ManufacturingError, ManufacturingWriteService};
+use super::manufacturing_write_service::{
+    legacy_company_echo, relay_ambient_scope, ManufacturingError, ManufacturingWriteService,
+};
 
 /// One receipt line of a subcontract purchase order.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -44,6 +51,9 @@ pub struct SubcontractReceiptLine {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SubcontractReceiptEvent {
     pub order_id: Uuid,
+    /// Legacy twin (ADR-0029): buying's envelope still carries a tenant on the wire. The module
+    /// reads it only for accounting continuity — no module statement keys on it; scoping is the
+    /// composing service's decorator's job, from the ambient org scope.
     pub company_id: Uuid,
     pub supplier_id: Uuid,
     /// Only `subcontract` mints a manufacturing order — every other kind is refused LOUDLY.
@@ -67,12 +77,13 @@ impl ManufacturingWriteService {
         if event.order_kind != "subcontract" {
             return Err(ManufacturingError::SubcontractKindMismatch(event.order_kind.clone()));
         }
-        // The replay backstop: one MO per (company, purchase order) — return the existing mint.
-        if let Some(existing) = backbone_orm::company_scope::with_company_scope(
-            Some(event.company_id),
-            self.subcontract_links.find_by_purchase_order(&self.pool, event.company_id, event.order_id),
-        )
-        .await?
+        // The replay backstop: one MO per purchase order — return the existing mint. ID-only
+        // (ADR-0029): the read rides the caller-scoped helper; the decorator's re-declared
+        // (org unit, purchase order) unique keeps it one-per-unit.
+        if let Some(existing) = self
+            .subcontract_links
+            .find_by_purchase_order(&self.pool, event.order_id)
+            .await?
         {
             return Ok(existing);
         }
@@ -92,20 +103,20 @@ impl ManufacturingWriteService {
 
         // Resolve the item's ACTIVE BoM and insist it is a subcontract BoM — anything else means
         // the supplier's item has no subcontract recipe, which is an authoring defect, LOUD.
-        let bom_id = backbone_orm::company_scope::with_company_scope(
-            Some(event.company_id),
-            self.boms.find_active_bom_for_item(&self.pool, event.company_id, first.item_id),
-        )
-        .await?
-        .ok_or(ManufacturingError::Invalid(
-            "subcontract receipt item has no active BoM — author one with bom_type=subcontract".into(),
-        ))?;
-        let bom_type = backbone_orm::company_scope::with_company_scope(
-            Some(event.company_id),
-            self.boms.fetch_bom_type(&self.pool, bom_id),
-        )
-        .await?
-        .unwrap_or_else(|| "normal".into());
+        // ID-only reads (ADR-0029): they ride the caller-scoped helper — under the composed
+        // decorator the org fence scopes the resolution to the caller's unit.
+        let bom_id = self
+            .boms
+            .find_active_bom_for_item(&self.pool, first.item_id)
+            .await?
+            .ok_or(ManufacturingError::Invalid(
+                "subcontract receipt item has no active BoM — author one with bom_type=subcontract".into(),
+            ))?;
+        let bom_type = self
+            .boms
+            .fetch_bom_type(&self.pool, bom_id)
+            .await?
+            .unwrap_or_else(|| "normal".into());
         if bom_type != "subcontract" {
             return Err(ManufacturingError::Invalid(
                 "subcontract receipt item's active BoM is not bom_type=subcontract".into(),
@@ -116,7 +127,7 @@ impl ManufacturingWriteService {
         // so the normal consume/receive verbs drive them (the DoD subcontract receipt = components
         // + PO value → FG, exactly the receive path's extra-cost leg).
         let mut required: Vec<(Uuid, Decimal, Decimal)> = Vec::new();
-        self.explode_bom(event.company_id, bom_id, quantity, 0, &mut required).await?;
+        self.explode_bom(bom_id, quantity, 0, &mut required).await?;
 
         // The hidden MO: numbered by the PO reference, directly in `confirmed`, with its link row —
         // ONE transaction. A concurrent double-delivery loses on the link's unique constraint and
@@ -127,10 +138,12 @@ impl ManufacturingWriteService {
             .clone()
             .unwrap_or_else(|| event.order_id.to_string());
         let mut tx = self.pool.begin().await?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, event.company_id).await?;
+        // The ambient org scope — the mint rides the composed decorator's fence (ADR-0029); the
+        // composing service's relay sets it when delivering the event. Undecorated, the tx stays
+        // plain.
+        relay_ambient_scope(&mut tx).await?;
         let mint = self.work_orders.insert_confirmed(&mut tx, &NewWorkOrderRow {
             id: wo_id,
-            company_id: event.company_id,
             work_order_number: &number,
             item_id: first.item_id,
             bom_id,
@@ -151,7 +164,6 @@ impl ManufacturingWriteService {
         for (item, qty, rate) in &required {
             self.work_order_items.insert_requirement(&mut tx, &NewWorkOrderItemRow {
                 id: Uuid::new_v4(),
-                company_id: event.company_id,
                 work_order_id: wo_id,
                 item_id: *item,
                 required_qty: *qty,
@@ -160,15 +172,17 @@ impl ManufacturingWriteService {
         }
         self.subcontract_links.insert_link(&mut tx, &NewSubcontractLinkRow {
             id: Uuid::new_v4(),
-            company_id: event.company_id,
             purchase_order_id: event.order_id,
             work_order_id: wo_id,
         }).await?;
         tx.commit().await?;
 
+        // Legacy company twin (ADR-0029): filled from the ambient org scope's company echo for
+        // consumers that still read a tenant off the wire. No module statement keys on it.
+        let legacy_company = legacy_company_echo();
         sink.publish(&ManufacturingEvent::SubcontractMoMinted(SubcontractMoMinted {
             work_order_id: wo_id,
-            company_id: event.company_id,
+            company_id: legacy_company,
             purchase_order_id: event.order_id,
             supplier_id: event.supplier_id,
             item_id: first.item_id,
