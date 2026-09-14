@@ -22,6 +22,11 @@
 #   service = the service verb's gate predicate only (raw SQL can bypass; recorded)
 # =============================================================================
 
+# The module this register belongs to. Every sibling module-level hook names it;
+# omitting it left this file with nothing identifying what it hooks, so the
+# parser could not classify it and dropped the whole register.
+module: manufacturing
+
 state_machines:
 
   # ===========================================================================
