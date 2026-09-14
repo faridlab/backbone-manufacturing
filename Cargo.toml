@@ -17,10 +17,10 @@ path = "src/lib.rs"
 # or `rev = "<commit-sha>"`. Cargo dedupes the git fetch — the repo is only
 # cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.19", features = ["postgres"] }
-backbone-orm = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.19" }
-backbone-auth = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.19" }
-backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.19" }
+backbone-core = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.20", features = ["postgres"] }
+backbone-orm = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.20" }
+backbone-auth = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.20" }
+backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.20" }
 
 # Core async runtime and serialization
 tokio = { version = "1.0", features = ["full"] }
@@ -90,4 +90,4 @@ rand = "0.8"
 # `cargo tree -e normal -i backbone-accounting` is empty). Inventory is driven through `InventoryPort`.
 # Pinned to the tenant-agnostic (ADR-0029) accounting line — the undecorated module tests assume
 # the company-free accounts shape.
-backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.8.1" }
+backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.9.0" }
