@@ -1,6 +1,6 @@
 [package]
 name = "backbone-manufacturing"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 description = "Manufacturing module: BOM/product definition (versioned, typed normal/kit/subcontract) and work-order execution (hybrid 6-state lifecycle, WIP job-order costing through the inventory/GL ports, unbuild, repair, subcontract mint, OEE read side)"
 
@@ -17,10 +17,10 @@ path = "src/lib.rs"
 # or `rev = "<commit-sha>"`. Cargo dedupes the git fetch — the repo is only
 # cloned once even though four crates reference it.
 # -----------------------------------------------------------------------------
-backbone-core = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.22", features = ["postgres"] }
-backbone-orm = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.22" }
-backbone-auth = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.22" }
-backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.22" }
+backbone-core = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.23", features = ["postgres"] }
+backbone-orm = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.23" }
+backbone-auth = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.23" }
+backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", tag = "v2.7.23" }
 
 # Core async runtime and serialization
 tokio = { version = "1.0", features = ["full"] }
@@ -90,4 +90,4 @@ rand = "0.8"
 # `cargo tree -e normal -i backbone-accounting` is empty). Inventory is driven through `InventoryPort`.
 # Pinned to the tenant-agnostic (ADR-0029) accounting line — the undecorated module tests assume
 # the company-free accounts shape.
-backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.9.3" }
+backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.9.4" }
