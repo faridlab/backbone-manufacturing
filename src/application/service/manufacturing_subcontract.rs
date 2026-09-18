@@ -61,6 +61,20 @@ pub struct SubcontractReceiptEvent {
     pub currency: String,
     pub reference: Option<String>,
     pub lines: Vec<SubcontractReceiptLine>,
+    /// The finished item's product category, which the account-resolution chain walks to reach
+    /// the costing defaults. Manufacturing does not read the product catalogue, so only the
+    /// composing service can supply it; absent, the first valuation leg refuses with
+    /// `MissingAccount` rather than posting to a guessed account.
+    #[serde(default)]
+    pub product_category_id: Option<Uuid>,
+    /// Where the supplied materials are consumed from, and where the finished goods land. The
+    /// buying envelope carries no warehouse — it is composition knowledge, the same way the
+    /// receipt's own warehouse is — so these travel with the event rather than being invented
+    /// at mint time.
+    #[serde(default)]
+    pub wip_warehouse_id: Option<Uuid>,
+    #[serde(default)]
+    pub fg_warehouse_id: Option<Uuid>,
 }
 
 impl ManufacturingWriteService {
@@ -148,9 +162,12 @@ impl ManufacturingWriteService {
             item_id: first.item_id,
             bom_id,
             quantity,
-            product_category_id: None,
-            wip_warehouse_id: None,
-            fg_warehouse_id: None,
+            // Carried from the envelope, not invented here. The accounts stay unset on purpose:
+            // resolution is deferred to posting time and walks the category, so a per-order
+            // override is something a caller chooses rather than something a mint fabricates.
+            product_category_id: event.product_category_id,
+            wip_warehouse_id: event.wip_warehouse_id,
+            fg_warehouse_id: event.fg_warehouse_id,
             wip_account_id: None,
             fg_account_id: None,
             raw_material_account_id: None,

@@ -46,6 +46,11 @@ fn event(company: Uuid, order: Uuid, item: Uuid, qty: &str, reference: Option<&s
         currency: "IDR".into(),
         reference: reference.map(|r| r.into()),
         lines: vec![SubcontractReceiptLine { item_id: item, quantity: dec(qty), rate: dec("5000") }],
+        // The composition-supplied half: absent here by default so the existing cases keep
+        // exercising the bare envelope. SCB-6 sets them.
+        product_category_id: None,
+        wip_warehouse_id: None,
+        fg_warehouse_id: None,
     }
 }
 
@@ -179,4 +184,48 @@ async fn scb4_normal_bom_refused() {
     e.lines = vec![];
     let err = svc.handle_subcontract_receipt(&e, &sink).await.unwrap_err();
     assert!(matches!(err, ManufacturingError::Invalid(_)), "empty event refused");
+}
+
+/// SCB-6 — the composition-supplied fields reach the minted order.
+///
+/// The hidden order used to be minted with no product category and no warehouses, which left the
+/// account-resolution chain nothing to walk and the receive path without a destination. They are
+/// carried on the envelope because manufacturing does not read the product catalogue and the
+/// buying receipt does not name a warehouse; only the composing service knows either.
+#[tokio::test]
+async fn scb6_composition_fields_reach_the_mint() {
+    let company = Uuid::new_v4();
+    let item = Uuid::new_v4();
+    let comp = Uuid::new_v4();
+    let order = Uuid::new_v4();
+    let (svc, pool, bom) = svc_bom(item, comp).await;
+    sqlx::query("UPDATE manufacturing.boms SET bom_type='subcontract'::bom_type WHERE id=$1")
+        .bind(bom)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let category = Uuid::new_v4();
+    let wip_wh = Uuid::new_v4();
+    let fg_wh = Uuid::new_v4();
+    let mut e = event(company, order, item, "4", Some("PO-SCB-6"));
+    e.product_category_id = Some(category);
+    e.wip_warehouse_id = Some(wip_wh);
+    e.fg_warehouse_id = Some(fg_wh);
+
+    let sink = LoggingSink;
+    let wo = svc.handle_subcontract_receipt(&e, &sink).await.unwrap();
+
+    let (got_category, got_wip, got_fg): (Option<Uuid>, Option<Uuid>, Option<Uuid>) =
+        sqlx::query_as(
+            "SELECT product_category_id, wip_warehouse_id, fg_warehouse_id \
+               FROM manufacturing.work_orders WHERE id = $1",
+        )
+        .bind(wo)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(got_category, Some(category), "the category must reach the order, or accounts cannot resolve");
+    assert_eq!(got_wip, Some(wip_wh), "wip warehouse must reach the order");
+    assert_eq!(got_fg, Some(fg_wh), "fg warehouse must reach the order, or receive refuses");
 }
