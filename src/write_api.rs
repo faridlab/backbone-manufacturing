@@ -62,8 +62,9 @@ use crate::application::service::{
     manufacturing_gl::GlPostSink,
     manufacturing_ports::{CostPosture, InventoryPort},
     manufacturing_write_service::{
-        ManufacturingError, ManufacturingWriteService, NewJobCard, NewProductivity, NewRepairOrder,
-        NewRepairPart, NewUnbuild, ReceiveByproductLine, ReceiveFinishedOrder,
+        ManufacturingError, ManufacturingWriteService, NewBom, NewBomItem, NewBomOperation,
+        NewJobCard, NewProductivity, NewRepairOrder, NewRepairPart, NewUnbuild, NewWorkOrder,
+        ReceiveByproductLine, ReceiveFinishedOrder,
     },
 };
 use crate::domain::entity::{RepairLineType, ReservationState};
@@ -89,6 +90,12 @@ pub struct ManufacturingWriteDeps {
 /// must not allow directly.
 pub fn create_manufacturing_write_routes() -> Router<ManufacturingWriteDeps> {
     Router::new()
+        // Authoring: a bill of materials, then the order raised against it. These forward to the
+        // same validated write service the lifecycle verbs use — they are here because without
+        // them the lifecycle has nothing to act on: a work order could be confirmed, consumed and
+        // received, and never raised.
+        .route("/boms", post(create_bom))
+        .route("/work-orders", post(create_work_order))
         // Work-order lifecycle: draft → confirmed → progress → to_close|done, cancel from draft|confirmed.
         .route("/work-orders/:id/confirm", post(confirm_work_order))
         .route("/work-orders/:id/cancel", post(cancel_work_order))
@@ -117,6 +124,141 @@ pub fn create_manufacturing_write_routes() -> Router<ManufacturingWriteDeps> {
 // ---------------------------------------------------------------------------
 // Handlers — thin forwarders; ManufacturingWriteService does all the work.
 // ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBomItemBody {
+    pub item_id: Uuid,
+    pub quantity: Decimal,
+    #[serde(default)]
+    pub rate: Decimal,
+    /// A phantom sub-assembly is exploded through to its own BOM's components at confirm,
+    /// never issued as itself.
+    #[serde(default)]
+    pub is_phantom: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBomOperationBody {
+    pub operation_id: Uuid,
+    pub workstation_id: Uuid,
+    pub time_in_mins: Decimal,
+    pub hour_rate: Decimal,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBomBody {
+    pub item_id: Uuid,
+    pub bom_code: String,
+    pub quantity: Decimal,
+    #[serde(default)]
+    pub uom: Option<String>,
+    pub items: Vec<CreateBomItemBody>,
+    #[serde(default)]
+    pub operations: Vec<CreateBomOperationBody>,
+}
+
+#[derive(Serialize)]
+pub struct BomResponse {
+    pub bom_id: Uuid,
+}
+
+/// Author a bill of materials. The service refuses a BoM with no components and a
+/// non-positive quantity; both are invariants, not shapes the caller may choose.
+pub async fn create_bom(
+    State(deps): State<ManufacturingWriteDeps>,
+    Json(body): Json<CreateBomBody>,
+) -> Result<Json<BomResponse>, (StatusCode, String)> {
+    let id = deps
+        .write_service
+        .create_bom(NewBom {
+            item_id: body.item_id,
+            bom_code: body.bom_code,
+            quantity: body.quantity,
+            uom: body.uom,
+            items: body
+                .items
+                .into_iter()
+                .map(|i| NewBomItem {
+                    item_id: i.item_id,
+                    quantity: i.quantity,
+                    rate: i.rate,
+                    is_phantom: i.is_phantom,
+                })
+                .collect(),
+            operations: body
+                .operations
+                .into_iter()
+                .map(|o| NewBomOperation {
+                    operation_id: o.operation_id,
+                    workstation_id: o.workstation_id,
+                    time_in_mins: o.time_in_mins,
+                    hour_rate: o.hour_rate,
+                })
+                .collect(),
+        })
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(BomResponse { bom_id: id }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateWorkOrderBody {
+    pub work_order_number: String,
+    pub item_id: Uuid,
+    pub bom_id: Uuid,
+    pub quantity: Decimal,
+    /// The item's product category, which selects the costing defaults that fill any account
+    /// left unset below. Supplying neither leaves the order with no costing accounts, and the
+    /// first valuation leg refuses rather than guessing one.
+    #[serde(default)]
+    pub product_category_id: Option<Uuid>,
+    #[serde(default)]
+    pub wip_warehouse_id: Option<Uuid>,
+    #[serde(default)]
+    pub fg_warehouse_id: Option<Uuid>,
+    #[serde(default)]
+    pub wip_account_id: Option<Uuid>,
+    #[serde(default)]
+    pub fg_account_id: Option<Uuid>,
+    #[serde(default)]
+    pub raw_material_account_id: Option<Uuid>,
+    #[serde(default)]
+    pub conversion_cost_account_id: Option<Uuid>,
+}
+
+#[derive(Serialize)]
+pub struct WorkOrderResponse {
+    pub work_order_id: Uuid,
+}
+
+/// Raise a draft work order against a bill of materials.
+pub async fn create_work_order(
+    State(deps): State<ManufacturingWriteDeps>,
+    Json(body): Json<CreateWorkOrderBody>,
+) -> Result<Json<WorkOrderResponse>, (StatusCode, String)> {
+    let id = deps
+        .write_service
+        .create_work_order(NewWorkOrder {
+            work_order_number: body.work_order_number,
+            item_id: body.item_id,
+            bom_id: body.bom_id,
+            quantity: body.quantity,
+            product_category_id: body.product_category_id,
+            wip_warehouse_id: body.wip_warehouse_id,
+            fg_warehouse_id: body.fg_warehouse_id,
+            wip_account_id: body.wip_account_id,
+            fg_account_id: body.fg_account_id,
+            raw_material_account_id: body.raw_material_account_id,
+            conversion_cost_account_id: body.conversion_cost_account_id,
+        })
+        .await
+        .map_err(map_mfg_error)?;
+    Ok(Json(WorkOrderResponse { work_order_id: id }))
+}
 
 #[derive(Serialize)]
 pub struct ConfirmResponse {

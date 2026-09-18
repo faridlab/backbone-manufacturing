@@ -1,6 +1,6 @@
 [package]
 name = "backbone-manufacturing"
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 description = "Manufacturing module: BOM/product definition (versioned, typed normal/kit/subcontract) and work-order execution (hybrid 6-state lifecycle, WIP job-order costing through the inventory/GL ports, unbuild, repair, subcontract mint, OEE read side)"
 
