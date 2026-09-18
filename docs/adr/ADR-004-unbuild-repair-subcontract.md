@@ -35,8 +35,9 @@ order (`subcontract_mo_links` unique is the replay backstop; replays return the 
 is atomic — confirmed WO + exploded requirements + link row in ONE transaction; there is no
 orphan-draft window — and the item's active BoM must be `bom_type='subcontract'` or the receipt is
 an authoring defect, LOUD. The minted MO lands directly `confirmed`, numbered by the purchase
-reference, warehouses NULL for the operator; inventory/ledger value rides the ordinary
-consume/receive verbs (extra cost through the interim account). A non-subcontract receipt event
+reference, warehouses supplied by the composer when it knows them (see the amendment below);
+inventory/ledger value rides the ordinary consume/receive verbs (extra cost through the interim
+account). A non-subcontract receipt event
 never mints (`SubcontractKindMismatch`). Zero buying writes, zero SVL.
 
 ## Consequences
@@ -50,3 +51,27 @@ never mints (`SubcontractKindMismatch`). Zero buying writes, zero SVL.
 Anchors: `manufacturing_unbuild.rs`, `manufacturing_repair.rs`, `manufacturing_subcontract.rs`,
 `manufacturing_ports.rs`, `tests/unbuild_golden_cases.rs`, `tests/repair_lifecycle_probes.rs`,
 `tests/subcontract_golden_cases.rs`.
+
+## Amendment 2026-09-18 — the mint carries what only the composer knows
+
+The original decision left the minted order's warehouses NULL "for the operator". That reads well
+and does not survive contact with the event lane: a work order minted from an event is never
+touched by an operator before its first verb runs, and `receive_finished` refuses without an
+`fg_warehouse_id`. Every hidden order therefore arrived permanently stuck, and the refusal named a
+missing account rather than a missing setup step.
+
+The same applies to the product category. The account-resolution chain walks it to reach the
+costing defaults, and the mint set it to `None`, so the chain had nothing to walk.
+
+`SubcontractReceiptEvent` now carries three optional fields the composer fills:
+`product_category_id`, `wip_warehouse_id`, `fg_warehouse_id`. The module still reads no product
+catalogue and still names no warehouse of its own — it forwards what the envelope carries, and a
+composer that supplies nothing gets exactly the old behaviour, NULL and a loud refusal at the first
+valuation leg.
+
+What changed is who is expected to know. The composer resolves the category from the catalogue and
+the warehouse from the receipt the goods actually landed in, because it is the only party that can
+see either. An operator override is still the right idea; it is now an override of a working
+default rather than the only way to make the order usable.
+
+Covered by `scb6_composition_fields_reach_the_mint`.
