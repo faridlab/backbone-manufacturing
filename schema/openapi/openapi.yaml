@@ -7,7 +7,7 @@ info:
     This API provides 11 standard CRUD endpoints for each model.
 
 servers:
-  - url: http://localhost:3000
+  - url: /
     description: Development server
 
 tags:
@@ -49,7 +49,7 @@ tags:
     description: SubcontractMoLink management endpoints
 
 paths:
-  /api/v1/workstations:
+  /api/v1/manufacturing/workstations:
     get:
       tags:
         - Workstations
@@ -95,7 +95,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/workstations/{id}:
+  /api/v1/manufacturing/workstations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -167,7 +167,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstations/bulk:
+  /api/v1/manufacturing/workstations/bulk:
     post:
       tags:
         - Workstations
@@ -259,7 +259,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstations/upsert:
+  /api/v1/manufacturing/workstations/upsert:
     post:
       tags:
         - Workstations
@@ -289,7 +289,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Workstation'
 
-  /api/v1/workstations/trash:
+  /api/v1/manufacturing/workstations/trash:
     get:
       tags:
         - Workstations
@@ -306,7 +306,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkstationList'
 
-  /api/v1/workstations/{id}/restore:
+  /api/v1/manufacturing/workstations/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -324,7 +324,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstations/empty:
+  /api/v1/manufacturing/workstations/empty:
     delete:
       tags:
         - Workstations
@@ -341,7 +341,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/workstations/delete/bulk:
+  /api/v1/manufacturing/workstations/delete/bulk:
     post:
       tags:
         - Workstations
@@ -361,7 +361,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstations/restore/bulk:
+  /api/v1/manufacturing/workstations/restore/bulk:
     post:
       tags:
         - Workstations
@@ -379,7 +379,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstations/restore/all:
+  /api/v1/manufacturing/workstations/restore/all:
     post:
       tags:
         - Workstations
@@ -395,7 +395,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/workstations/trash/bulk:
+  /api/v1/manufacturing/workstations/trash/bulk:
     delete:
       tags:
         - Workstations
@@ -415,7 +415,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_losses:
+  /api/v1/manufacturing/workstation_losses:
     get:
       tags:
         - WorkstationLosses
@@ -461,7 +461,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/workstation_losses/{id}:
+  /api/v1/manufacturing/workstation_losses/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -533,7 +533,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstation_losses/bulk:
+  /api/v1/manufacturing/workstation_losses/bulk:
     post:
       tags:
         - WorkstationLosses
@@ -625,7 +625,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_losses/upsert:
+  /api/v1/manufacturing/workstation_losses/upsert:
     post:
       tags:
         - WorkstationLosses
@@ -655,7 +655,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkstationLoss'
 
-  /api/v1/workstation_losses/trash:
+  /api/v1/manufacturing/workstation_losses/trash:
     get:
       tags:
         - WorkstationLosses
@@ -672,7 +672,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkstationLossList'
 
-  /api/v1/workstation_losses/{id}/restore:
+  /api/v1/manufacturing/workstation_losses/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -690,7 +690,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstation_losses/empty:
+  /api/v1/manufacturing/workstation_losses/empty:
     delete:
       tags:
         - WorkstationLosses
@@ -707,7 +707,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/workstation_losses/delete/bulk:
+  /api/v1/manufacturing/workstation_losses/delete/bulk:
     post:
       tags:
         - WorkstationLosses
@@ -727,7 +727,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_losses/restore/bulk:
+  /api/v1/manufacturing/workstation_losses/restore/bulk:
     post:
       tags:
         - WorkstationLosses
@@ -745,7 +745,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_losses/restore/all:
+  /api/v1/manufacturing/workstation_losses/restore/all:
     post:
       tags:
         - WorkstationLosses
@@ -761,7 +761,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/workstation_losses/trash/bulk:
+  /api/v1/manufacturing/workstation_losses/trash/bulk:
     delete:
       tags:
         - WorkstationLosses
@@ -781,7 +781,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_productivities:
+  /api/v1/manufacturing/workstation_productivities:
     get:
       tags:
         - WorkstationProductivities
@@ -827,7 +827,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/workstation_productivities/{id}:
+  /api/v1/manufacturing/workstation_productivities/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -899,7 +899,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstation_productivities/bulk:
+  /api/v1/manufacturing/workstation_productivities/bulk:
     post:
       tags:
         - WorkstationProductivities
@@ -991,7 +991,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_productivities/upsert:
+  /api/v1/manufacturing/workstation_productivities/upsert:
     post:
       tags:
         - WorkstationProductivities
@@ -1021,7 +1021,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkstationProductivity'
 
-  /api/v1/workstation_productivities/trash:
+  /api/v1/manufacturing/workstation_productivities/trash:
     get:
       tags:
         - WorkstationProductivities
@@ -1038,7 +1038,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkstationProductivityList'
 
-  /api/v1/workstation_productivities/{id}/restore:
+  /api/v1/manufacturing/workstation_productivities/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1056,7 +1056,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/workstation_productivities/empty:
+  /api/v1/manufacturing/workstation_productivities/empty:
     delete:
       tags:
         - WorkstationProductivities
@@ -1073,7 +1073,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/workstation_productivities/delete/bulk:
+  /api/v1/manufacturing/workstation_productivities/delete/bulk:
     post:
       tags:
         - WorkstationProductivities
@@ -1093,7 +1093,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_productivities/restore/bulk:
+  /api/v1/manufacturing/workstation_productivities/restore/bulk:
     post:
       tags:
         - WorkstationProductivities
@@ -1111,7 +1111,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/workstation_productivities/restore/all:
+  /api/v1/manufacturing/workstation_productivities/restore/all:
     post:
       tags:
         - WorkstationProductivities
@@ -1127,7 +1127,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/workstation_productivities/trash/bulk:
+  /api/v1/manufacturing/workstation_productivities/trash/bulk:
     delete:
       tags:
         - WorkstationProductivities
@@ -1147,7 +1147,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/operations:
+  /api/v1/manufacturing/operations:
     get:
       tags:
         - Operations
@@ -1193,7 +1193,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/operations/{id}:
+  /api/v1/manufacturing/operations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1265,7 +1265,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/operations/bulk:
+  /api/v1/manufacturing/operations/bulk:
     post:
       tags:
         - Operations
@@ -1357,7 +1357,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/operations/upsert:
+  /api/v1/manufacturing/operations/upsert:
     post:
       tags:
         - Operations
@@ -1387,7 +1387,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Operation'
 
-  /api/v1/operations/trash:
+  /api/v1/manufacturing/operations/trash:
     get:
       tags:
         - Operations
@@ -1404,7 +1404,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OperationList'
 
-  /api/v1/operations/{id}/restore:
+  /api/v1/manufacturing/operations/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1422,7 +1422,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/operations/empty:
+  /api/v1/manufacturing/operations/empty:
     delete:
       tags:
         - Operations
@@ -1439,7 +1439,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/operations/delete/bulk:
+  /api/v1/manufacturing/operations/delete/bulk:
     post:
       tags:
         - Operations
@@ -1459,7 +1459,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/operations/restore/bulk:
+  /api/v1/manufacturing/operations/restore/bulk:
     post:
       tags:
         - Operations
@@ -1477,7 +1477,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/operations/restore/all:
+  /api/v1/manufacturing/operations/restore/all:
     post:
       tags:
         - Operations
@@ -1493,7 +1493,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/operations/trash/bulk:
+  /api/v1/manufacturing/operations/trash/bulk:
     delete:
       tags:
         - Operations
@@ -1513,7 +1513,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/boms:
+  /api/v1/manufacturing/boms:
     get:
       tags:
         - Boms
@@ -1559,7 +1559,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/boms/{id}:
+  /api/v1/manufacturing/boms/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1631,7 +1631,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/boms/bulk:
+  /api/v1/manufacturing/boms/bulk:
     post:
       tags:
         - Boms
@@ -1723,7 +1723,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/boms/upsert:
+  /api/v1/manufacturing/boms/upsert:
     post:
       tags:
         - Boms
@@ -1753,7 +1753,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bom'
 
-  /api/v1/boms/trash:
+  /api/v1/manufacturing/boms/trash:
     get:
       tags:
         - Boms
@@ -1770,7 +1770,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomList'
 
-  /api/v1/boms/{id}/restore:
+  /api/v1/manufacturing/boms/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1788,7 +1788,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/boms/empty:
+  /api/v1/manufacturing/boms/empty:
     delete:
       tags:
         - Boms
@@ -1805,7 +1805,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/boms/delete/bulk:
+  /api/v1/manufacturing/boms/delete/bulk:
     post:
       tags:
         - Boms
@@ -1825,7 +1825,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/boms/restore/bulk:
+  /api/v1/manufacturing/boms/restore/bulk:
     post:
       tags:
         - Boms
@@ -1843,7 +1843,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/boms/restore/all:
+  /api/v1/manufacturing/boms/restore/all:
     post:
       tags:
         - Boms
@@ -1859,7 +1859,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/boms/trash/bulk:
+  /api/v1/manufacturing/boms/trash/bulk:
     delete:
       tags:
         - Boms
@@ -1879,7 +1879,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_items:
+  /api/v1/manufacturing/bom_items:
     get:
       tags:
         - BomItems
@@ -1925,7 +1925,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/bom_items/{id}:
+  /api/v1/manufacturing/bom_items/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1997,7 +1997,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_items/bulk:
+  /api/v1/manufacturing/bom_items/bulk:
     post:
       tags:
         - BomItems
@@ -2089,7 +2089,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_items/upsert:
+  /api/v1/manufacturing/bom_items/upsert:
     post:
       tags:
         - BomItems
@@ -2119,7 +2119,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomItem'
 
-  /api/v1/bom_items/trash:
+  /api/v1/manufacturing/bom_items/trash:
     get:
       tags:
         - BomItems
@@ -2136,7 +2136,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomItemList'
 
-  /api/v1/bom_items/{id}/restore:
+  /api/v1/manufacturing/bom_items/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2154,7 +2154,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_items/empty:
+  /api/v1/manufacturing/bom_items/empty:
     delete:
       tags:
         - BomItems
@@ -2171,7 +2171,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/bom_items/delete/bulk:
+  /api/v1/manufacturing/bom_items/delete/bulk:
     post:
       tags:
         - BomItems
@@ -2191,7 +2191,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_items/restore/bulk:
+  /api/v1/manufacturing/bom_items/restore/bulk:
     post:
       tags:
         - BomItems
@@ -2209,7 +2209,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_items/restore/all:
+  /api/v1/manufacturing/bom_items/restore/all:
     post:
       tags:
         - BomItems
@@ -2225,7 +2225,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/bom_items/trash/bulk:
+  /api/v1/manufacturing/bom_items/trash/bulk:
     delete:
       tags:
         - BomItems
@@ -2245,7 +2245,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_operations:
+  /api/v1/manufacturing/bom_operations:
     get:
       tags:
         - BomOperations
@@ -2291,7 +2291,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/bom_operations/{id}:
+  /api/v1/manufacturing/bom_operations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -2363,7 +2363,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_operations/bulk:
+  /api/v1/manufacturing/bom_operations/bulk:
     post:
       tags:
         - BomOperations
@@ -2455,7 +2455,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_operations/upsert:
+  /api/v1/manufacturing/bom_operations/upsert:
     post:
       tags:
         - BomOperations
@@ -2485,7 +2485,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomOperation'
 
-  /api/v1/bom_operations/trash:
+  /api/v1/manufacturing/bom_operations/trash:
     get:
       tags:
         - BomOperations
@@ -2502,7 +2502,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomOperationList'
 
-  /api/v1/bom_operations/{id}/restore:
+  /api/v1/manufacturing/bom_operations/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2520,7 +2520,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_operations/empty:
+  /api/v1/manufacturing/bom_operations/empty:
     delete:
       tags:
         - BomOperations
@@ -2537,7 +2537,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/bom_operations/delete/bulk:
+  /api/v1/manufacturing/bom_operations/delete/bulk:
     post:
       tags:
         - BomOperations
@@ -2557,7 +2557,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_operations/restore/bulk:
+  /api/v1/manufacturing/bom_operations/restore/bulk:
     post:
       tags:
         - BomOperations
@@ -2575,7 +2575,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_operations/restore/all:
+  /api/v1/manufacturing/bom_operations/restore/all:
     post:
       tags:
         - BomOperations
@@ -2591,7 +2591,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/bom_operations/trash/bulk:
+  /api/v1/manufacturing/bom_operations/trash/bulk:
     delete:
       tags:
         - BomOperations
@@ -2611,7 +2611,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_byproducts:
+  /api/v1/manufacturing/bom_byproducts:
     get:
       tags:
         - BomByproducts
@@ -2657,7 +2657,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/bom_byproducts/{id}:
+  /api/v1/manufacturing/bom_byproducts/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -2729,7 +2729,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_byproducts/bulk:
+  /api/v1/manufacturing/bom_byproducts/bulk:
     post:
       tags:
         - BomByproducts
@@ -2821,7 +2821,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_byproducts/upsert:
+  /api/v1/manufacturing/bom_byproducts/upsert:
     post:
       tags:
         - BomByproducts
@@ -2851,7 +2851,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomByproduct'
 
-  /api/v1/bom_byproducts/trash:
+  /api/v1/manufacturing/bom_byproducts/trash:
     get:
       tags:
         - BomByproducts
@@ -2868,7 +2868,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomByproductList'
 
-  /api/v1/bom_byproducts/{id}/restore:
+  /api/v1/manufacturing/bom_byproducts/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2886,7 +2886,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_byproducts/empty:
+  /api/v1/manufacturing/bom_byproducts/empty:
     delete:
       tags:
         - BomByproducts
@@ -2903,7 +2903,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/bom_byproducts/delete/bulk:
+  /api/v1/manufacturing/bom_byproducts/delete/bulk:
     post:
       tags:
         - BomByproducts
@@ -2923,7 +2923,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_byproducts/restore/bulk:
+  /api/v1/manufacturing/bom_byproducts/restore/bulk:
     post:
       tags:
         - BomByproducts
@@ -2941,7 +2941,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_byproducts/restore/all:
+  /api/v1/manufacturing/bom_byproducts/restore/all:
     post:
       tags:
         - BomByproducts
@@ -2957,7 +2957,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/bom_byproducts/trash/bulk:
+  /api/v1/manufacturing/bom_byproducts/trash/bulk:
     delete:
       tags:
         - BomByproducts
@@ -2977,7 +2977,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_subcontractors:
+  /api/v1/manufacturing/bom_subcontractors:
     get:
       tags:
         - BomSubcontractors
@@ -3023,7 +3023,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/bom_subcontractors/{id}:
+  /api/v1/manufacturing/bom_subcontractors/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3095,7 +3095,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_subcontractors/bulk:
+  /api/v1/manufacturing/bom_subcontractors/bulk:
     post:
       tags:
         - BomSubcontractors
@@ -3187,7 +3187,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_subcontractors/upsert:
+  /api/v1/manufacturing/bom_subcontractors/upsert:
     post:
       tags:
         - BomSubcontractors
@@ -3217,7 +3217,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomSubcontractor'
 
-  /api/v1/bom_subcontractors/trash:
+  /api/v1/manufacturing/bom_subcontractors/trash:
     get:
       tags:
         - BomSubcontractors
@@ -3234,7 +3234,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BomSubcontractorList'
 
-  /api/v1/bom_subcontractors/{id}/restore:
+  /api/v1/manufacturing/bom_subcontractors/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3252,7 +3252,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bom_subcontractors/empty:
+  /api/v1/manufacturing/bom_subcontractors/empty:
     delete:
       tags:
         - BomSubcontractors
@@ -3269,7 +3269,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/bom_subcontractors/delete/bulk:
+  /api/v1/manufacturing/bom_subcontractors/delete/bulk:
     post:
       tags:
         - BomSubcontractors
@@ -3289,7 +3289,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_subcontractors/restore/bulk:
+  /api/v1/manufacturing/bom_subcontractors/restore/bulk:
     post:
       tags:
         - BomSubcontractors
@@ -3307,7 +3307,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bom_subcontractors/restore/all:
+  /api/v1/manufacturing/bom_subcontractors/restore/all:
     post:
       tags:
         - BomSubcontractors
@@ -3323,7 +3323,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/bom_subcontractors/trash/bulk:
+  /api/v1/manufacturing/bom_subcontractors/trash/bulk:
     delete:
       tags:
         - BomSubcontractors
@@ -3343,7 +3343,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/category_costing_defaultses:
+  /api/v1/manufacturing/category_costing_defaultses:
     get:
       tags:
         - CategoryCostingDefaultses
@@ -3389,7 +3389,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/category_costing_defaultses/{id}:
+  /api/v1/manufacturing/category_costing_defaultses/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3461,7 +3461,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/category_costing_defaultses/bulk:
+  /api/v1/manufacturing/category_costing_defaultses/bulk:
     post:
       tags:
         - CategoryCostingDefaultses
@@ -3553,7 +3553,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/category_costing_defaultses/upsert:
+  /api/v1/manufacturing/category_costing_defaultses/upsert:
     post:
       tags:
         - CategoryCostingDefaultses
@@ -3583,7 +3583,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CategoryCostingDefaults'
 
-  /api/v1/category_costing_defaultses/trash:
+  /api/v1/manufacturing/category_costing_defaultses/trash:
     get:
       tags:
         - CategoryCostingDefaultses
@@ -3600,7 +3600,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CategoryCostingDefaultsList'
 
-  /api/v1/category_costing_defaultses/{id}/restore:
+  /api/v1/manufacturing/category_costing_defaultses/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3618,7 +3618,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/category_costing_defaultses/empty:
+  /api/v1/manufacturing/category_costing_defaultses/empty:
     delete:
       tags:
         - CategoryCostingDefaultses
@@ -3635,7 +3635,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/category_costing_defaultses/delete/bulk:
+  /api/v1/manufacturing/category_costing_defaultses/delete/bulk:
     post:
       tags:
         - CategoryCostingDefaultses
@@ -3655,7 +3655,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/category_costing_defaultses/restore/bulk:
+  /api/v1/manufacturing/category_costing_defaultses/restore/bulk:
     post:
       tags:
         - CategoryCostingDefaultses
@@ -3673,7 +3673,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/category_costing_defaultses/restore/all:
+  /api/v1/manufacturing/category_costing_defaultses/restore/all:
     post:
       tags:
         - CategoryCostingDefaultses
@@ -3689,7 +3689,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/category_costing_defaultses/trash/bulk:
+  /api/v1/manufacturing/category_costing_defaultses/trash/bulk:
     delete:
       tags:
         - CategoryCostingDefaultses
@@ -3709,7 +3709,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_orders:
+  /api/v1/manufacturing/repair_orders:
     get:
       tags:
         - RepairOrders
@@ -3755,7 +3755,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/repair_orders/{id}:
+  /api/v1/manufacturing/repair_orders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3827,7 +3827,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_orders/bulk:
+  /api/v1/manufacturing/repair_orders/bulk:
     post:
       tags:
         - RepairOrders
@@ -3919,7 +3919,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_orders/upsert:
+  /api/v1/manufacturing/repair_orders/upsert:
     post:
       tags:
         - RepairOrders
@@ -3949,7 +3949,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairOrder'
 
-  /api/v1/repair_orders/trash:
+  /api/v1/manufacturing/repair_orders/trash:
     get:
       tags:
         - RepairOrders
@@ -3966,7 +3966,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairOrderList'
 
-  /api/v1/repair_orders/{id}/restore:
+  /api/v1/manufacturing/repair_orders/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3984,7 +3984,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_orders/empty:
+  /api/v1/manufacturing/repair_orders/empty:
     delete:
       tags:
         - RepairOrders
@@ -4001,7 +4001,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/repair_orders/delete/bulk:
+  /api/v1/manufacturing/repair_orders/delete/bulk:
     post:
       tags:
         - RepairOrders
@@ -4021,7 +4021,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_orders/restore/bulk:
+  /api/v1/manufacturing/repair_orders/restore/bulk:
     post:
       tags:
         - RepairOrders
@@ -4039,7 +4039,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_orders/restore/all:
+  /api/v1/manufacturing/repair_orders/restore/all:
     post:
       tags:
         - RepairOrders
@@ -4055,7 +4055,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/repair_orders/trash/bulk:
+  /api/v1/manufacturing/repair_orders/trash/bulk:
     delete:
       tags:
         - RepairOrders
@@ -4075,7 +4075,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_parts:
+  /api/v1/manufacturing/repair_parts:
     get:
       tags:
         - RepairParts
@@ -4121,7 +4121,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/repair_parts/{id}:
+  /api/v1/manufacturing/repair_parts/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4193,7 +4193,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_parts/bulk:
+  /api/v1/manufacturing/repair_parts/bulk:
     post:
       tags:
         - RepairParts
@@ -4285,7 +4285,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_parts/upsert:
+  /api/v1/manufacturing/repair_parts/upsert:
     post:
       tags:
         - RepairParts
@@ -4315,7 +4315,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairPart'
 
-  /api/v1/repair_parts/trash:
+  /api/v1/manufacturing/repair_parts/trash:
     get:
       tags:
         - RepairParts
@@ -4332,7 +4332,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairPartList'
 
-  /api/v1/repair_parts/{id}/restore:
+  /api/v1/manufacturing/repair_parts/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -4350,7 +4350,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_parts/empty:
+  /api/v1/manufacturing/repair_parts/empty:
     delete:
       tags:
         - RepairParts
@@ -4367,7 +4367,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/repair_parts/delete/bulk:
+  /api/v1/manufacturing/repair_parts/delete/bulk:
     post:
       tags:
         - RepairParts
@@ -4387,7 +4387,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_parts/restore/bulk:
+  /api/v1/manufacturing/repair_parts/restore/bulk:
     post:
       tags:
         - RepairParts
@@ -4405,7 +4405,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_parts/restore/all:
+  /api/v1/manufacturing/repair_parts/restore/all:
     post:
       tags:
         - RepairParts
@@ -4421,7 +4421,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/repair_parts/trash/bulk:
+  /api/v1/manufacturing/repair_parts/trash/bulk:
     delete:
       tags:
         - RepairParts
@@ -4441,7 +4441,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_tags:
+  /api/v1/manufacturing/repair_tags:
     get:
       tags:
         - RepairTags
@@ -4487,7 +4487,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/repair_tags/{id}:
+  /api/v1/manufacturing/repair_tags/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4559,7 +4559,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_tags/bulk:
+  /api/v1/manufacturing/repair_tags/bulk:
     post:
       tags:
         - RepairTags
@@ -4651,7 +4651,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_tags/upsert:
+  /api/v1/manufacturing/repair_tags/upsert:
     post:
       tags:
         - RepairTags
@@ -4681,7 +4681,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairTag'
 
-  /api/v1/repair_tags/trash:
+  /api/v1/manufacturing/repair_tags/trash:
     get:
       tags:
         - RepairTags
@@ -4698,7 +4698,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RepairTagList'
 
-  /api/v1/repair_tags/{id}/restore:
+  /api/v1/manufacturing/repair_tags/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -4716,7 +4716,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/repair_tags/empty:
+  /api/v1/manufacturing/repair_tags/empty:
     delete:
       tags:
         - RepairTags
@@ -4733,7 +4733,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/repair_tags/delete/bulk:
+  /api/v1/manufacturing/repair_tags/delete/bulk:
     post:
       tags:
         - RepairTags
@@ -4753,7 +4753,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_tags/restore/bulk:
+  /api/v1/manufacturing/repair_tags/restore/bulk:
     post:
       tags:
         - RepairTags
@@ -4771,7 +4771,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/repair_tags/restore/all:
+  /api/v1/manufacturing/repair_tags/restore/all:
     post:
       tags:
         - RepairTags
@@ -4787,7 +4787,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/repair_tags/trash/bulk:
+  /api/v1/manufacturing/repair_tags/trash/bulk:
     delete:
       tags:
         - RepairTags
@@ -4807,7 +4807,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/unbuild_orders:
+  /api/v1/manufacturing/unbuild_orders:
     get:
       tags:
         - UnbuildOrders
@@ -4853,7 +4853,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/unbuild_orders/{id}:
+  /api/v1/manufacturing/unbuild_orders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4925,7 +4925,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/unbuild_orders/bulk:
+  /api/v1/manufacturing/unbuild_orders/bulk:
     post:
       tags:
         - UnbuildOrders
@@ -5017,7 +5017,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/unbuild_orders/upsert:
+  /api/v1/manufacturing/unbuild_orders/upsert:
     post:
       tags:
         - UnbuildOrders
@@ -5047,7 +5047,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnbuildOrder'
 
-  /api/v1/unbuild_orders/trash:
+  /api/v1/manufacturing/unbuild_orders/trash:
     get:
       tags:
         - UnbuildOrders
@@ -5064,7 +5064,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnbuildOrderList'
 
-  /api/v1/unbuild_orders/{id}/restore:
+  /api/v1/manufacturing/unbuild_orders/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5082,7 +5082,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/unbuild_orders/empty:
+  /api/v1/manufacturing/unbuild_orders/empty:
     delete:
       tags:
         - UnbuildOrders
@@ -5099,7 +5099,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/unbuild_orders/delete/bulk:
+  /api/v1/manufacturing/unbuild_orders/delete/bulk:
     post:
       tags:
         - UnbuildOrders
@@ -5119,7 +5119,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/unbuild_orders/restore/bulk:
+  /api/v1/manufacturing/unbuild_orders/restore/bulk:
     post:
       tags:
         - UnbuildOrders
@@ -5137,7 +5137,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/unbuild_orders/restore/all:
+  /api/v1/manufacturing/unbuild_orders/restore/all:
     post:
       tags:
         - UnbuildOrders
@@ -5153,7 +5153,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/unbuild_orders/trash/bulk:
+  /api/v1/manufacturing/unbuild_orders/trash/bulk:
     delete:
       tags:
         - UnbuildOrders
@@ -5173,7 +5173,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_orders:
+  /api/v1/manufacturing/work_orders:
     get:
       tags:
         - WorkOrders
@@ -5219,7 +5219,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/work_orders/{id}:
+  /api/v1/manufacturing/work_orders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -5291,7 +5291,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/work_orders/bulk:
+  /api/v1/manufacturing/work_orders/bulk:
     post:
       tags:
         - WorkOrders
@@ -5383,7 +5383,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_orders/upsert:
+  /api/v1/manufacturing/work_orders/upsert:
     post:
       tags:
         - WorkOrders
@@ -5413,7 +5413,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkOrder'
 
-  /api/v1/work_orders/trash:
+  /api/v1/manufacturing/work_orders/trash:
     get:
       tags:
         - WorkOrders
@@ -5430,7 +5430,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkOrderList'
 
-  /api/v1/work_orders/{id}/restore:
+  /api/v1/manufacturing/work_orders/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5448,7 +5448,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/work_orders/empty:
+  /api/v1/manufacturing/work_orders/empty:
     delete:
       tags:
         - WorkOrders
@@ -5465,7 +5465,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/work_orders/delete/bulk:
+  /api/v1/manufacturing/work_orders/delete/bulk:
     post:
       tags:
         - WorkOrders
@@ -5485,7 +5485,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_orders/restore/bulk:
+  /api/v1/manufacturing/work_orders/restore/bulk:
     post:
       tags:
         - WorkOrders
@@ -5503,7 +5503,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_orders/restore/all:
+  /api/v1/manufacturing/work_orders/restore/all:
     post:
       tags:
         - WorkOrders
@@ -5519,7 +5519,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/work_orders/trash/bulk:
+  /api/v1/manufacturing/work_orders/trash/bulk:
     delete:
       tags:
         - WorkOrders
@@ -5539,7 +5539,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_order_items:
+  /api/v1/manufacturing/work_order_items:
     get:
       tags:
         - WorkOrderItems
@@ -5585,7 +5585,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/work_order_items/{id}:
+  /api/v1/manufacturing/work_order_items/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -5657,7 +5657,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/work_order_items/bulk:
+  /api/v1/manufacturing/work_order_items/bulk:
     post:
       tags:
         - WorkOrderItems
@@ -5749,7 +5749,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_order_items/upsert:
+  /api/v1/manufacturing/work_order_items/upsert:
     post:
       tags:
         - WorkOrderItems
@@ -5779,7 +5779,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkOrderItem'
 
-  /api/v1/work_order_items/trash:
+  /api/v1/manufacturing/work_order_items/trash:
     get:
       tags:
         - WorkOrderItems
@@ -5796,7 +5796,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkOrderItemList'
 
-  /api/v1/work_order_items/{id}/restore:
+  /api/v1/manufacturing/work_order_items/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5814,7 +5814,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/work_order_items/empty:
+  /api/v1/manufacturing/work_order_items/empty:
     delete:
       tags:
         - WorkOrderItems
@@ -5831,7 +5831,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/work_order_items/delete/bulk:
+  /api/v1/manufacturing/work_order_items/delete/bulk:
     post:
       tags:
         - WorkOrderItems
@@ -5851,7 +5851,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_order_items/restore/bulk:
+  /api/v1/manufacturing/work_order_items/restore/bulk:
     post:
       tags:
         - WorkOrderItems
@@ -5869,7 +5869,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/work_order_items/restore/all:
+  /api/v1/manufacturing/work_order_items/restore/all:
     post:
       tags:
         - WorkOrderItems
@@ -5885,7 +5885,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/work_order_items/trash/bulk:
+  /api/v1/manufacturing/work_order_items/trash/bulk:
     delete:
       tags:
         - WorkOrderItems
@@ -5905,7 +5905,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/job_cards:
+  /api/v1/manufacturing/job_cards:
     get:
       tags:
         - JobCards
@@ -5951,7 +5951,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/job_cards/{id}:
+  /api/v1/manufacturing/job_cards/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -6023,7 +6023,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/job_cards/bulk:
+  /api/v1/manufacturing/job_cards/bulk:
     post:
       tags:
         - JobCards
@@ -6115,7 +6115,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/job_cards/upsert:
+  /api/v1/manufacturing/job_cards/upsert:
     post:
       tags:
         - JobCards
@@ -6145,7 +6145,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/JobCard'
 
-  /api/v1/job_cards/trash:
+  /api/v1/manufacturing/job_cards/trash:
     get:
       tags:
         - JobCards
@@ -6162,7 +6162,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/JobCardList'
 
-  /api/v1/job_cards/{id}/restore:
+  /api/v1/manufacturing/job_cards/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -6180,7 +6180,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/job_cards/empty:
+  /api/v1/manufacturing/job_cards/empty:
     delete:
       tags:
         - JobCards
@@ -6197,7 +6197,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/job_cards/delete/bulk:
+  /api/v1/manufacturing/job_cards/delete/bulk:
     post:
       tags:
         - JobCards
@@ -6217,7 +6217,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/job_cards/restore/bulk:
+  /api/v1/manufacturing/job_cards/restore/bulk:
     post:
       tags:
         - JobCards
@@ -6235,7 +6235,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/job_cards/restore/all:
+  /api/v1/manufacturing/job_cards/restore/all:
     post:
       tags:
         - JobCards
@@ -6251,7 +6251,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/job_cards/trash/bulk:
+  /api/v1/manufacturing/job_cards/trash/bulk:
     delete:
       tags:
         - JobCards
@@ -6271,7 +6271,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/subcontract_mo_links:
+  /api/v1/manufacturing/subcontract_mo_links:
     get:
       tags:
         - SubcontractMoLinks
@@ -6317,7 +6317,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/subcontract_mo_links/{id}:
+  /api/v1/manufacturing/subcontract_mo_links/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -6389,7 +6389,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/subcontract_mo_links/bulk:
+  /api/v1/manufacturing/subcontract_mo_links/bulk:
     post:
       tags:
         - SubcontractMoLinks
@@ -6481,7 +6481,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/subcontract_mo_links/upsert:
+  /api/v1/manufacturing/subcontract_mo_links/upsert:
     post:
       tags:
         - SubcontractMoLinks
@@ -6511,7 +6511,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubcontractMoLink'
 
-  /api/v1/subcontract_mo_links/trash:
+  /api/v1/manufacturing/subcontract_mo_links/trash:
     get:
       tags:
         - SubcontractMoLinks
@@ -6528,7 +6528,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubcontractMoLinkList'
 
-  /api/v1/subcontract_mo_links/{id}/restore:
+  /api/v1/manufacturing/subcontract_mo_links/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -6546,7 +6546,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/subcontract_mo_links/empty:
+  /api/v1/manufacturing/subcontract_mo_links/empty:
     delete:
       tags:
         - SubcontractMoLinks
@@ -6563,7 +6563,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/subcontract_mo_links/delete/bulk:
+  /api/v1/manufacturing/subcontract_mo_links/delete/bulk:
     post:
       tags:
         - SubcontractMoLinks
@@ -6583,7 +6583,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/subcontract_mo_links/restore/bulk:
+  /api/v1/manufacturing/subcontract_mo_links/restore/bulk:
     post:
       tags:
         - SubcontractMoLinks
@@ -6601,7 +6601,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/subcontract_mo_links/restore/all:
+  /api/v1/manufacturing/subcontract_mo_links/restore/all:
     post:
       tags:
         - SubcontractMoLinks
@@ -6617,7 +6617,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/subcontract_mo_links/trash/bulk:
+  /api/v1/manufacturing/subcontract_mo_links/trash/bulk:
     delete:
       tags:
         - SubcontractMoLinks
