@@ -1,6 +1,6 @@
 [package]
 name = "backbone-manufacturing"
-version = "0.5.17"
+version = "0.5.18"
 edition = "2021"
 description = "Manufacturing module: BOM/product definition (versioned, typed normal/kit/subcontract) and work-order execution (hybrid 6-state lifecycle, WIP job-order costing through the inventory/GL ports, unbuild, repair, subcontract mint, OEE read side)"
 
@@ -96,4 +96,4 @@ rand = "0.8"
 # `cargo tree -e normal -i backbone-accounting` is empty). Inventory is driven through `InventoryPort`.
 # Pinned to the tenant-agnostic (ADR-0029) accounting line — the undecorated module tests assume
 # the company-free accounts shape.
-backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.9.13" }
+backbone-accounting = { git = "https://github.com/faridlab/backbone-accounting", tag = "v0.9.14" }
