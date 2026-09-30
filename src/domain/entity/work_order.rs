@@ -343,6 +343,7 @@ impl backbone_orm::EntityRepoMeta for WorkOrder {
         m.insert("conversion_cost_account_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "work_order_state".to_string());
         m.insert("reservation_state".to_string(), "reservation_state".to_string());
+        m.insert("planned_start_date".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

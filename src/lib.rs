@@ -57,6 +57,9 @@ pub use application::service::WorkOrderItemService;
 pub use application::service::JobCardService;
 pub use application::service::SubcontractMoLinkService;
 
+// Re-exports - Validation
+pub use application::validator::{ValidationError, ValidationResult};
+
 // Re-exports - Workflows
 pub use application::workflows::*;
 
@@ -114,20 +117,20 @@ impl ManufacturingModule {
     /// real deployment; use this only in trusted/admin/seeding contexts.
     pub fn all_crud_routes(&self) -> Router {
         use presentation::http::{
-            create_workstation_routes,
+            create_workstation_read_routes,
             create_workstation_loss_routes,
             create_workstation_productivity_routes,
-            create_operation_routes,
-            create_bom_routes,
+            create_operation_read_routes,
+            create_bom_read_routes,
             create_bom_item_routes,
             create_bom_operation_routes,
             create_bom_byproduct_routes,
             create_bom_subcontractor_routes,
             create_category_costing_defaults_routes,
-            create_repair_order_routes,
+            create_repair_order_read_routes,
             create_repair_part_routes,
             create_repair_tag_routes,
-            create_unbuild_order_routes,
+            create_unbuild_order_read_routes,
             create_work_order_routes,
             create_work_order_item_routes,
             create_job_card_routes,
@@ -135,20 +138,35 @@ impl ManufacturingModule {
         };
 
         Router::new()
-            .merge(create_workstation_routes(self.workstation_service.clone()))
+            // Workstation: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_workstation_read_routes(self.workstation_service.clone()))
             .merge(create_workstation_loss_routes(self.workstation_loss_service.clone()))
             .merge(create_workstation_productivity_routes(self.workstation_productivity_service.clone()))
-            .merge(create_operation_routes(self.operation_service.clone()))
-            .merge(create_bom_routes(self.bom_service.clone()))
+            // Operation: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_operation_read_routes(self.operation_service.clone()))
+            // Bom: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_bom_read_routes(self.bom_service.clone()))
             .merge(create_bom_item_routes(self.bom_item_service.clone()))
             .merge(create_bom_operation_routes(self.bom_operation_service.clone()))
             .merge(create_bom_byproduct_routes(self.bom_byproduct_service.clone()))
             .merge(create_bom_subcontractor_routes(self.bom_subcontractor_service.clone()))
             .merge(create_category_costing_defaults_routes(self.category_costing_defaults_service.clone()))
-            .merge(create_repair_order_routes(self.repair_order_service.clone()))
+            // RepairOrder: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_repair_order_read_routes(self.repair_order_service.clone()))
             .merge(create_repair_part_routes(self.repair_part_service.clone()))
             .merge(create_repair_tag_routes(self.repair_tag_service.clone()))
-            .merge(create_unbuild_order_routes(self.unbuild_order_service.clone()))
+            // UnbuildOrder: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_unbuild_order_read_routes(self.unbuild_order_service.clone()))
             .merge(create_work_order_routes(self.work_order_service.clone()))
             .merge(create_work_order_item_routes(self.work_order_item_service.clone()))
             .merge(create_job_card_routes(self.job_card_service.clone()))

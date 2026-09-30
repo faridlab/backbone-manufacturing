@@ -235,6 +235,8 @@ impl backbone_orm::EntityRepoMeta for WorkstationProductivity {
         m.insert("workstation_id".to_string(), "uuid".to_string());
         m.insert("job_card_id".to_string(), "uuid".to_string());
         m.insert("loss_id".to_string(), "uuid".to_string());
+        m.insert("date_start".to_string(), "timestamptz".to_string());
+        m.insert("date_end".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

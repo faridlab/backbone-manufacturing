@@ -9,20 +9,20 @@ use axum::Router;
 use std::sync::Arc;
 
 use super::{
-    workstation_handler::create_workstation_routes,
+    workstation_handler::create_workstation_read_routes,
     workstation_loss_handler::create_workstation_loss_routes,
     workstation_productivity_handler::create_workstation_productivity_routes,
-    operation_handler::create_operation_routes,
-    bom_handler::create_bom_routes,
+    operation_handler::create_operation_read_routes,
+    bom_handler::create_bom_read_routes,
     bom_item_handler::create_bom_item_routes,
     bom_operation_handler::create_bom_operation_routes,
     bom_byproduct_handler::create_bom_byproduct_routes,
     bom_subcontractor_handler::create_bom_subcontractor_routes,
     category_costing_defaults_handler::create_category_costing_defaults_routes,
-    repair_order_handler::create_repair_order_routes,
+    repair_order_handler::create_repair_order_read_routes,
     repair_part_handler::create_repair_part_routes,
     repair_tag_handler::create_repair_tag_routes,
-    unbuild_order_handler::create_unbuild_order_routes,
+    unbuild_order_handler::create_unbuild_order_read_routes,
     work_order_handler::create_work_order_routes,
     work_order_item_handler::create_work_order_item_routes,
     job_card_handler::create_job_card_routes,
@@ -89,16 +89,16 @@ pub struct HttpServices {
 /// 12. GET /api/v1/{collection}/:id/deleted - Get deleted by ID
 pub fn configure_routes(services: HttpServices) -> Router {
     Router::new()
-        // Workstation routes (12 Backbone endpoints)
-        .merge(create_workstation_routes(services.workstation))
+        // Workstation routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_workstation_read_routes(services.workstation))
         // WorkstationLoss routes (12 Backbone endpoints)
         .merge(create_workstation_loss_routes(services.workstation_loss))
         // WorkstationProductivity routes (12 Backbone endpoints)
         .merge(create_workstation_productivity_routes(services.workstation_productivity))
-        // Operation routes (12 Backbone endpoints)
-        .merge(create_operation_routes(services.operation))
-        // Bom routes (12 Backbone endpoints)
-        .merge(create_bom_routes(services.bom))
+        // Operation routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_operation_read_routes(services.operation))
+        // Bom routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_bom_read_routes(services.bom))
         // BomItem routes (12 Backbone endpoints)
         .merge(create_bom_item_routes(services.bom_item))
         // BomOperation routes (12 Backbone endpoints)
@@ -109,14 +109,14 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_bom_subcontractor_routes(services.bom_subcontractor))
         // CategoryCostingDefaults routes (12 Backbone endpoints)
         .merge(create_category_costing_defaults_routes(services.category_costing_defaults))
-        // RepairOrder routes (12 Backbone endpoints)
-        .merge(create_repair_order_routes(services.repair_order))
+        // RepairOrder routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_repair_order_read_routes(services.repair_order))
         // RepairPart routes (12 Backbone endpoints)
         .merge(create_repair_part_routes(services.repair_part))
         // RepairTag routes (12 Backbone endpoints)
         .merge(create_repair_tag_routes(services.repair_tag))
-        // UnbuildOrder routes (12 Backbone endpoints)
-        .merge(create_unbuild_order_routes(services.unbuild_order))
+        // UnbuildOrder routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_unbuild_order_read_routes(services.unbuild_order))
         // WorkOrder routes (12 Backbone endpoints)
         .merge(create_work_order_routes(services.work_order))
         // WorkOrderItem routes (12 Backbone endpoints)
@@ -132,7 +132,7 @@ pub mod individual {
     use super::*;
 
     pub fn workstation_routes(service: Arc<WorkstationService>) -> Router {
-        create_workstation_routes(service)
+        create_workstation_read_routes(service)
     }
 
     pub fn workstation_loss_routes(service: Arc<WorkstationLossService>) -> Router {
@@ -144,11 +144,11 @@ pub mod individual {
     }
 
     pub fn operation_routes(service: Arc<OperationService>) -> Router {
-        create_operation_routes(service)
+        create_operation_read_routes(service)
     }
 
     pub fn bom_routes(service: Arc<BomService>) -> Router {
-        create_bom_routes(service)
+        create_bom_read_routes(service)
     }
 
     pub fn bom_item_routes(service: Arc<BomItemService>) -> Router {
@@ -172,7 +172,7 @@ pub mod individual {
     }
 
     pub fn repair_order_routes(service: Arc<RepairOrderService>) -> Router {
-        create_repair_order_routes(service)
+        create_repair_order_read_routes(service)
     }
 
     pub fn repair_part_routes(service: Arc<RepairPartService>) -> Router {
@@ -184,7 +184,7 @@ pub mod individual {
     }
 
     pub fn unbuild_order_routes(service: Arc<UnbuildOrderService>) -> Router {
-        create_unbuild_order_routes(service)
+        create_unbuild_order_read_routes(service)
     }
 
     pub fn work_order_routes(service: Arc<WorkOrderService>) -> Router {
