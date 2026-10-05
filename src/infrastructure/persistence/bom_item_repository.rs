@@ -12,7 +12,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::entity::BomItem;
 
@@ -93,7 +93,7 @@ impl BomItemRepository {
         pool: &PgPool,
         bom_id: Uuid,
     ) -> Result<Vec<BomComponentRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT item_id, quantity, rate, is_phantom FROM manufacturing.bom_items WHERE bom_id=$1"#,

@@ -20,7 +20,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::{company_scope, org_scope};
+use backbone_orm::org_scope;
 
 use crate::domain::entity::WorkOrder;
 use crate::domain::entity::ReservationState;
@@ -175,7 +175,7 @@ impl WorkOrderRepository {
         pool: &PgPool,
         wo_id: Uuid,
     ) -> Result<Option<ConfirmSourceRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT item_id, bom_id, quantity, status::text AS status
@@ -371,7 +371,7 @@ impl WorkOrderRepository {
         pool: &PgPool,
         wo_id: Uuid,
     ) -> Result<Option<WorkOrderRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT work_order_number, item_id, bom_id, quantity, produced_qty,

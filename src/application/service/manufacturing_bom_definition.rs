@@ -46,7 +46,7 @@ impl ManufacturingWriteService {
         }
         let total = raw + operating;
         let id = Uuid::new_v4();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — every insert below rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -106,12 +106,12 @@ impl ManufacturingWriteService {
         // the org fence decides (ADR-0029).
         let _parent = self
             .boms
-            .fetch_bom_type(&self.pool, b.bom_id)
+            .fetch_bom_type(&self.rpool(), b.bom_id)
             .await?
             .ok_or(ManufacturingError::NotFound("bom"))?;
 
         // Authoring-time sum guard: existing family + this leg may not exceed the whole batch.
-        let family = self.bom_byproducts.find_by_bom(&self.pool, b.bom_id).await?;
+        let family = self.bom_byproducts.find_by_bom(&self.rpool(), b.bom_id).await?;
         let mut share_sum = b.cost_share;
         for leg in &family {
             share_sum += leg.cost_share;
@@ -121,7 +121,7 @@ impl ManufacturingWriteService {
         }
 
         let id = Uuid::new_v4();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the byproduct lands behind the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -149,11 +149,11 @@ impl ManufacturingWriteService {
     ) -> Result<Uuid, ManufacturingError> {
         let _parent = self
             .boms
-            .fetch_bom_type(&self.pool, bom_id)
+            .fetch_bom_type(&self.rpool(), bom_id)
             .await?
             .ok_or(ManufacturingError::NotFound("bom"))?;
         let id = Uuid::new_v4();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the link lands behind the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -181,6 +181,6 @@ impl ManufacturingWriteService {
         &self,
         bom_id: Uuid,
     ) -> Result<Vec<Uuid>, ManufacturingError> {
-        Ok(self.bom_subcontractors.partners_for_bom(&self.pool, bom_id).await?)
+        Ok(self.bom_subcontractors.partners_for_bom(&self.rpool(), bom_id).await?)
     }
 }

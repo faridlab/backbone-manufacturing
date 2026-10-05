@@ -43,7 +43,7 @@ impl ManufacturingWriteService {
         // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
         let r = self
             .workcenter
-            .insert_loss(&self.pool, &NewWorkstationLossRow {
+            .insert_loss(&self.rpool(), &NewWorkstationLossRow {
                 id,
                 name: &l.name,
                 loss_type: l.loss_type,
@@ -74,14 +74,14 @@ impl ManufacturingWriteService {
         // org fence's scope union resolves the name against the caller's subtree ∪ tenant root.
         let loss_id = self
             .workcenter
-            .find_loss_by_name(&self.pool, &p.loss_name)
+            .find_loss_by_name(&self.rpool(), &p.loss_name)
             .await?
             .ok_or_else(|| ManufacturingError::Invalid(format!("unknown loss reason '{}'", p.loss_name)))?;
 
         let id = Uuid::new_v4();
         // The pool insert rides `org_scope::execute_scoped` (ADR-0029) — see `insert_loss`.
         self.workcenter
-            .insert_productivity(&self.pool, &NewWorkstationProductivityRow {
+            .insert_productivity(&self.rpool(), &NewWorkstationProductivityRow {
                 id,
                 workstation_id: p.workstation_id,
                 job_card_id: p.job_card_id,
@@ -111,7 +111,7 @@ impl ManufacturingWriteService {
         }
         // ID-only (ADR-0029): the aggregation read rides the caller-scoped helper — under the
         // composed decorator the org fence scopes the ledger to the caller's unit.
-        let buckets = self.workcenter.oee_buckets(&self.pool, workstation_id, from, to).await?;
+        let buckets = self.workcenter.oee_buckets(&self.rpool(), workstation_id, from, to).await?;
 
         let mut productive = 0.0_f64;
         let mut availability = 0.0_f64;

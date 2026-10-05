@@ -57,7 +57,7 @@ impl ManufacturingWriteService {
         // composing service sets it per request) makes the decorator's fence see them (ADR-0029).
         let r = self
             .repairs
-            .insert_repair_order(&self.pool, &NewRepairOrderRow {
+            .insert_repair_order(&self.rpool(), &NewRepairOrderRow {
                 id,
                 repair_number: &o.repair_number,
                 item_id: o.item_id,
@@ -70,7 +70,7 @@ impl ManufacturingWriteService {
         }
         for p in &o.parts {
             self.repairs
-                .insert_repair_part(&self.pool, &NewRepairPartRow {
+                .insert_repair_part(&self.rpool(), &NewRepairPartRow {
                     id: Uuid::new_v4(),
                     repair_order_id: id,
                     item_id: p.item_id,
@@ -95,14 +95,14 @@ impl ManufacturingWriteService {
         repair_id: Uuid,
         inventory: &dyn InventoryPort,
     ) -> Result<(), ManufacturingError> {
-        let o = self.repairs.find_order(&self.pool, repair_id).await?
+        let o = self.repairs.find_order(&self.rpool(), repair_id).await?
             .ok_or(ManufacturingError::NotFound("repair order"))?;
         if o.status != "draft" {
             return Err(ManufacturingError::RepairInvalidState("repair order is not draft"));
         }
         // The parts read rides the caller-scoped helper (ADR-0029) — the fence decides under
         // composition; undecorated (module tests) it runs plain.
-        let parts = self.repairs.find_parts(&self.pool, repair_id).await?;
+        let parts = self.repairs.find_parts(&self.rpool(), repair_id).await?;
         // Legacy company twin (ADR-0029): the availability probe is a wire payload — the ambient
         // org scope's company echo fills it for consumers that still read a tenant off the wire.
         let legacy_company = legacy_company_echo();
@@ -119,7 +119,7 @@ impl ManufacturingWriteService {
                     .map_err(|r| ManufacturingError::Inventory(r.code))?;
             }
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the validate gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -135,7 +135,7 @@ impl ManufacturingWriteService {
     /// Start the repair: under_repair. A DRAFT is auto-confirmed first — the operator starting
     /// work has implicitly accepted part availability.
     pub async fn start_repair(&self, repair_id: Uuid) -> Result<(), ManufacturingError> {
-        let o = self.repairs.find_order(&self.pool, repair_id).await?
+        let o = self.repairs.find_order(&self.rpool(), repair_id).await?
             .ok_or(ManufacturingError::NotFound("repair order"))?;
         match o.status.as_str() {
             "draft" | "confirmed" => {}
@@ -148,7 +148,7 @@ impl ManufacturingWriteService {
             )),
             _ => return Err(ManufacturingError::RepairInvalidState("repair order state does not allow start")),
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the start gates ride the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -176,7 +176,7 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<RepairEndOutcome, ManufacturingError> {
-        let o = self.repairs.find_order(&self.pool, repair_id).await?
+        let o = self.repairs.find_order(&self.rpool(), repair_id).await?
             .ok_or(ManufacturingError::NotFound("repair order"))?;
         if o.status == "done" {
             return Ok(RepairEndOutcome {
@@ -193,7 +193,7 @@ impl ManufacturingWriteService {
         }
         // The parts read rides the caller-scoped helper (ADR-0029) — the fence decides under
         // composition; undecorated (module tests) it runs plain.
-        let parts = self.repairs.find_parts(&self.pool, repair_id).await?;
+        let parts = self.repairs.find_parts(&self.rpool(), repair_id).await?;
 
         // Accounts resolve through the same chain as every other costing path: category default
         // → LOUD MissingAccount (a repair carries no per-order account overrides).
@@ -279,7 +279,7 @@ impl ManufacturingWriteService {
         }
 
         // THE GATE, last: under_repair → done (once-only, terminal).
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the end gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -317,7 +317,7 @@ impl ManufacturingWriteService {
     /// Cancel BEFORE end needs no move cancellation — legs only ever move at `end`. A `done`
     /// repair has moved real stock; it is uncancelable, LOUDLY.
     pub async fn cancel_repair(&self, repair_id: Uuid) -> Result<(), ManufacturingError> {
-        let o = self.repairs.find_order(&self.pool, repair_id).await?
+        let o = self.repairs.find_order(&self.rpool(), repair_id).await?
             .ok_or(ManufacturingError::NotFound("repair order"))?;
         match o.status.as_str() {
             "draft" | "confirmed" | "under_repair" => {}
@@ -327,7 +327,7 @@ impl ManufacturingWriteService {
             "cancel" => return Err(ManufacturingError::RepairInvalidState("repair order is already cancelled")),
             _ => return Err(ManufacturingError::RepairInvalidState("repair order state does not allow cancel")),
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the cancel gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -349,12 +349,12 @@ impl ManufacturingWriteService {
         if name.trim().is_empty() {
             return Err(ManufacturingError::Invalid("repair tag name must not be empty".into()));
         }
-        if self.repairs.find_tag_by_name(&self.pool, &name).await?.is_some() {
+        if self.repairs.find_tag_by_name(&self.rpool(), &name).await?.is_some() {
             return Err(ManufacturingError::Invalid(format!("repair tag '{name}' already exists")));
         }
         let id = Uuid::new_v4();
         // The pool insert rides `org_scope::execute_scoped` (ADR-0029) — see `insert_tag`.
-        let r = self.repairs.insert_tag(&self.pool, id, &name).await;
+        let r = self.repairs.insert_tag(&self.rpool(), id, &name).await;
         if let Err(e) = r {
             return Err(if is_dup(&e) {
                 ManufacturingError::Invalid(format!("repair tag '{name}' already exists"))

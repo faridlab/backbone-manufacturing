@@ -96,7 +96,7 @@ impl ManufacturingWriteService {
         // (org unit, purchase order) unique keeps it one-per-unit.
         if let Some(existing) = self
             .subcontract_links
-            .find_by_purchase_order(&self.pool, event.order_id)
+            .find_by_purchase_order(&self.rpool(), event.order_id)
             .await?
         {
             return Ok(existing);
@@ -121,14 +121,14 @@ impl ManufacturingWriteService {
         // decorator the org fence scopes the resolution to the caller's unit.
         let bom_id = self
             .boms
-            .find_active_bom_for_item(&self.pool, first.item_id)
+            .find_active_bom_for_item(&self.rpool(), first.item_id)
             .await?
             .ok_or(ManufacturingError::Invalid(
                 "subcontract receipt item has no active BoM — author one with bom_type=subcontract".into(),
             ))?;
         let bom_type = self
             .boms
-            .fetch_bom_type(&self.pool, bom_id)
+            .fetch_bom_type(&self.rpool(), bom_id)
             .await?
             .unwrap_or_else(|| "normal".into());
         if bom_type != "subcontract" {
@@ -151,7 +151,7 @@ impl ManufacturingWriteService {
             .reference
             .clone()
             .unwrap_or_else(|| event.order_id.to_string());
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the mint rides the composed decorator's fence (ADR-0029); the
         // composing service's relay sets it when delivering the event. Undecorated, the tx stays
         // plain.

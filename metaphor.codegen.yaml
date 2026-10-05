@@ -107,3 +107,6 @@ user_owned:
   - "migrations/*strip_tenancy*"
   - "tests/common/mod.rs"
   - "src/write_api.rs"
+  # The composer-installed request-pool shim the write service resolves its database
+  # through (ADR-0029 pool law): hand-written, never schema-derived.
+  - "src/request_pool.rs"

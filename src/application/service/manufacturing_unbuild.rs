@@ -51,7 +51,7 @@ impl ManufacturingWriteService {
         // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
         let r = self
             .unbuilds
-            .insert_draft(&self.pool, &NewUnbuildRow {
+            .insert_draft(&self.rpool(), &NewUnbuildRow {
                 id,
                 unbuild_number: &o.unbuild_number,
                 work_order_id: o.work_order_id,
@@ -79,7 +79,7 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<UnbuildOutcome, ManufacturingError> {
-        let u = self.unbuilds.find_execute_source(&self.pool, unbuild_id).await?
+        let u = self.unbuilds.find_execute_source(&self.rpool(), unbuild_id).await?
             .ok_or(ManufacturingError::NotFound("unbuild order"))?;
         if u.status == "done" {
             return Ok(UnbuildOutcome { reversed_value: Decimal::ZERO, already: true });
@@ -120,7 +120,7 @@ impl ManufacturingWriteService {
 
         // Components back = the order's ACTUAL per-unit consumption, prorated by the unbuilt share.
         // The read rides the caller-scoped helper (ADR-0029) — the fence decides under composition.
-        let items = self.work_order_items.list_requirements(&self.pool, u.work_order_id).await?;
+        let items = self.work_order_items.list_requirements(&self.rpool(), u.work_order_id).await?;
         let share = if u.produced_qty > Decimal::ZERO { u.quantity / u.produced_qty } else { Decimal::ZERO };
         let components: Vec<IssueLine> = items
             .iter()
@@ -178,7 +178,7 @@ impl ManufacturingWriteService {
         self.post(gl, &env).await?;
 
         // THE GATE, last: draft → done (the once-only guard on the reversal).
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the execute gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;

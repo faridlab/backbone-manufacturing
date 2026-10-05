@@ -155,7 +155,7 @@ impl RepairRepository {
         pool: &PgPool,
         repair_id: Uuid,
     ) -> Result<Option<RepairOrderRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT item_id, product_category_id, quantity, status::text AS status
@@ -179,7 +179,7 @@ impl RepairRepository {
         pool: &PgPool,
         repair_id: Uuid,
     ) -> Result<Vec<RepairPartRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT item_id, warehouse_id, line_type::text AS line_type, quantity, rate

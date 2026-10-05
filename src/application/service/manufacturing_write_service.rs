@@ -321,6 +321,13 @@ impl ManufacturingWriteService {
         }
     }
 
+    /// The database this call runs on: the composer's request pool when one
+    /// is bound (a tenant mount, or a relay consumer wrapped by the host),
+    /// else the composed pool (ADR-0029 pool law).
+    pub(super) fn rpool(&self) -> PgPool {
+        crate::request_pool::current().unwrap_or_else(|| self.pool.clone())
+    }
+
     // ---- shared helpers -----------------------------------------------------------------------
 
     pub(super) async fn post(
@@ -350,7 +357,7 @@ impl ManufacturingWriteService {
         // ID-only pattern: no tenant argument — the read rides the request-dedicated connection,
         // so the composed decorator's org fence scopes it to the caller's unit (ADR-0029).
         // Undecorated (module tests) the read runs plain.
-        self.work_orders.load(&self.pool, wo_id).await?
+        self.work_orders.load(&self.rpool(), wo_id).await?
             .ok_or(ManufacturingError::NotFound("work order"))
     }
 
@@ -371,7 +378,7 @@ impl ManufacturingWriteService {
         if let Some(category) = product_category_id {
             if let Some(defaults) = self
                 .costing_defaults
-                .find(&self.pool, category)
+                .find(&self.rpool(), category)
                 .await?
             {
                 if let Some(account) = pick(&defaults) {

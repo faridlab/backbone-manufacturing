@@ -148,7 +148,7 @@ impl WorkcenterRepository {
         from: DateTime<Utc>,
         to: DateTime<Utc>,
     ) -> Result<Vec<OeeBucketRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT l.loss_type::text AS loss_type,

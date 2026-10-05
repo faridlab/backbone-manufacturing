@@ -42,7 +42,7 @@ impl ManufacturingWriteService {
         let id = Uuid::new_v4();
         // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
         // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
-        let r = self.work_orders.insert_draft(&self.pool, &NewWorkOrderRow {
+        let r = self.work_orders.insert_draft(&self.rpool(), &NewWorkOrderRow {
             id,
             work_order_number: &o.work_order_number,
             item_id: o.item_id,
@@ -73,7 +73,7 @@ impl ManufacturingWriteService {
         // first through the scoped helper (it rides the REQUEST-dedicated connection — under the
         // composed decorator the org fence hides another unit's work order). The once-only guard
         // is unaffected: it remains the in-transaction draft→confirmed gate.
-        let wo = self.work_orders.find_confirm_source(&self.pool, wo_id).await?
+        let wo = self.work_orders.find_confirm_source(&self.rpool(), wo_id).await?
             .ok_or(ManufacturingError::NotFound("work order"))?;
         if wo.status != "draft" {
             return Err(ManufacturingError::InvalidState("work order is not draft"));
@@ -84,7 +84,7 @@ impl ManufacturingWriteService {
 
         // A kit NEVER mints a work order (it explodes through to components at demand time), and a
         // subcontract BoM's orders are minted ONLY by the receipt event — never by hand.
-        let bom_type = self.boms.fetch_bom_type(&self.pool, bom_id).await?
+        let bom_type = self.boms.fetch_bom_type(&self.rpool(), bom_id).await?
             .ok_or(ManufacturingError::NotFound("bom"))?;
         if bom_type == "kit" {
             return Err(ManufacturingError::Invalid(
@@ -103,7 +103,7 @@ impl ManufacturingWriteService {
         self.explode_bom(bom_id, wo_qty, 0, &mut required).await?;
 
         // Gate the explosion on the draft→confirmed transition (once-only).
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the confirm tx rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -141,7 +141,7 @@ impl ManufacturingWriteService {
         wo_id: Uuid,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<(), ManufacturingError> {
-        let wo = self.work_orders.find_confirm_source(&self.pool, wo_id).await?
+        let wo = self.work_orders.find_confirm_source(&self.rpool(), wo_id).await?
             .ok_or(ManufacturingError::NotFound("work order"))?;
         match wo.status.as_str() {
             "draft" | "confirmed" => {}
@@ -155,7 +155,7 @@ impl ManufacturingWriteService {
             _ => return Err(ManufacturingError::InvalidState("work order state does not allow cancel")),
         }
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the cancel tx rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -183,7 +183,7 @@ impl ManufacturingWriteService {
         state: crate::domain::entity::ReservationState,
     ) -> Result<(), ManufacturingError> {
         // Idempotent by value: rewriting the same state is a no-op.
-        self.work_orders.write_reservation_state(&self.pool, wo_id, state).await?;
+        self.work_orders.write_reservation_state(&self.rpool(), wo_id, state).await?;
         Ok(())
     }
 
@@ -208,11 +208,11 @@ impl ManufacturingWriteService {
             // (module tests) the reads run plain.
             let base: Decimal = self
                 .boms
-                .fetch_output_quantity(&self.pool, bom_id)
+                .fetch_output_quantity(&self.rpool(), bom_id)
                 .await?
                 .ok_or(ManufacturingError::NotFound("bom"))?;
 
-            let comps = self.bom_items.list_components(&self.pool, bom_id).await?;
+            let comps = self.bom_items.list_components(&self.rpool(), bom_id).await?;
 
             for c in &comps {
                 let needed = c.quantity * want_units / base;
@@ -220,7 +220,7 @@ impl ManufacturingWriteService {
                     // Resolve the phantom item's own BOM (default first) and explode through it.
                     let child_bom: Uuid = self
                         .boms
-                        .find_active_bom_for_item(&self.pool, c.item_id)
+                        .find_active_bom_for_item(&self.rpool(), c.item_id)
                         .await?
                         .ok_or(ManufacturingError::Invalid("phantom component has no BOM".into()))?;
                     self.explode_bom(child_bom, needed, depth + 1, out).await?;

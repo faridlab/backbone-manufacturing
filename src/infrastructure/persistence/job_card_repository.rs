@@ -17,7 +17,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::{company_scope, org_scope};
+use backbone_orm::org_scope;
 
 use crate::domain::entity::JobCard;
 
@@ -111,7 +111,7 @@ impl JobCardRepository {
         pool: &PgPool,
         job_card_id: Uuid,
     ) -> Result<Option<JobCardCompletionRow>, sqlx::Error> {
-        let row = company_scope::fetch_optional_row_scoped(
+        let row = org_scope::fetch_optional_row_scoped(
             pool,
             sqlx::query(
                 r#"SELECT j.work_order_id, j.operating_cost, j.status::text AS status,

@@ -44,7 +44,7 @@ impl ManufacturingWriteService {
         // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
         // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
         self.job_cards
-            .insert_ready(&self.pool, &NewJobCardRow {
+            .insert_ready(&self.rpool(), &NewJobCardRow {
                 id,
                 work_order_id: j.work_order_id,
                 operation_id: j.operation_id,
@@ -63,7 +63,7 @@ impl ManufacturingWriteService {
     /// wait for the reservation projection to flip it back to ready. The parent work order must be
     /// confirmed (or already in progress) — a draft/cancelled order has no floor work.
     pub async fn start_job_card(&self, job_card_id: Uuid) -> Result<(), ManufacturingError> {
-        let jc = self.job_cards.find_completion_source(&self.pool, job_card_id).await?
+        let jc = self.job_cards.find_completion_source(&self.rpool(), job_card_id).await?
             .ok_or(ManufacturingError::NotFound("job card"))?;
         match jc.status.as_str() {
             "ready" | "blocked" => {}
@@ -77,7 +77,7 @@ impl ManufacturingWriteService {
                 "work order is not open for operations (confirm it first)",
             ));
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the start gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -101,7 +101,7 @@ impl ManufacturingWriteService {
     ) -> Result<Decimal, ManufacturingError> {
         // ID-only pattern (ADR-0029): the join read rides the request-dedicated connection; under
         // the composed decorator the org fence scopes the card to the caller's unit.
-        let jc = self.job_cards.find_completion_source(&self.pool, job_card_id).await?
+        let jc = self.job_cards.find_completion_source(&self.rpool(), job_card_id).await?
             .ok_or(ManufacturingError::NotFound("job card"))?;
         if jc.status == "done" {
             return Ok(jc.operating_cost);
@@ -152,7 +152,7 @@ impl ManufacturingWriteService {
             self.post(gl, &env).await?;
         }
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the completion gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -179,7 +179,7 @@ impl ManufacturingWriteService {
     /// A `done` card has already charged conversion cost to WIP — cancelling it would strand the
     /// charge, so the refusal is LOUD.
     pub async fn cancel_job_card(&self, job_card_id: Uuid) -> Result<(), ManufacturingError> {
-        let jc = self.job_cards.find_completion_source(&self.pool, job_card_id).await?
+        let jc = self.job_cards.find_completion_source(&self.rpool(), job_card_id).await?
             .ok_or(ManufacturingError::NotFound("job card"))?;
         match jc.status.as_str() {
             "ready" | "blocked" | "progress" => {}
@@ -189,7 +189,7 @@ impl ManufacturingWriteService {
             "cancel" => return Err(ManufacturingError::InvalidState("job card is already cancelled")),
             _ => return Err(ManufacturingError::InvalidState("job card state does not allow cancel")),
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the cancel gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;

@@ -12,7 +12,7 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::entity::WorkOrderItem;
 
@@ -91,7 +91,7 @@ impl WorkOrderItemRepository {
         pool: &PgPool,
         wo_id: Uuid,
     ) -> Result<Vec<WorkOrderRequirementRow>, sqlx::Error> {
-        let rows = company_scope::fetch_all_rows_scoped(
+        let rows = org_scope::fetch_all_rows_scoped(
             pool,
             sqlx::query(
                 r#"SELECT id, item_id, required_qty, consumed_qty FROM manufacturing.work_order_items

@@ -67,7 +67,7 @@ impl ManufacturingWriteService {
         // The line read rides the caller-scoped helper (ADR-0029): under the composed decorator
         // the org fence scopes the requirements to the caller's unit on the request-dedicated
         // connection; undecorated (module tests) the read runs plain.
-        let items = self.work_order_items.list_requirements(&self.pool, wo_id).await?;
+        let items = self.work_order_items.list_requirements(&self.rpool(), wo_id).await?;
         let mut lines = Vec::new();
         for it in &items {
             let remaining = it.required_qty - it.consumed_qty;
@@ -120,7 +120,7 @@ impl ManufacturingWriteService {
         self.post(gl, &env).await?;
 
         // Record consumption + advance state, gated on confirmed → progress.
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the consume gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
@@ -210,7 +210,7 @@ impl ManufacturingWriteService {
 
         // BoM byproduct legs + their cost shares; the family may not carry off more than the batch.
         // The read rides the caller-scoped helper (ADR-0029) — the fence decides under composition.
-        let bom_byproducts = self.bom_byproducts.find_by_bom(&self.pool, wo.bom_id).await?;
+        let bom_byproducts = self.bom_byproducts.find_by_bom(&self.rpool(), wo.bom_id).await?;
         let mut share_sum = Decimal::ZERO;
         for b in &bom_byproducts {
             share_sum += b.cost_share;
@@ -360,7 +360,7 @@ impl ManufacturingWriteService {
 
         // 3) THE GATE, last: advance produced qty / derive to_close|done. Concurrent double-receive →
         //    one wins; the loser's (idempotent) side effects were harmless dups.
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.rpool().begin().await?;
         // The ambient org scope — the receive gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
