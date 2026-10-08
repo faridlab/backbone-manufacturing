@@ -180,6 +180,9 @@ impl super::Entity for Operation {
 }
 
 impl backbone_core::PersistentEntity for Operation {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["status"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

@@ -36,7 +36,7 @@ impl Seeder for SeedCategoryCostingDefaultsSeeder {
     }
 
     fn order(&self) -> i32 {
-        10
+        9
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {

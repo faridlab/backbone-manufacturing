@@ -227,6 +227,9 @@ impl super::Entity for Bom {
 }
 
 impl backbone_core::PersistentEntity for Bom {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["status"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }
