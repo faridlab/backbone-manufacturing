@@ -25,15 +25,17 @@ pub mod presentation;
 pub mod seeders;
 pub mod exports;
 // <<< CUSTOM MODULES
-// Hand-written validated command surface (`src/write_api.rs` is declared under
-// `user_owned` in metaphor.codegen.yaml). Declared inside this marker so schema
-// regeneration preserves the declaration alongside the generated module list.
-pub mod write_api;
-// The hand-owned request-pool shim (the composing service's tenant pool
-// resolution): a generated-tree declaration the regenerator drops, so it
-// lives in the preserved block (#447 cause-2 class).
-pub mod request_pool;
 // END CUSTOM
+
+// The module's extension (hand-written; ADR-0031).
+#[path = "lib.ext.rs"]
+mod lib_ext;
+pub use lib_ext::*;
+/// This crate's module and builder under fixed names, for the extension's `impl` blocks.
+#[allow(dead_code)]
+pub(crate) type ThisModule = ManufacturingModule;
+#[allow(dead_code)]
+pub(crate) type ThisModuleBuilder = ManufacturingModuleBuilder;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -102,10 +104,65 @@ pub struct ManufacturingModule {
     pub(crate) work_order_item_service: Arc<WorkOrderItemService>,
     pub(crate) job_card_service: Arc<JobCardService>,
     pub(crate) subcontract_mo_link_service: Arc<SubcontractMoLinkService>,
+    /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    pub(crate) ext: ModuleExt,
     // <<< CUSTOM FIELDS
-    pub(crate) manufacturing_write_service:
-        Arc<crate::application::service::ManufacturingWriteService>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for ManufacturingModule {
+    type Target = ModuleExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for ManufacturingModule {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
+}
+
+/// What the extension's `build` hook receives from the generated build (ADR-0031).
+#[allow(dead_code)]
+pub(crate) struct ModuleParts<'a> {
+    pub(crate) db_pool: &'a PgPool,
+    pub(crate) workstation_service: &'a Arc<WorkstationService>,
+    pub(crate) workstation_repository: &'a Arc<WorkstationRepository>,
+    pub(crate) workstation_loss_service: &'a Arc<WorkstationLossService>,
+    pub(crate) workstation_loss_repository: &'a Arc<WorkstationLossRepository>,
+    pub(crate) workstation_productivity_service: &'a Arc<WorkstationProductivityService>,
+    pub(crate) workstation_productivity_repository: &'a Arc<WorkstationProductivityRepository>,
+    pub(crate) operation_service: &'a Arc<OperationService>,
+    pub(crate) operation_repository: &'a Arc<OperationRepository>,
+    pub(crate) bom_service: &'a Arc<BomService>,
+    pub(crate) bom_repository: &'a Arc<BomRepository>,
+    pub(crate) bom_item_service: &'a Arc<BomItemService>,
+    pub(crate) bom_item_repository: &'a Arc<BomItemRepository>,
+    pub(crate) bom_operation_service: &'a Arc<BomOperationService>,
+    pub(crate) bom_operation_repository: &'a Arc<BomOperationRepository>,
+    pub(crate) bom_byproduct_service: &'a Arc<BomByproductService>,
+    pub(crate) bom_byproduct_repository: &'a Arc<BomByproductRepository>,
+    pub(crate) bom_subcontractor_service: &'a Arc<BomSubcontractorService>,
+    pub(crate) bom_subcontractor_repository: &'a Arc<BomSubcontractorRepository>,
+    pub(crate) category_costing_defaults_service: &'a Arc<CategoryCostingDefaultsService>,
+    pub(crate) category_costing_defaults_repository: &'a Arc<CategoryCostingDefaultsRepository>,
+    pub(crate) repair_order_service: &'a Arc<RepairOrderService>,
+    pub(crate) repair_order_repository: &'a Arc<RepairOrderRepository>,
+    pub(crate) repair_part_service: &'a Arc<RepairPartService>,
+    pub(crate) repair_part_repository: &'a Arc<RepairPartRepository>,
+    pub(crate) repair_tag_service: &'a Arc<RepairTagService>,
+    pub(crate) repair_tag_repository: &'a Arc<RepairTagRepository>,
+    pub(crate) unbuild_order_service: &'a Arc<UnbuildOrderService>,
+    pub(crate) unbuild_order_repository: &'a Arc<UnbuildOrderRepository>,
+    pub(crate) work_order_service: &'a Arc<WorkOrderService>,
+    pub(crate) work_order_repository: &'a Arc<WorkOrderRepository>,
+    pub(crate) work_order_item_service: &'a Arc<WorkOrderItemService>,
+    pub(crate) work_order_item_repository: &'a Arc<WorkOrderItemRepository>,
+    pub(crate) job_card_service: &'a Arc<JobCardService>,
+    pub(crate) job_card_repository: &'a Arc<JobCardRepository>,
+    pub(crate) subcontract_mo_link_service: &'a Arc<SubcontractMoLinkService>,
+    pub(crate) subcontract_mo_link_repository: &'a Arc<SubcontractMoLinkRepository>,
 }
 
 impl ManufacturingModule {
@@ -236,42 +293,29 @@ impl ManufacturingModule {
     }
 
     // <<< CUSTOM METHODS
-    /// The validated manufacturing execution engine (release → consume → operate → receive),
-    /// which rolls up BOM cost and emits the three WIP/FG GL posts so a Work Order's WIP nets to
-    /// zero on completion.
-    ///
-    /// This is **not** mounted by [`Self::all_crud_routes`] — that exposes *unguarded* generic CRUD
-    /// that bypasses every manufacturing invariant (a `PATCH status→completed` there posts no GL).
-    /// To serve validated writes over HTTP, compose the command router from [`write_api`]:
-    ///
-    /// ```ignore
-    /// let m = ManufacturingModule::builder().with_database(pool).build()?;
-    /// let deps = write_api::ManufacturingWriteDeps {
-    ///     write_service: m.write_service(),
-    ///     inventory: Arc::new(my_inventory_adapter),   // you own stock — supply a real InventoryPort
-    ///     gl:        Arc::new(my_gl_adapter),          // you own the ledger — supply a real GlPostSink
-    ///     events:    Arc::new(LoggingSink),            // or your bus sink
-    /// };
-    /// let app = Router::new()
-    ///     .merge(/* your read routes */)
-    ///     .merge(write_api::create_manufacturing_write_routes().with_state(deps));
-    /// ```
-    ///
-    /// The ports are caller-supplied per call: a no-op `GlPostSink` silently drops the WIP postings
-    /// (it compiles, it looks done, WIP leaks) — supply real adapters from the composing service.
-    pub fn write_service(
-        &self,
-    ) -> Arc<crate::application::service::ManufacturingWriteService> {
-        self.manufacturing_write_service.clone()
-    }
     // END CUSTOM
 }
 
 /// Builder for ManufacturingModule
 pub struct ManufacturingModuleBuilder {
     db_pool: Option<PgPool>,
+    /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    ext: ModuleBuilderExt,
     // <<< CUSTOM BUILDER FIELDS
     // END CUSTOM
+}
+
+impl std::ops::Deref for ManufacturingModuleBuilder {
+    type Target = ModuleBuilderExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for ManufacturingModuleBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 impl ManufacturingModuleBuilder {
@@ -279,6 +323,7 @@ impl ManufacturingModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            ext: Default::default(),
             // <<< CUSTOM BUILDER DEFAULTS
             // END CUSTOM
         }
@@ -371,13 +416,48 @@ impl ManufacturingModuleBuilder {
         let subcontract_mo_link_service = Arc::new(SubcontractMoLinkService::with_repository(subcontract_mo_link_repository.clone()));
 
         // <<< CUSTOM
-        // The validated execution engine. It shares this module's pool (same RLS connection
-        // story as the generic services); the GL/inventory ports are supplied per call by the
-        // composing service via `write_api::ManufacturingWriteDeps`.
-        let manufacturing_write_service = Arc::new(
-            crate::application::service::ManufacturingWriteService::new(db_pool.clone()),
-        );
         // END CUSTOM
+
+        // The extension builds its own state from what the generated build made.
+        let ext = self.ext.build(&ModuleParts {
+            db_pool: &db_pool,
+            workstation_service: &workstation_service,
+            workstation_repository: &workstation_repository,
+            workstation_loss_service: &workstation_loss_service,
+            workstation_loss_repository: &workstation_loss_repository,
+            workstation_productivity_service: &workstation_productivity_service,
+            workstation_productivity_repository: &workstation_productivity_repository,
+            operation_service: &operation_service,
+            operation_repository: &operation_repository,
+            bom_service: &bom_service,
+            bom_repository: &bom_repository,
+            bom_item_service: &bom_item_service,
+            bom_item_repository: &bom_item_repository,
+            bom_operation_service: &bom_operation_service,
+            bom_operation_repository: &bom_operation_repository,
+            bom_byproduct_service: &bom_byproduct_service,
+            bom_byproduct_repository: &bom_byproduct_repository,
+            bom_subcontractor_service: &bom_subcontractor_service,
+            bom_subcontractor_repository: &bom_subcontractor_repository,
+            category_costing_defaults_service: &category_costing_defaults_service,
+            category_costing_defaults_repository: &category_costing_defaults_repository,
+            repair_order_service: &repair_order_service,
+            repair_order_repository: &repair_order_repository,
+            repair_part_service: &repair_part_service,
+            repair_part_repository: &repair_part_repository,
+            repair_tag_service: &repair_tag_service,
+            repair_tag_repository: &repair_tag_repository,
+            unbuild_order_service: &unbuild_order_service,
+            unbuild_order_repository: &unbuild_order_repository,
+            work_order_service: &work_order_service,
+            work_order_repository: &work_order_repository,
+            work_order_item_service: &work_order_item_service,
+            work_order_item_repository: &work_order_item_repository,
+            job_card_service: &job_card_service,
+            job_card_repository: &job_card_repository,
+            subcontract_mo_link_service: &subcontract_mo_link_service,
+            subcontract_mo_link_repository: &subcontract_mo_link_repository,
+        })?;
 
         Ok(ManufacturingModule {
             workstation_service,
@@ -398,8 +478,8 @@ impl ManufacturingModuleBuilder {
             work_order_item_service,
             job_card_service,
             subcontract_mo_link_service,
+            ext,
             // <<< CUSTOM
-            manufacturing_write_service,
             // END CUSTOM
         })
     }
@@ -410,3 +490,6 @@ impl Default for ManufacturingModuleBuilder {
         Self::new()
     }
 }
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");
