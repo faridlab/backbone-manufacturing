@@ -373,7 +373,7 @@ impl ManufacturingModuleBuilder {
 
         // RepairOrder service
         let repair_order_repository = Arc::new(RepairOrderRepository::new(db_pool.clone()));
-        let repair_order_service = Arc::new(RepairOrderService::with_repository(repair_order_repository.clone()));
+        let repair_order_service = Arc::new(RepairOrderService::with_repository(repair_order_repository.clone()).with_guard(Arc::new(crate::application::service::RepairOrderRowRules)));
 
         // RepairPart service
         let repair_part_repository = Arc::new(RepairPartRepository::new(db_pool.clone()));
@@ -385,11 +385,11 @@ impl ManufacturingModuleBuilder {
 
         // UnbuildOrder service
         let unbuild_order_repository = Arc::new(UnbuildOrderRepository::new(db_pool.clone()));
-        let unbuild_order_service = Arc::new(UnbuildOrderService::with_repository(unbuild_order_repository.clone()));
+        let unbuild_order_service = Arc::new(UnbuildOrderService::with_repository(unbuild_order_repository.clone()).with_guard(Arc::new(crate::application::service::UnbuildOrderRowRules)));
 
         // WorkOrder service
         let work_order_repository = Arc::new(WorkOrderRepository::new(db_pool.clone()));
-        let work_order_service = Arc::new(WorkOrderService::with_repository(work_order_repository.clone()));
+        let work_order_service = Arc::new(WorkOrderService::with_repository(work_order_repository.clone()).with_guard(Arc::new(crate::application::service::WorkOrderRowRules)));
 
         // WorkOrderItem service
         let work_order_item_repository = Arc::new(WorkOrderItemRepository::new(db_pool.clone()));
@@ -397,7 +397,7 @@ impl ManufacturingModuleBuilder {
 
         // JobCard service
         let job_card_repository = Arc::new(JobCardRepository::new(db_pool.clone()));
-        let job_card_service = Arc::new(JobCardService::with_repository(job_card_repository.clone()));
+        let job_card_service = Arc::new(JobCardService::with_repository(job_card_repository.clone()).with_guard(Arc::new(crate::application::service::JobCardRowRules)));
 
         // SubcontractMoLink service
         let subcontract_mo_link_repository = Arc::new(SubcontractMoLinkRepository::new(db_pool.clone()));

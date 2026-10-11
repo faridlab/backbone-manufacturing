@@ -34,6 +34,7 @@ state_machines:
   # ===========================================================================
   - entity: WorkOrder
     field: status
+    verbs: hand
     initial: draft
     shape: hybrid
     note: "EXACTLY three direct writes: confirm (draft->confirmed, absorbs the BOM explosion), mark-done (->done via the full receipt), cancel (draft|confirmed->cancel, the inverse of confirm). progress and to_close are derived computes written ONLY by the accumulator gates; done and cancel are terminal."
@@ -50,6 +51,7 @@ state_machines:
   # ===========================================================================
   - entity: JobCard
     field: status
+    verbs: hand
     initial: ready
     shape: hybrid
     note: "Direct writes: start (ready|blocked -> progress), finish (-> done = the once-only operate charge, idempotency operate:{job_card_id}), cancel. ready<->blocked auto-flips derived from the parent work order's reservation_state. There is NO pending state and NO open state."
@@ -65,6 +67,7 @@ state_machines:
   # ===========================================================================
   - entity: UnbuildOrder
     field: status
+    verbs: hand
     initial: draft
     shape: hand_set
     note: "Plain draft->done. An unbuild NEVER creates a reverse work order — execute writes reverse stock moves directly through the InventoryPort (FG out, components in) and posts Dr Raw (Σ components) · Cr FG (same Σ). No cancel/return path; done is terminal."
@@ -77,6 +80,7 @@ state_machines:
   # ===========================================================================
   - entity: RepairOrder
     field: status
+    verbs: hand
     initial: draft
     shape: hand_set
     note: "Hand-set draft -> confirmed -> under_repair -> done | cancel. Transitions happen ONLY via the service verbs; there is no free-form status write on the validated surface. done is uncancelable."

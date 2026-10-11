@@ -45,6 +45,10 @@ pub use work_order_service::WorkOrderService;
 pub use work_order_item_service::WorkOrderItemService;
 pub use job_card_service::JobCardService;
 pub use subcontract_mo_link_service::SubcontractMoLinkService;
+pub use repair_order_service::RepairOrderRowRules;
+pub use unbuild_order_service::UnbuildOrderRowRules;
+pub use work_order_service::WorkOrderRowRules;
+pub use job_card_service::JobCardRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
