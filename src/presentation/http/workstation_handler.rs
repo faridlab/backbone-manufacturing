@@ -187,3 +187,4 @@ pub fn create_protected_workstation_routes<A: AuthMiddleware + Send + Sync + 'st
             }
         }))
 }
+

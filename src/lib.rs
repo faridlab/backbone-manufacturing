@@ -24,8 +24,6 @@ pub mod application;
 pub mod presentation;
 pub mod seeders;
 pub mod exports;
-// <<< CUSTOM MODULES
-// END CUSTOM
 
 // The module's extension (hand-written; ADR-0031).
 #[path = "lib.ext.rs"]
@@ -106,8 +104,6 @@ pub struct ManufacturingModule {
     pub(crate) subcontract_mo_link_service: Arc<SubcontractMoLinkService>,
     /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
     pub(crate) ext: ModuleExt,
-    // <<< CUSTOM FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for ManufacturingModule {
@@ -292,8 +288,6 @@ impl ManufacturingModule {
             .merge(create_subcontract_mo_link_read_routes(self.subcontract_mo_link_service.clone()))
     }
 
-    // <<< CUSTOM METHODS
-    // END CUSTOM
 }
 
 /// Builder for ManufacturingModule
@@ -301,8 +295,6 @@ pub struct ManufacturingModuleBuilder {
     db_pool: Option<PgPool>,
     /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
     ext: ModuleBuilderExt,
-    // <<< CUSTOM BUILDER FIELDS
-    // END CUSTOM
 }
 
 impl std::ops::Deref for ManufacturingModuleBuilder {
@@ -324,8 +316,6 @@ impl ManufacturingModuleBuilder {
         Self {
             db_pool: None,
             ext: Default::default(),
-            // <<< CUSTOM BUILDER DEFAULTS
-            // END CUSTOM
         }
     }
 
@@ -335,8 +325,6 @@ impl ManufacturingModuleBuilder {
         self
     }
 
-    // <<< CUSTOM - custom builder methods
-    // END CUSTOM
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<ManufacturingModule> {
@@ -415,8 +403,6 @@ impl ManufacturingModuleBuilder {
         let subcontract_mo_link_repository = Arc::new(SubcontractMoLinkRepository::new(db_pool.clone()));
         let subcontract_mo_link_service = Arc::new(SubcontractMoLinkService::with_repository(subcontract_mo_link_repository.clone()));
 
-        // <<< CUSTOM
-        // END CUSTOM
 
         // The extension builds its own state from what the generated build made.
         let ext = self.ext.build(&ModuleParts {
@@ -479,8 +465,6 @@ impl ManufacturingModuleBuilder {
             job_card_service,
             subcontract_mo_link_service,
             ext,
-            // <<< CUSTOM
-            // END CUSTOM
         })
     }
 }

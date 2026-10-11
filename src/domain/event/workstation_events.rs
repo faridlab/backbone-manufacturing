@@ -11,8 +11,6 @@ use crate::domain::entity::Workstation;
 /// enum containing a `Crud(CrudEvent<Workstation>)` variant.
 pub type WorkstationEvent = CrudEvent<Workstation>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

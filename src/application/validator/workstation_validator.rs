@@ -16,9 +16,5 @@ pub type WorkstationValidator = EntityValidator<Workstation>;
 pub fn workstation_validator() -> WorkstationValidator {
     EntityValidator::new()
         .rule(RequiredString::new("workstation_name", |e: &Workstation| &e.workstation_name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

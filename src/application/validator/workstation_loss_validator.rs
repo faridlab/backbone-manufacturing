@@ -16,9 +16,5 @@ pub type WorkstationLossValidator = EntityValidator<WorkstationLoss>;
 pub fn workstation_loss_validator() -> WorkstationLossValidator {
     EntityValidator::new()
         .rule(RequiredString::new("name", |e: &WorkstationLoss| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

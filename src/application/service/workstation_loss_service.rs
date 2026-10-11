@@ -32,5 +32,3 @@ pub type WorkstationLossService = GenericCrudService<
     WorkstationLossRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

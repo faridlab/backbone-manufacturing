@@ -236,7 +236,7 @@ impl backbone_core::ApplyUpdateDto<UpdateBomSubcontractorDto> for BomSubcontract
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to BomSubcontractor here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

@@ -16,9 +16,5 @@ pub type WorkstationProductivityValidator = EntityValidator<WorkstationProductiv
 pub fn workstation_productivity_validator() -> WorkstationProductivityValidator {
     EntityValidator::new()
         .rule(OptionalNotBlank::new("description", |e: &WorkstationProductivity| e.description.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

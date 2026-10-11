@@ -18,5 +18,3 @@ use crate::domain::entity::WorkstationProductivity;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type WorkstationProductivityDomainPolicy = PermitAllPolicy<WorkstationProductivity>;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -43,5 +43,3 @@ pub use work_order_item_validator::{WorkOrderItemValidator, work_order_item_vali
 pub use job_card_validator::{JobCardValidator, job_card_validator};
 pub use subcontract_mo_link_validator::{SubcontractMoLinkValidator, subcontract_mo_link_validator};
 
-// <<< CUSTOM
-// END CUSTOM

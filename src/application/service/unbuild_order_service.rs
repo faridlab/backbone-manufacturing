@@ -32,5 +32,3 @@ pub type UnbuildOrderService = GenericCrudService<
     UnbuildOrderRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

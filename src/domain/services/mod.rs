@@ -40,5 +40,3 @@ pub use work_order_item_domain_policy::WorkOrderItemDomainPolicy;
 pub use job_card_domain_policy::JobCardDomainPolicy;
 pub use subcontract_mo_link_domain_policy::SubcontractMoLinkDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM

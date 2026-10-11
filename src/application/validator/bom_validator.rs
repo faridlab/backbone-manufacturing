@@ -18,9 +18,5 @@ pub fn bom_validator() -> BomValidator {
         .rule(RequiredString::new("bom_code", |e: &Bom| &e.bom_code))
         .rule(OptionalNotBlank::new("uom", |e: &Bom| e.uom.as_deref()))
         .rule(RequiredString::new("currency", |e: &Bom| &e.currency))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

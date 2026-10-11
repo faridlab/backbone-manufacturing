@@ -18,5 +18,3 @@ use crate::domain::entity::WorkstationLoss;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type WorkstationLossDomainPolicy = PermitAllPolicy<WorkstationLoss>;
 
-// <<< CUSTOM
-// END CUSTOM

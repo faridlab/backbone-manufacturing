@@ -14,10 +14,6 @@ pub type CategoryCostingDefaultsValidator = EntityValidator<CategoryCostingDefau
 /// Build a validator for CategoryCostingDefaults with all schema-defined field rules.
 pub fn category_costing_defaults_validator() -> CategoryCostingDefaultsValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

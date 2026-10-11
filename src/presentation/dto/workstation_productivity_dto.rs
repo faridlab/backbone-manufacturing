@@ -286,7 +286,7 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationProductivityDto> for Worksta
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to WorkstationProductivity here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

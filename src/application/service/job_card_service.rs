@@ -32,5 +32,3 @@ pub type JobCardService = GenericCrudService<
     JobCardRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

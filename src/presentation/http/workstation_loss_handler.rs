@@ -186,3 +186,4 @@ pub fn create_protected_workstation_loss_routes<A: AuthMiddleware + Send + Sync 
             }
         }))
 }
+

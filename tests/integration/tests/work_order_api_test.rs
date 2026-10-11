@@ -141,6 +141,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add WorkOrder specific tests here
-// <<< CUSTOM TESTS END >>>

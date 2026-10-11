@@ -220,7 +220,7 @@ impl backbone_core::ApplyUpdateDto<UpdateRepairTagDto> for RepairTag {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to RepairTag here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

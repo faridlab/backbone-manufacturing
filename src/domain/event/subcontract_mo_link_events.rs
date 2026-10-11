@@ -11,8 +11,6 @@ use crate::domain::entity::SubcontractMoLink;
 /// enum containing a `Crud(CrudEvent<SubcontractMoLink>)` variant.
 pub type SubcontractMoLinkEvent = CrudEvent<SubcontractMoLink>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

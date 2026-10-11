@@ -11,8 +11,6 @@ use crate::domain::entity::CategoryCostingDefaults;
 /// enum containing a `Crud(CrudEvent<CategoryCostingDefaults>)` variant.
 pub type CategoryCostingDefaultsEvent = CrudEvent<CategoryCostingDefaults>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

@@ -15,10 +15,6 @@ pub type JobCardValidator = EntityValidator<JobCard>;
 /// Build a validator for JobCard with all schema-defined field rules.
 pub fn job_card_validator() -> JobCardValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

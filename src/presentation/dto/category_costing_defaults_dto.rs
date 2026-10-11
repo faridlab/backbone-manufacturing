@@ -311,7 +311,7 @@ impl backbone_core::ApplyUpdateDto<UpdateCategoryCostingDefaultsDto> for Categor
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to CategoryCostingDefaults here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

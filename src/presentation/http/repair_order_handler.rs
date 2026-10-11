@@ -187,3 +187,4 @@ pub fn create_protected_repair_order_routes<A: AuthMiddleware + Send + Sync + 's
             }
         }))
 }
+

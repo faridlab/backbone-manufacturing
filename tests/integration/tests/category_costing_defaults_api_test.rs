@@ -113,6 +113,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add CategoryCostingDefaults specific tests here
-// <<< CUSTOM TESTS END >>>

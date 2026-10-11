@@ -24,8 +24,6 @@ pub mod work_order_item_handler;
 pub mod job_card_handler;
 pub mod subcontract_mo_link_handler;
 
-// <<< CUSTOM
-// END CUSTOM
 
 // Re-exports
 pub use workstation_handler::{create_workstation_routes, create_workstation_read_routes, create_workstation_write_routes};
@@ -46,5 +44,3 @@ pub use work_order_handler::{create_work_order_routes, create_work_order_read_ro
 pub use work_order_item_handler::{create_work_order_item_routes, create_work_order_item_read_routes, create_work_order_item_write_routes};
 pub use job_card_handler::{create_job_card_routes, create_job_card_read_routes, create_job_card_write_routes};
 pub use subcontract_mo_link_handler::{create_subcontract_mo_link_routes, create_subcontract_mo_link_read_routes, create_subcontract_mo_link_write_routes};
-// <<< CUSTOM
-// END CUSTOM

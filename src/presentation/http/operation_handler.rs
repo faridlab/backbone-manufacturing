@@ -186,3 +186,4 @@ pub fn create_protected_operation_routes<A: AuthMiddleware + Send + Sync + 'stat
             }
         }))
 }
+

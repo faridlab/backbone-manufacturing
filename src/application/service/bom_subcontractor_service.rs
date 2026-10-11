@@ -32,5 +32,3 @@ pub type BomSubcontractorService = GenericCrudService<
     BomSubcontractorRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

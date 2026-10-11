@@ -280,7 +280,7 @@ impl backbone_core::ApplyUpdateDto<UpdateRepairPartDto> for RepairPart {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to RepairPart here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

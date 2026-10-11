@@ -270,7 +270,7 @@ impl backbone_core::ApplyUpdateDto<UpdateBomByproductDto> for BomByproduct {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to BomByproduct here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

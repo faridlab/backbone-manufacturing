@@ -16,9 +16,5 @@ pub type RepairTagValidator = EntityValidator<RepairTag>;
 pub fn repair_tag_validator() -> RepairTagValidator {
     EntityValidator::new()
         .rule(RequiredString::new("name", |e: &RepairTag| &e.name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

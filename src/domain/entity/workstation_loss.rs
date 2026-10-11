@@ -143,8 +143,6 @@ impl WorkstationLoss {
         }
     }
 
-    // <<< CUSTOM METHODS START >>>
-    // <<< CUSTOM METHODS END >>>
 }
 
 impl super::Entity for WorkstationLoss {

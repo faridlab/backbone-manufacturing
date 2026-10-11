@@ -11,8 +11,6 @@ use crate::domain::entity::UnbuildOrder;
 /// enum containing a `Crud(CrudEvent<UnbuildOrder>)` variant.
 pub type UnbuildOrderEvent = CrudEvent<UnbuildOrder>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

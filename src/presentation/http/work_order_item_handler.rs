@@ -187,3 +187,4 @@ pub fn create_protected_work_order_item_routes<A: AuthMiddleware + Send + Sync +
             }
         }))
 }
+

@@ -32,5 +32,3 @@ pub type RepairTagService = GenericCrudService<
     RepairTagRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

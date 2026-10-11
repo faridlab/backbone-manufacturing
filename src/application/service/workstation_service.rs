@@ -32,5 +32,3 @@ pub type WorkstationService = GenericCrudService<
     WorkstationRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

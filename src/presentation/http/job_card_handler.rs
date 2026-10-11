@@ -187,3 +187,4 @@ pub fn create_protected_job_card_routes<A: AuthMiddleware + Send + Sync + 'stati
             }
         }))
 }
+

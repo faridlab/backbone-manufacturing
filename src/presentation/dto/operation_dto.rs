@@ -247,7 +247,7 @@ impl backbone_core::ApplyUpdateDto<UpdateOperationDto> for Operation {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Operation here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

@@ -272,7 +272,7 @@ impl backbone_core::ApplyUpdateDto<UpdateRepairOrderDto> for RepairOrder {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to RepairOrder here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

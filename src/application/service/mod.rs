@@ -26,8 +26,6 @@ pub mod work_order_item_service;
 pub mod job_card_service;
 pub mod subcontract_mo_link_service;
 
-// <<< CUSTOM
-// END CUSTOM
 
 pub use workstation_service::WorkstationService;
 pub use workstation_loss_service::WorkstationLossService;
@@ -47,8 +45,6 @@ pub use work_order_service::WorkOrderService;
 pub use work_order_item_service::WorkOrderItemService;
 pub use job_card_service::JobCardService;
 pub use subcontract_mo_link_service::SubcontractMoLinkService;
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

@@ -18,5 +18,3 @@ use crate::domain::entity::SubcontractMoLink;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type SubcontractMoLinkDomainPolicy = PermitAllPolicy<SubcontractMoLink>;
 
-// <<< CUSTOM
-// END CUSTOM

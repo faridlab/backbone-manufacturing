@@ -18,5 +18,3 @@ use crate::domain::entity::WorkOrderItem;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type WorkOrderItemDomainPolicy = PermitAllPolicy<WorkOrderItem>;
 
-// <<< CUSTOM
-// END CUSTOM

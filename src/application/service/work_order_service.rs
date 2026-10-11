@@ -32,5 +32,3 @@ pub type WorkOrderService = GenericCrudService<
     WorkOrderRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

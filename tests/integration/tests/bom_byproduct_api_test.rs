@@ -114,6 +114,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add BomByproduct specific tests here
-// <<< CUSTOM TESTS END >>>

@@ -187,3 +187,4 @@ pub fn create_protected_bom_operation_routes<A: AuthMiddleware + Send + Sync + '
             }
         }))
 }
+

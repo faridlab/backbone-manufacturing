@@ -32,5 +32,3 @@ pub type OperationService = GenericCrudService<
     OperationRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

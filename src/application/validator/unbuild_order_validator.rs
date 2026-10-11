@@ -16,9 +16,5 @@ pub type UnbuildOrderValidator = EntityValidator<UnbuildOrder>;
 pub fn unbuild_order_validator() -> UnbuildOrderValidator {
     EntityValidator::new()
         .rule(RequiredString::new("unbuild_number", |e: &UnbuildOrder| &e.unbuild_number))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

@@ -32,5 +32,3 @@ pub type RepairOrderService = GenericCrudService<
     RepairOrderRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

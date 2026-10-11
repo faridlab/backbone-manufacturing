@@ -15,10 +15,6 @@ pub type BomItemValidator = EntityValidator<BomItem>;
 /// Build a validator for BomItem with all schema-defined field rules.
 pub fn bom_item_validator() -> BomItemValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

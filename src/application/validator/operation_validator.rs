@@ -16,9 +16,5 @@ pub type OperationValidator = EntityValidator<Operation>;
 pub fn operation_validator() -> OperationValidator {
     EntityValidator::new()
         .rule(RequiredString::new("operation_name", |e: &Operation| &e.operation_name))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

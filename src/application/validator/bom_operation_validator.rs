@@ -15,10 +15,6 @@ pub type BomOperationValidator = EntityValidator<BomOperation>;
 /// Build a validator for BomOperation with all schema-defined field rules.
 pub fn bom_operation_validator() -> BomOperationValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

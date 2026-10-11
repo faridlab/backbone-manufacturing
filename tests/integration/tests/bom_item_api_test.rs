@@ -116,6 +116,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add BomItem specific tests here
-// <<< CUSTOM TESTS END >>>

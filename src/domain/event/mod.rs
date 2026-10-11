@@ -76,5 +76,3 @@ pub use job_card_event_handlers::JobCardEventHandler;
 pub use subcontract_mo_link_events::{SubcontractMoLinkEvent, SubcontractMoLinkEventPublisher, NoopSubcontractMoLinkEventPublisher};
 pub use subcontract_mo_link_event_handlers::SubcontractMoLinkEventHandler;
 
-// <<< CUSTOM
-// END CUSTOM

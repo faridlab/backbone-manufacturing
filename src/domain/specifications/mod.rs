@@ -25,5 +25,3 @@ pub mod work_order_item_specification;
 pub mod job_card_specification;
 pub mod subcontract_mo_link_specification;
 
-// <<< CUSTOM
-// END CUSTOM

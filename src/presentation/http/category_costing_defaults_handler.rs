@@ -186,3 +186,4 @@ pub fn create_protected_category_costing_defaults_routes<A: AuthMiddleware + Sen
             }
         }))
 }
+

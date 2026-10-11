@@ -18,5 +18,3 @@ use crate::domain::entity::RepairPart;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type RepairPartDomainPolicy = PermitAllPolicy<RepairPart>;
 
-// <<< CUSTOM
-// END CUSTOM

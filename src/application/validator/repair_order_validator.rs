@@ -16,9 +16,5 @@ pub type RepairOrderValidator = EntityValidator<RepairOrder>;
 pub fn repair_order_validator() -> RepairOrderValidator {
     EntityValidator::new()
         .rule(RequiredString::new("repair_number", |e: &RepairOrder| &e.repair_number))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

@@ -187,3 +187,4 @@ pub fn create_protected_workstation_productivity_routes<A: AuthMiddleware + Send
             }
         }))
 }
+

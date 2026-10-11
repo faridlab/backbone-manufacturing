@@ -287,7 +287,7 @@ impl backbone_core::ApplyUpdateDto<UpdateBomOperationDto> for BomOperation {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to BomOperation here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

@@ -32,5 +32,3 @@ pub type CategoryCostingDefaultsService = GenericCrudService<
     CategoryCostingDefaultsRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

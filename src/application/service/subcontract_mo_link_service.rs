@@ -32,5 +32,3 @@ pub type SubcontractMoLinkService = GenericCrudService<
     SubcontractMoLinkRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

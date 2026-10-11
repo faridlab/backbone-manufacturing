@@ -276,7 +276,7 @@ impl backbone_core::ApplyUpdateDto<UpdateUnbuildOrderDto> for UnbuildOrder {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to UnbuildOrder here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

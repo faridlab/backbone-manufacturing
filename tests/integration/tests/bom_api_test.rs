@@ -119,6 +119,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add Bom specific tests here
-// <<< CUSTOM TESTS END >>>

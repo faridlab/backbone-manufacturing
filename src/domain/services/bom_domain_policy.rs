@@ -18,5 +18,3 @@ use crate::domain::entity::Bom;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type BomDomainPolicy = PermitAllPolicy<Bom>;
 
-// <<< CUSTOM
-// END CUSTOM

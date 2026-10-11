@@ -16,9 +16,5 @@ pub type WorkOrderValidator = EntityValidator<WorkOrder>;
 pub fn work_order_validator() -> WorkOrderValidator {
     EntityValidator::new()
         .rule(RequiredString::new("work_order_number", |e: &WorkOrder| &e.work_order_number))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM
