@@ -32,3 +32,41 @@ pub type WorkstationProductivityService = GenericCrudService<
     WorkstationProductivityRepository,
 >;
 
+/// The rules the schema declares for WorkstationProductivity, checked against the row a create or update
+/// would store. The generated build attaches it to [`WorkstationProductivityService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct WorkstationProductivityRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<WorkstationProductivity> for WorkstationProductivityRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, WorkstationProductivity>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `workstation_id_required` (@required on WorkstationProductivity.workstation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["workstation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "workstation_id")), r::not(r::is_empty(r::trim(r::field(row, "workstation_id")))))) {
+            refuse.push(Violation::new("workstation_id", "required", "workstation_id is required"));
+        }
+        // `loss_id_required` (@required on WorkstationProductivity.loss_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["loss_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "loss_id")), r::not(r::is_empty(r::trim(r::field(row, "loss_id")))))) {
+            refuse.push(Violation::new("loss_id", "required", "loss_id is required"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

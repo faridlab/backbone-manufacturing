@@ -32,3 +32,57 @@ pub type BomOperationService = GenericCrudService<
     BomOperationRepository,
 >;
 
+/// The rules the schema declares for BomOperation, checked against the row a create or update
+/// would store. The generated build attaches it to [`BomOperationService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct BomOperationRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<BomOperation> for BomOperationRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, BomOperation>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `bom_id_required` (@required on BomOperation.bom_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["bom_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bom_id")), r::not(r::is_empty(r::trim(r::field(row, "bom_id")))))) {
+            refuse.push(Violation::new("bom_id", "required", "bom_id is required"));
+        }
+        // `operation_id_required` (@required on BomOperation.operation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["operation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "operation_id")), r::not(r::is_empty(r::trim(r::field(row, "operation_id")))))) {
+            refuse.push(Violation::new("operation_id", "required", "operation_id is required"));
+        }
+        // `workstation_id_required` (@required on BomOperation.workstation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["workstation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "workstation_id")), r::not(r::is_empty(r::trim(r::field(row, "workstation_id")))))) {
+            refuse.push(Violation::new("workstation_id", "required", "workstation_id is required"));
+        }
+        // `time_in_mins_non_negative` (@non_negative on BomOperation.time_in_mins)
+        if (create || (update && r::changed(old.as_ref(), row, &["time_in_mins"]))) && !r::holds(&r::ge(r::field(row, "time_in_mins"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("time_in_mins", "non_negative", "time_in_mins must not be negative"));
+        }
+        // `hour_rate_non_negative` (@non_negative on BomOperation.hour_rate)
+        if (create || (update && r::changed(old.as_ref(), row, &["hour_rate"]))) && !r::holds(&r::ge(r::field(row, "hour_rate"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
+        }
+        // `operating_cost_non_negative` (@non_negative on BomOperation.operating_cost)
+        if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

@@ -32,3 +32,53 @@ pub type WorkstationService = GenericCrudService<
     WorkstationRepository,
 >;
 
+/// The rules the schema declares for Workstation, checked against the row a create or update
+/// would store. The generated build attaches it to [`WorkstationService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct WorkstationRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<Workstation> for WorkstationRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, Workstation>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `workstation_name_required` (@required on Workstation.workstation_name)
+        if (create || (update && r::changed(old.as_ref(), row, &["workstation_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "workstation_name")), r::not(r::is_empty(r::trim(r::field(row, "workstation_name")))))) {
+            refuse.push(Violation::new("workstation_name", "required", "workstation_name is required"));
+        }
+        // `workstation_name_max_length` (@max(140) on Workstation.workstation_name)
+        if (create || (update && r::changed(old.as_ref(), row, &["workstation_name"]))) && !r::holds(&r::le(r::length(r::field(row, "workstation_name")), r::Val::Num(140.0_f64))) {
+            shadow.push(Violation::new("workstation_name", "max_length", "workstation_name must be at most 140 characters").with_param("max", 140_i64));
+        }
+        // `hour_rate_non_negative` (@non_negative on Workstation.hour_rate)
+        if (create || (update && r::changed(old.as_ref(), row, &["hour_rate"]))) && !r::holds(&r::ge(r::field(row, "hour_rate"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
+        }
+        // `capacity_positive` (@positive on Workstation.capacity)
+        if (create || (update && r::changed(old.as_ref(), row, &["capacity"]))) && !r::holds(&r::gt(r::field(row, "capacity"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("capacity", "positive", "capacity must be positive"));
+        }
+        // `time_efficiency_non_negative` (@non_negative on Workstation.time_efficiency)
+        if (create || (update && r::changed(old.as_ref(), row, &["time_efficiency"]))) && !r::holds(&r::ge(r::field(row, "time_efficiency"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("time_efficiency", "non_negative", "time_efficiency must not be negative"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

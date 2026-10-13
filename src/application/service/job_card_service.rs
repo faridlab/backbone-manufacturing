@@ -32,9 +32,10 @@ pub type JobCardService = GenericCrudService<
     JobCardRepository,
 >;
 
-/// The row rules the schema declares for JobCard, checked against the row a create or
-/// update would store. The generated build attaches it to [`JobCardService`]. Every rule
-/// runs in shadow: a break is logged under `backbone::write_guard` and the write goes ahead.
+/// The rules the schema declares for JobCard, checked against the row a create or update
+/// would store. The generated build attaches it to [`JobCardService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
 pub struct JobCardRowRules;
 
 #[async_trait::async_trait]
@@ -56,11 +57,36 @@ impl backbone_core::write_guard::WriteGuard<JobCard> for JobCardRowRules {
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
         let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
         // `status` belongs to a state machine: only its verbs move it
         if update && ctx.transition.is_none() && r::changed(old.as_ref(), row, &["status"]) {
             shadow.push(Violation::new("status", "state_field_verbs_only", "the state field moves only through its verbs"));
         }
-        GuardOutcome { refuse: Vec::new(), shadow }
+        // `work_order_id_required` (@required on JobCard.work_order_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["work_order_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "work_order_id")), r::not(r::is_empty(r::trim(r::field(row, "work_order_id")))))) {
+            refuse.push(Violation::new("work_order_id", "required", "work_order_id is required"));
+        }
+        // `operation_id_required` (@required on JobCard.operation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["operation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "operation_id")), r::not(r::is_empty(r::trim(r::field(row, "operation_id")))))) {
+            refuse.push(Violation::new("operation_id", "required", "operation_id is required"));
+        }
+        // `workstation_id_required` (@required on JobCard.workstation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["workstation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "workstation_id")), r::not(r::is_empty(r::trim(r::field(row, "workstation_id")))))) {
+            refuse.push(Violation::new("workstation_id", "required", "workstation_id is required"));
+        }
+        // `total_time_mins_non_negative` (@non_negative on JobCard.total_time_mins)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_time_mins"]))) && !r::holds(&r::ge(r::field(row, "total_time_mins"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_time_mins", "non_negative", "total_time_mins must not be negative"));
+        }
+        // `hour_rate_non_negative` (@non_negative on JobCard.hour_rate)
+        if (create || (update && r::changed(old.as_ref(), row, &["hour_rate"]))) && !r::holds(&r::ge(r::field(row, "hour_rate"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
+        }
+        // `operating_cost_non_negative` (@non_negative on JobCard.operating_cost)
+        if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+        }
+        GuardOutcome { refuse, shadow }
     }
 }
 

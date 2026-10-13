@@ -32,9 +32,10 @@ pub type RepairOrderService = GenericCrudService<
     RepairOrderRepository,
 >;
 
-/// The row rules the schema declares for RepairOrder, checked against the row a create or
-/// update would store. The generated build attaches it to [`RepairOrderService`]. Every rule
-/// runs in shadow: a break is logged under `backbone::write_guard` and the write goes ahead.
+/// The rules the schema declares for RepairOrder, checked against the row a create or update
+/// would store. The generated build attaches it to [`RepairOrderService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
 pub struct RepairOrderRowRules;
 
 #[async_trait::async_trait]
@@ -56,11 +57,28 @@ impl backbone_core::write_guard::WriteGuard<RepairOrder> for RepairOrderRowRules
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
         let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
         // `status` belongs to a state machine: only its verbs move it
         if update && ctx.transition.is_none() && r::changed(old.as_ref(), row, &["status"]) {
             shadow.push(Violation::new("status", "state_field_verbs_only", "the state field moves only through its verbs"));
         }
-        GuardOutcome { refuse: Vec::new(), shadow }
+        // `repair_number_required` (@required on RepairOrder.repair_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["repair_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "repair_number")), r::not(r::is_empty(r::trim(r::field(row, "repair_number")))))) {
+            refuse.push(Violation::new("repair_number", "required", "repair_number is required"));
+        }
+        // `repair_number_max_length` (@max(40) on RepairOrder.repair_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["repair_number"]))) && !r::holds(&r::le(r::length(r::field(row, "repair_number")), r::Val::Num(40.0_f64))) {
+            shadow.push(Violation::new("repair_number", "max_length", "repair_number must be at most 40 characters").with_param("max", 40_i64));
+        }
+        // `item_id_required` (@required on RepairOrder.item_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["item_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "item_id")), r::not(r::is_empty(r::trim(r::field(row, "item_id")))))) {
+            refuse.push(Violation::new("item_id", "required", "item_id is required"));
+        }
+        // `quantity_positive` (@positive on RepairOrder.quantity)
+        if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+        }
+        GuardOutcome { refuse, shadow }
     }
 }
 

@@ -45,10 +45,24 @@ pub use work_order_service::WorkOrderService;
 pub use work_order_item_service::WorkOrderItemService;
 pub use job_card_service::JobCardService;
 pub use subcontract_mo_link_service::SubcontractMoLinkService;
+pub use workstation_service::WorkstationRowRules;
+pub use workstation_loss_service::WorkstationLossRowRules;
+pub use workstation_productivity_service::WorkstationProductivityRowRules;
+pub use operation_service::OperationRowRules;
+pub use bom_service::BomRowRules;
+pub use bom_item_service::BomItemRowRules;
+pub use bom_operation_service::BomOperationRowRules;
+pub use bom_byproduct_service::BomByproductRowRules;
+pub use bom_subcontractor_service::BomSubcontractorRowRules;
+pub use category_costing_defaults_service::CategoryCostingDefaultsRowRules;
 pub use repair_order_service::RepairOrderRowRules;
+pub use repair_part_service::RepairPartRowRules;
+pub use repair_tag_service::RepairTagRowRules;
 pub use unbuild_order_service::UnbuildOrderRowRules;
 pub use work_order_service::WorkOrderRowRules;
+pub use work_order_item_service::WorkOrderItemRowRules;
 pub use job_card_service::JobCardRowRules;
+pub use subcontract_mo_link_service::SubcontractMoLinkRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

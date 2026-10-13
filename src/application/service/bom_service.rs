@@ -32,3 +32,73 @@ pub type BomService = GenericCrudService<
     BomRepository,
 >;
 
+/// The rules the schema declares for Bom, checked against the row a create or update
+/// would store. The generated build attaches it to [`BomService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct BomRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<Bom> for BomRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, Bom>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `item_id_required` (@required on Bom.item_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["item_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "item_id")), r::not(r::is_empty(r::trim(r::field(row, "item_id")))))) {
+            refuse.push(Violation::new("item_id", "required", "item_id is required"));
+        }
+        // `bom_code_required` (@required on Bom.bom_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["bom_code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bom_code")), r::not(r::is_empty(r::trim(r::field(row, "bom_code")))))) {
+            refuse.push(Violation::new("bom_code", "required", "bom_code is required"));
+        }
+        // `bom_code_max_length` (@max(40) on Bom.bom_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["bom_code"]))) && !r::holds(&r::le(r::length(r::field(row, "bom_code")), r::Val::Num(40.0_f64))) {
+            shadow.push(Violation::new("bom_code", "max_length", "bom_code must be at most 40 characters").with_param("max", 40_i64));
+        }
+        // `version_positive` (@positive on Bom.version)
+        if (create || (update && r::changed(old.as_ref(), row, &["version"]))) && !r::holds(&r::gt(r::field(row, "version"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("version", "positive", "version must be positive"));
+        }
+        // `quantity_positive` (@positive on Bom.quantity)
+        if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+        }
+        // `uom_max_length` (@max(20) on Bom.uom)
+        if (create || (update && r::changed(old.as_ref(), row, &["uom"]))) && !r::holds(&r::le(r::length(r::field(row, "uom")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("uom", "max_length", "uom must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `currency_length` (@length(3) on Bom.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        // `raw_material_cost_non_negative` (@non_negative on Bom.raw_material_cost)
+        if (create || (update && r::changed(old.as_ref(), row, &["raw_material_cost"]))) && !r::holds(&r::ge(r::field(row, "raw_material_cost"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("raw_material_cost", "non_negative", "raw_material_cost must not be negative"));
+        }
+        // `operating_cost_non_negative` (@non_negative on Bom.operating_cost)
+        if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+        }
+        // `total_cost_non_negative` (@non_negative on Bom.total_cost)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_cost"]))) && !r::holds(&r::ge(r::field(row, "total_cost"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_cost", "non_negative", "total_cost must not be negative"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+
