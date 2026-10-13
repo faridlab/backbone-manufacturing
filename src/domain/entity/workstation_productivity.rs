@@ -240,6 +240,9 @@ impl backbone_orm::EntityRepoMeta for WorkstationProductivity {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("workstation", "workstations", "workstationId"), ("jobCard", "job_cards", "jobCardId"), ("loss", "workstation_losses", "lossId")]
+    }
 }
 
 /// Builder for WorkstationProductivity entity

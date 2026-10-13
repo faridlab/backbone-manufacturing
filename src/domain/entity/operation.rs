@@ -220,6 +220,9 @@ impl backbone_orm::EntityRepoMeta for Operation {
     fn search_fields() -> &'static [&'static str] {
         &["operation_name"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("defaultWorkstation", "workstations", "defaultWorkstationId")]
+    }
 }
 
 /// Builder for Operation entity

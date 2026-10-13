@@ -222,6 +222,9 @@ impl backbone_orm::EntityRepoMeta for UnbuildOrder {
     fn search_fields() -> &'static [&'static str] {
         &["unbuild_number"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("workOrder", "work_orders", "workOrderId")]
+    }
 }
 
 /// Builder for UnbuildOrder entity

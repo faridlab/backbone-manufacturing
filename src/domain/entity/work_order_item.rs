@@ -211,6 +211,9 @@ impl backbone_orm::EntityRepoMeta for WorkOrderItem {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("workOrder", "work_orders", "workOrderId")]
+    }
 }
 
 /// Builder for WorkOrderItem entity

@@ -230,6 +230,9 @@ impl backbone_orm::EntityRepoMeta for JobCard {
     fn search_fields() -> &'static [&'static str] {
         &[]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("workOrder", "work_orders", "workOrderId"), ("operation", "operations", "operationId"), ("workstation", "workstations", "workstationId")]
+    }
 }
 
 /// Builder for JobCard entity
