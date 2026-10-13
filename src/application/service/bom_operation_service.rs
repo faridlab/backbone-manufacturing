@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<BomOperation> for BomOperationRowRul
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `bom_id_required` (@required on BomOperation.bom_id)
         if (create || (update && r::changed(old.as_ref(), row, &["bom_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bom_id")), r::not(r::is_empty(r::trim(r::field(row, "bom_id")))))) {
@@ -72,15 +72,15 @@ impl backbone_core::write_guard::WriteGuard<BomOperation> for BomOperationRowRul
         }
         // `time_in_mins_non_negative` (@non_negative on BomOperation.time_in_mins)
         if (create || (update && r::changed(old.as_ref(), row, &["time_in_mins"]))) && !r::holds(&r::ge(r::field(row, "time_in_mins"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("time_in_mins", "non_negative", "time_in_mins must not be negative"));
+            refuse.push(Violation::new("time_in_mins", "non_negative", "time_in_mins must not be negative"));
         }
         // `hour_rate_non_negative` (@non_negative on BomOperation.hour_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["hour_rate"]))) && !r::holds(&r::ge(r::field(row, "hour_rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
+            refuse.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
         }
         // `operating_cost_non_negative` (@non_negative on BomOperation.operating_cost)
         if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+            refuse.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }

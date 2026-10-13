@@ -68,7 +68,7 @@ impl backbone_core::write_guard::WriteGuard<WorkOrder> for WorkOrderRowRules {
         }
         // `work_order_number_max_length` (@max(40) on WorkOrder.work_order_number)
         if (create || (update && r::changed(old.as_ref(), row, &["work_order_number"]))) && !r::holds(&r::le(r::length(r::field(row, "work_order_number")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("work_order_number", "max_length", "work_order_number must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("work_order_number", "max_length", "work_order_number must be at most 40 characters").with_param("max", 40_i64));
         }
         // `item_id_required` (@required on WorkOrder.item_id)
         if (create || (update && r::changed(old.as_ref(), row, &["item_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "item_id")), r::not(r::is_empty(r::trim(r::field(row, "item_id")))))) {
@@ -80,19 +80,19 @@ impl backbone_core::write_guard::WriteGuard<WorkOrder> for WorkOrderRowRules {
         }
         // `quantity_positive` (@positive on WorkOrder.quantity)
         if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+            refuse.push(Violation::new("quantity", "positive", "quantity must be positive"));
         }
         // `produced_qty_non_negative` (@non_negative on WorkOrder.produced_qty)
         if (create || (update && r::changed(old.as_ref(), row, &["produced_qty"]))) && !r::holds(&r::ge(r::field(row, "produced_qty"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("produced_qty", "non_negative", "produced_qty must not be negative"));
+            refuse.push(Violation::new("produced_qty", "non_negative", "produced_qty must not be negative"));
         }
         // `raw_material_cost_non_negative` (@non_negative on WorkOrder.raw_material_cost)
         if (create || (update && r::changed(old.as_ref(), row, &["raw_material_cost"]))) && !r::holds(&r::ge(r::field(row, "raw_material_cost"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("raw_material_cost", "non_negative", "raw_material_cost must not be negative"));
+            refuse.push(Violation::new("raw_material_cost", "non_negative", "raw_material_cost must not be negative"));
         }
         // `operating_cost_non_negative` (@non_negative on WorkOrder.operating_cost)
         if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+            refuse.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }

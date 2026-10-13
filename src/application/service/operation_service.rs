@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Operation> for OperationRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `operation_name_required` (@required on Operation.operation_name)
         if (create || (update && r::changed(old.as_ref(), row, &["operation_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "operation_name")), r::not(r::is_empty(r::trim(r::field(row, "operation_name")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<Operation> for OperationRowRules {
         }
         // `operation_name_max_length` (@max(140) on Operation.operation_name)
         if (create || (update && r::changed(old.as_ref(), row, &["operation_name"]))) && !r::holds(&r::le(r::length(r::field(row, "operation_name")), r::Val::Num(140.0_f64))) {
-            shadow.push(Violation::new("operation_name", "max_length", "operation_name must be at most 140 characters").with_param("max", 140_i64));
+            refuse.push(Violation::new("operation_name", "max_length", "operation_name must be at most 140 characters").with_param("max", 140_i64));
         }
         GuardOutcome { refuse, shadow }
     }

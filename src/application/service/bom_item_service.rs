@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<BomItem> for BomItemRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `bom_id_required` (@required on BomItem.bom_id)
         if (create || (update && r::changed(old.as_ref(), row, &["bom_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bom_id")), r::not(r::is_empty(r::trim(r::field(row, "bom_id")))))) {
@@ -68,15 +68,15 @@ impl backbone_core::write_guard::WriteGuard<BomItem> for BomItemRowRules {
         }
         // `quantity_positive` (@positive on BomItem.quantity)
         if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+            refuse.push(Violation::new("quantity", "positive", "quantity must be positive"));
         }
         // `rate_non_negative` (@non_negative on BomItem.rate)
         if (create || (update && r::changed(old.as_ref(), row, &["rate"]))) && !r::holds(&r::ge(r::field(row, "rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("rate", "non_negative", "rate must not be negative"));
+            refuse.push(Violation::new("rate", "non_negative", "rate must not be negative"));
         }
         // `amount_non_negative` (@non_negative on BomItem.amount)
         if (create || (update && r::changed(old.as_ref(), row, &["amount"]))) && !r::holds(&r::ge(r::field(row, "amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("amount", "non_negative", "amount must not be negative"));
+            refuse.push(Violation::new("amount", "non_negative", "amount must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }

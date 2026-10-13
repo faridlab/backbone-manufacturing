@@ -76,15 +76,15 @@ impl backbone_core::write_guard::WriteGuard<JobCard> for JobCardRowRules {
         }
         // `total_time_mins_non_negative` (@non_negative on JobCard.total_time_mins)
         if (create || (update && r::changed(old.as_ref(), row, &["total_time_mins"]))) && !r::holds(&r::ge(r::field(row, "total_time_mins"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("total_time_mins", "non_negative", "total_time_mins must not be negative"));
+            refuse.push(Violation::new("total_time_mins", "non_negative", "total_time_mins must not be negative"));
         }
         // `hour_rate_non_negative` (@non_negative on JobCard.hour_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["hour_rate"]))) && !r::holds(&r::ge(r::field(row, "hour_rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
+            refuse.push(Violation::new("hour_rate", "non_negative", "hour_rate must not be negative"));
         }
         // `operating_cost_non_negative` (@non_negative on JobCard.operating_cost)
         if (create || (update && r::changed(old.as_ref(), row, &["operating_cost"]))) && !r::holds(&r::ge(r::field(row, "operating_cost"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
+            refuse.push(Violation::new("operating_cost", "non_negative", "operating_cost must not be negative"));
         }
         GuardOutcome { refuse, shadow }
     }

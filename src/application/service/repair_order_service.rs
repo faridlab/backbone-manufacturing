@@ -68,7 +68,7 @@ impl backbone_core::write_guard::WriteGuard<RepairOrder> for RepairOrderRowRules
         }
         // `repair_number_max_length` (@max(40) on RepairOrder.repair_number)
         if (create || (update && r::changed(old.as_ref(), row, &["repair_number"]))) && !r::holds(&r::le(r::length(r::field(row, "repair_number")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("repair_number", "max_length", "repair_number must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("repair_number", "max_length", "repair_number must be at most 40 characters").with_param("max", 40_i64));
         }
         // `item_id_required` (@required on RepairOrder.item_id)
         if (create || (update && r::changed(old.as_ref(), row, &["item_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "item_id")), r::not(r::is_empty(r::trim(r::field(row, "item_id")))))) {
@@ -76,7 +76,7 @@ impl backbone_core::write_guard::WriteGuard<RepairOrder> for RepairOrderRowRules
         }
         // `quantity_positive` (@positive on RepairOrder.quantity)
         if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+            refuse.push(Violation::new("quantity", "positive", "quantity must be positive"));
         }
         GuardOutcome { refuse, shadow }
     }

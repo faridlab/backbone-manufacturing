@@ -68,7 +68,7 @@ impl backbone_core::write_guard::WriteGuard<UnbuildOrder> for UnbuildOrderRowRul
         }
         // `unbuild_number_max_length` (@max(40) on UnbuildOrder.unbuild_number)
         if (create || (update && r::changed(old.as_ref(), row, &["unbuild_number"]))) && !r::holds(&r::le(r::length(r::field(row, "unbuild_number")), r::Val::Num(40.0_f64))) {
-            shadow.push(Violation::new("unbuild_number", "max_length", "unbuild_number must be at most 40 characters").with_param("max", 40_i64));
+            refuse.push(Violation::new("unbuild_number", "max_length", "unbuild_number must be at most 40 characters").with_param("max", 40_i64));
         }
         // `work_order_id_required` (@required on UnbuildOrder.work_order_id)
         if (create || (update && r::changed(old.as_ref(), row, &["work_order_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "work_order_id")), r::not(r::is_empty(r::trim(r::field(row, "work_order_id")))))) {
@@ -80,7 +80,7 @@ impl backbone_core::write_guard::WriteGuard<UnbuildOrder> for UnbuildOrderRowRul
         }
         // `quantity_positive` (@positive on UnbuildOrder.quantity)
         if (create || (update && r::changed(old.as_ref(), row, &["quantity"]))) && !r::holds(&r::gt(r::field(row, "quantity"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("quantity", "positive", "quantity must be positive"));
+            refuse.push(Violation::new("quantity", "positive", "quantity must be positive"));
         }
         GuardOutcome { refuse, shadow }
     }
