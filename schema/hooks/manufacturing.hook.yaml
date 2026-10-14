@@ -58,7 +58,8 @@ state_machines:
     states: [ready, progress, done, cancel, blocked]
     transitions:
       - { id: W1, from: [ready, blocked],        to: progress, on: start,   write: direct,  note: "The operation run begins." }
-      - { id: W2, from: progress,                to: done,     on: finish,  write: direct,  note: "The once-only conversion-cost charge to WIP (operate:{job_card_id} idempotency)." }
+      # gate_complete also finishes a queued card that was never started (ready or blocked)
+      - { id: W2, from: [ready, progress, blocked], to: done,  on: finish,  write: direct,  note: "The once-only conversion-cost charge to WIP (operate:{job_card_id} idempotency)." }
       - { id: W3, from: [ready, blocked, progress], to: cancel, on: cancel, write: direct, note: "Terminal and sticky." }
       - { id: W4a, from: ready,                  to: blocked,  on: reservation_projection, write: derived, note: "Auto-flip from the parent work order's reservation_state (availability): waiting/confirmed -> blocked. A projection write, never hand-set." }
       - { id: W4b, from: blocked,                to: ready,    on: reservation_projection, write: derived, note: "Auto-flip from the parent work order's reservation_state (availability): assigned -> ready. A projection write, never hand-set." }
@@ -90,7 +91,8 @@ state_machines:
       - { id: R1, from: draft,      to: confirmed,   on: validate, write: direct, note: "Part availability checked through the InventoryPort — a shortfall is a LOUD refusal (the upstream soft wizard is not ported)." }
       - { id: R2, from: [draft, confirmed], to: under_repair, on: start, write: direct, note: "Auto-confirms a draft first (per the upstream start verb)." }
       - { id: R3, from: under_repair, to: done,      on: end,      write: direct, note: "ONCE-ONLY; executes ALL part legs in one pass through the port, each idempotent on repair-leg:{repair}:{index} (add: out of stock; remove: to inventory loss; recycle: recovered to stock), then ONE grouped balanced GL post for the leg totals." }
-      - { id: R4, from: [confirmed, under_repair], to: cancel, on: cancel, write: direct, note: "done is uncancelable — LOUD refusal." }
+      # gate_cancel also cancels a repair still in draft
+      - { id: R4, from: [draft, confirmed, under_repair], to: cancel, on: cancel, write: direct, note: "done is uncancelable — LOUD refusal." }
 
 rules:
 
