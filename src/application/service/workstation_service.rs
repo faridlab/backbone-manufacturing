@@ -78,6 +78,10 @@ impl backbone_core::write_guard::WriteGuard<Workstation> for WorkstationRowRules
         if (create || (update && r::changed(old.as_ref(), row, &["time_efficiency"]))) && !r::holds(&r::ge(r::field(row, "time_efficiency"), r::Val::Num(0.0_f64))) {
             refuse.push(Violation::new("time_efficiency", "non_negative", "time_efficiency must not be negative"));
         }
+        // `capacity-positive` (manufacturing.hook.yaml:132)
+        if (create || update) && !r::holds(&r::gt(r::field(row, "capacity"), r::Val::Num(0.0_f64))) {
+            refuse.push(Violation::new("capacity", "check_violation", "breaks the rule `capacity-positive`: capacity > 0"));
+        }
         GuardOutcome { refuse, shadow }
     }
 }

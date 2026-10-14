@@ -64,5 +64,149 @@ pub use work_order_item_service::WorkOrderItemRowRules;
 pub use job_card_service::JobCardRowRules;
 pub use subcontract_mo_link_service::SubcontractMoLinkRowRules;
 
+/// A `WorkstationService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_workstation_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::WorkstationRepository>,
+) -> WorkstationService {
+    WorkstationService::with_repository(repository).with_guard(std::sync::Arc::new(WorkstationRowRules))
+}
+
+/// A `WorkstationLossService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_workstation_loss_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::WorkstationLossRepository>,
+) -> WorkstationLossService {
+    WorkstationLossService::with_repository(repository).with_guard(std::sync::Arc::new(WorkstationLossRowRules))
+}
+
+/// A `WorkstationProductivityService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_workstation_productivity_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::WorkstationProductivityRepository>,
+) -> WorkstationProductivityService {
+    WorkstationProductivityService::with_repository(repository).with_guard(std::sync::Arc::new(WorkstationProductivityRowRules))
+}
+
+/// A `OperationService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_operation_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::OperationRepository>,
+) -> OperationService {
+    OperationService::with_repository(repository).with_guard(std::sync::Arc::new(OperationRowRules))
+}
+
+/// A `BomService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bom_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BomRepository>,
+) -> BomService {
+    BomService::with_repository(repository).with_guard(std::sync::Arc::new(BomRowRules))
+}
+
+/// A `BomItemService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bom_item_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BomItemRepository>,
+) -> BomItemService {
+    BomItemService::with_repository(repository).with_guard(std::sync::Arc::new(BomItemRowRules))
+}
+
+/// A `BomOperationService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bom_operation_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BomOperationRepository>,
+) -> BomOperationService {
+    BomOperationService::with_repository(repository).with_guard(std::sync::Arc::new(BomOperationRowRules))
+}
+
+/// A `BomByproductService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bom_byproduct_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BomByproductRepository>,
+) -> BomByproductService {
+    BomByproductService::with_repository(repository).with_guard(std::sync::Arc::new(BomByproductRowRules))
+}
+
+/// A `BomSubcontractorService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bom_subcontractor_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BomSubcontractorRepository>,
+) -> BomSubcontractorService {
+    BomSubcontractorService::with_repository(repository).with_guard(std::sync::Arc::new(BomSubcontractorRowRules))
+}
+
+/// A `CategoryCostingDefaultsService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_category_costing_defaults_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::CategoryCostingDefaultsRepository>,
+) -> CategoryCostingDefaultsService {
+    CategoryCostingDefaultsService::with_repository(repository).with_guard(std::sync::Arc::new(CategoryCostingDefaultsRowRules))
+}
+
+/// A `RepairOrderService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_repair_order_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::RepairOrderRepository>,
+) -> RepairOrderService {
+    RepairOrderService::with_repository(repository).with_guard(std::sync::Arc::new(RepairOrderRowRules))
+}
+
+/// A `RepairPartService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_repair_part_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::RepairPartRepository>,
+) -> RepairPartService {
+    RepairPartService::with_repository(repository).with_guard(std::sync::Arc::new(RepairPartRowRules))
+}
+
+/// A `RepairTagService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_repair_tag_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::RepairTagRepository>,
+) -> RepairTagService {
+    RepairTagService::with_repository(repository).with_guard(std::sync::Arc::new(RepairTagRowRules))
+}
+
+/// A `UnbuildOrderService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_unbuild_order_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::UnbuildOrderRepository>,
+) -> UnbuildOrderService {
+    UnbuildOrderService::with_repository(repository).with_guard(std::sync::Arc::new(UnbuildOrderRowRules))
+}
+
+/// A `WorkOrderService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_work_order_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::WorkOrderRepository>,
+) -> WorkOrderService {
+    WorkOrderService::with_repository(repository).with_guard(std::sync::Arc::new(WorkOrderRowRules))
+}
+
+/// A `WorkOrderItemService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_work_order_item_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::WorkOrderItemRepository>,
+) -> WorkOrderItemService {
+    WorkOrderItemService::with_repository(repository).with_guard(std::sync::Arc::new(WorkOrderItemRowRules))
+}
+
+/// A `JobCardService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_job_card_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::JobCardRepository>,
+) -> JobCardService {
+    JobCardService::with_repository(repository).with_guard(std::sync::Arc::new(JobCardRowRules))
+}
+
+/// A `SubcontractMoLinkService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_subcontract_mo_link_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::SubcontractMoLinkRepository>,
+) -> SubcontractMoLinkService {
+    SubcontractMoLinkService::with_repository(repository).with_guard(std::sync::Arc::new(SubcontractMoLinkRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

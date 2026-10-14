@@ -124,13 +124,12 @@ rules:
   # ---------------------------------------------------------------------------
   # Repair guards
   # ---------------------------------------------------------------------------
-  - { id: G-R1, name: "repair-transition-table", when: "validate/start/end/cancel verbs", entity: RepairOrder, assert: "only the R1–R4 transitions above; done is uncancelable", error_code: RepairInvalidState, enforcement: both, note: "The hand-set chain is verb-gated; there is no free-form status write on the validated surface.", justification: "PARTLY, and the gate disagrees with the rule: gate_cancel admits draft, which the R1-R4 table does not; end_repair moves stock and posts before its gate, so an end racing a cancel moves stock on a cancelled repair." }
   - { id: G-MEX7, name: "repair-tag-name-unique", when: "repair_tags INSERT/UPDATE", entity: RepairTag, assert: "unique (company_id, name) partial WHERE deleted_at IS NULL", error_code: duplicate_tag, enforcement: db, note: "The family's sole DB-level guard. ON-RECORD DEVIATION: tenant-scoped unique rather than the upstream GLOBAL unique(name) — a cross-tenant global unique would collide.", justification: "NOT ENFORCED in the module: its unique left with tenancy (strip_tenancy) and create_repair_tag only pre-reads; the composing service's tenancy posture installs the per-unit unique. No composed surface mounts a repair-tag writer." }
 
   # ---------------------------------------------------------------------------
   # Workcenter guards
   # ---------------------------------------------------------------------------
-  - { id: G-X3, name: "capacity-positive",       when: "workstations INSERT/UPDATE capacity", entity: Workstation, assert: "capacity > 0 (DB CHECK)", error_code: check_violation, enforcement: db, note: "Column CHECK on the capacity column.", justification: "Held by an unnamed column CHECK (capacity > 0), which no claim can cite; naming it needs a new migration. No composed surface mounts a workstation writer." }
+  - { id: G-X3, name: "capacity-positive",       when: [create, update], entity: Workstation, assert: "capacity > 0", error_code: check_violation, enforcement: db, note: "Column CHECK on the capacity column.", justification: "Compiled into the generated write guard, so every create and update of a workstation refuses a zero or negative capacity; the unnamed column CHECK (capacity > 0) holds it in the database as well." }
 
   # ---------------------------------------------------------------------------
   # Guards examined and deliberately NOT ported (silence is not deferral — these

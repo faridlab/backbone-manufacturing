@@ -327,75 +327,75 @@ impl ManufacturingModuleBuilder {
 
         // Workstation service
         let workstation_repository = Arc::new(WorkstationRepository::new(db_pool.clone()));
-        let workstation_service = Arc::new(WorkstationService::with_repository(workstation_repository.clone()).with_guard(Arc::new(crate::application::service::WorkstationRowRules)));
+        let workstation_service = Arc::new(crate::application::service::build_workstation_service(workstation_repository.clone()));
 
         // WorkstationLoss service
         let workstation_loss_repository = Arc::new(WorkstationLossRepository::new(db_pool.clone()));
-        let workstation_loss_service = Arc::new(WorkstationLossService::with_repository(workstation_loss_repository.clone()).with_guard(Arc::new(crate::application::service::WorkstationLossRowRules)));
+        let workstation_loss_service = Arc::new(crate::application::service::build_workstation_loss_service(workstation_loss_repository.clone()));
 
         // WorkstationProductivity service
         let workstation_productivity_repository = Arc::new(WorkstationProductivityRepository::new(db_pool.clone()));
-        let workstation_productivity_service = Arc::new(WorkstationProductivityService::with_repository(workstation_productivity_repository.clone()).with_guard(Arc::new(crate::application::service::WorkstationProductivityRowRules)));
+        let workstation_productivity_service = Arc::new(crate::application::service::build_workstation_productivity_service(workstation_productivity_repository.clone()));
 
         // Operation service
         let operation_repository = Arc::new(OperationRepository::new(db_pool.clone()));
-        let operation_service = Arc::new(OperationService::with_repository(operation_repository.clone()).with_guard(Arc::new(crate::application::service::OperationRowRules)));
+        let operation_service = Arc::new(crate::application::service::build_operation_service(operation_repository.clone()));
 
         // Bom service
         let bom_repository = Arc::new(BomRepository::new(db_pool.clone()));
-        let bom_service = Arc::new(BomService::with_repository(bom_repository.clone()).with_guard(Arc::new(crate::application::service::BomRowRules)));
+        let bom_service = Arc::new(crate::application::service::build_bom_service(bom_repository.clone()));
 
         // BomItem service
         let bom_item_repository = Arc::new(BomItemRepository::new(db_pool.clone()));
-        let bom_item_service = Arc::new(BomItemService::with_repository(bom_item_repository.clone()).with_guard(Arc::new(crate::application::service::BomItemRowRules)));
+        let bom_item_service = Arc::new(crate::application::service::build_bom_item_service(bom_item_repository.clone()));
 
         // BomOperation service
         let bom_operation_repository = Arc::new(BomOperationRepository::new(db_pool.clone()));
-        let bom_operation_service = Arc::new(BomOperationService::with_repository(bom_operation_repository.clone()).with_guard(Arc::new(crate::application::service::BomOperationRowRules)));
+        let bom_operation_service = Arc::new(crate::application::service::build_bom_operation_service(bom_operation_repository.clone()));
 
         // BomByproduct service
         let bom_byproduct_repository = Arc::new(BomByproductRepository::new(db_pool.clone()));
-        let bom_byproduct_service = Arc::new(BomByproductService::with_repository(bom_byproduct_repository.clone()).with_guard(Arc::new(crate::application::service::BomByproductRowRules)));
+        let bom_byproduct_service = Arc::new(crate::application::service::build_bom_byproduct_service(bom_byproduct_repository.clone()));
 
         // BomSubcontractor service
         let bom_subcontractor_repository = Arc::new(BomSubcontractorRepository::new(db_pool.clone()));
-        let bom_subcontractor_service = Arc::new(BomSubcontractorService::with_repository(bom_subcontractor_repository.clone()).with_guard(Arc::new(crate::application::service::BomSubcontractorRowRules)));
+        let bom_subcontractor_service = Arc::new(crate::application::service::build_bom_subcontractor_service(bom_subcontractor_repository.clone()));
 
         // CategoryCostingDefaults service
         let category_costing_defaults_repository = Arc::new(CategoryCostingDefaultsRepository::new(db_pool.clone()));
-        let category_costing_defaults_service = Arc::new(CategoryCostingDefaultsService::with_repository(category_costing_defaults_repository.clone()).with_guard(Arc::new(crate::application::service::CategoryCostingDefaultsRowRules)));
+        let category_costing_defaults_service = Arc::new(crate::application::service::build_category_costing_defaults_service(category_costing_defaults_repository.clone()));
 
         // RepairOrder service
         let repair_order_repository = Arc::new(RepairOrderRepository::new(db_pool.clone()));
-        let repair_order_service = Arc::new(RepairOrderService::with_repository(repair_order_repository.clone()).with_guard(Arc::new(crate::application::service::RepairOrderRowRules)));
+        let repair_order_service = Arc::new(crate::application::service::build_repair_order_service(repair_order_repository.clone()));
 
         // RepairPart service
         let repair_part_repository = Arc::new(RepairPartRepository::new(db_pool.clone()));
-        let repair_part_service = Arc::new(RepairPartService::with_repository(repair_part_repository.clone()).with_guard(Arc::new(crate::application::service::RepairPartRowRules)));
+        let repair_part_service = Arc::new(crate::application::service::build_repair_part_service(repair_part_repository.clone()));
 
         // RepairTag service
         let repair_tag_repository = Arc::new(RepairTagRepository::new(db_pool.clone()));
-        let repair_tag_service = Arc::new(RepairTagService::with_repository(repair_tag_repository.clone()).with_guard(Arc::new(crate::application::service::RepairTagRowRules)));
+        let repair_tag_service = Arc::new(crate::application::service::build_repair_tag_service(repair_tag_repository.clone()));
 
         // UnbuildOrder service
         let unbuild_order_repository = Arc::new(UnbuildOrderRepository::new(db_pool.clone()));
-        let unbuild_order_service = Arc::new(UnbuildOrderService::with_repository(unbuild_order_repository.clone()).with_guard(Arc::new(crate::application::service::UnbuildOrderRowRules)));
+        let unbuild_order_service = Arc::new(crate::application::service::build_unbuild_order_service(unbuild_order_repository.clone()));
 
         // WorkOrder service
         let work_order_repository = Arc::new(WorkOrderRepository::new(db_pool.clone()));
-        let work_order_service = Arc::new(WorkOrderService::with_repository(work_order_repository.clone()).with_guard(Arc::new(crate::application::service::WorkOrderRowRules)));
+        let work_order_service = Arc::new(crate::application::service::build_work_order_service(work_order_repository.clone()));
 
         // WorkOrderItem service
         let work_order_item_repository = Arc::new(WorkOrderItemRepository::new(db_pool.clone()));
-        let work_order_item_service = Arc::new(WorkOrderItemService::with_repository(work_order_item_repository.clone()).with_guard(Arc::new(crate::application::service::WorkOrderItemRowRules)));
+        let work_order_item_service = Arc::new(crate::application::service::build_work_order_item_service(work_order_item_repository.clone()));
 
         // JobCard service
         let job_card_repository = Arc::new(JobCardRepository::new(db_pool.clone()));
-        let job_card_service = Arc::new(JobCardService::with_repository(job_card_repository.clone()).with_guard(Arc::new(crate::application::service::JobCardRowRules)));
+        let job_card_service = Arc::new(crate::application::service::build_job_card_service(job_card_repository.clone()));
 
         // SubcontractMoLink service
         let subcontract_mo_link_repository = Arc::new(SubcontractMoLinkRepository::new(db_pool.clone()));
-        let subcontract_mo_link_service = Arc::new(SubcontractMoLinkService::with_repository(subcontract_mo_link_repository.clone()).with_guard(Arc::new(crate::application::service::SubcontractMoLinkRowRules)));
+        let subcontract_mo_link_service = Arc::new(crate::application::service::build_subcontract_mo_link_service(subcontract_mo_link_repository.clone()));
 
 
         // The extension builds its own state from what the generated build made.
