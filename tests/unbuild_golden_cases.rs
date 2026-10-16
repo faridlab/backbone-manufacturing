@@ -298,3 +298,29 @@ async fn ug5_source_work_order_untouched() {
     .unwrap();
     assert_eq!((p2, r2, o2), (produced, raw_cost, op_cost), "accumulators untouched");
 }
+
+/// UG-6 — an unbuild reverses only the item its source produced: another item is refused when the
+/// unbuild is drafted, and again at execute for a draft that names one anyway.
+#[tokio::test]
+async fn ug6_unbuild_of_another_item_refused() {
+    let inv = FakeInventory::new();
+    let (svc, pool, wo, fg_item, _comp, _acc) = done_wo("10", &inv).await;
+    let sink = LoggingSink;
+    let gl = GlAdapter::new(pool.clone());
+    let number = || format!("UB-{}", &Uuid::new_v4().to_string()[..8]);
+
+    let err = svc
+        .create_unbuild(NewUnbuild { unbuild_number: number(), work_order_id: wo, item_id: Uuid::new_v4(), quantity: dec("1") })
+        .await
+        .unwrap_err();
+    assert!(matches!(err, ManufacturingError::UnbuildItemMismatch), "drafting another item, got {err:?}");
+
+    let draft = svc
+        .create_unbuild(NewUnbuild { unbuild_number: number(), work_order_id: wo, item_id: fg_item, quantity: dec("1") })
+        .await
+        .unwrap();
+    sqlx::query("UPDATE manufacturing.unbuild_orders SET item_id = $2 WHERE id = $1")
+        .bind(draft).bind(Uuid::new_v4()).execute(&pool).await.unwrap();
+    let err = svc.execute_unbuild(draft, Uuid::new_v4(), &inv, &gl, &sink).await.unwrap_err();
+    assert!(matches!(err, ManufacturingError::UnbuildItemMismatch), "executing another item, got {err:?}");
+}

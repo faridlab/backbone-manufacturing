@@ -100,6 +100,8 @@ pub enum ManufacturingError {
     DuplicateNumber(String),
     #[error("unbuild source not done: the source work order must be fully produced before any of its output is unbuilt")]
     UnbuildSourceNotDone,
+    #[error("unbuild item mismatch: an unbuild reverses only the item its source work order produced")]
+    UnbuildItemMismatch,
     #[error("unbuild over remaining: unbuilding {requested} would exceed the {remaining} producible quantity left on the source order")]
     UnbuildOverRemaining { requested: Decimal, remaining: Decimal },
     #[error("cost share overflow: byproduct cost shares sum to {sum}% — the family may not carry off more than the whole batch")]

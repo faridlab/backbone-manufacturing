@@ -820,6 +820,7 @@ fn map_mfg_error(e: ManufacturingError) -> (StatusCode, String) {
         | OverProduce { .. }
         | DuplicateNumber(_)
         | UnbuildSourceNotDone
+        | UnbuildItemMismatch
         | UnbuildOverRemaining { .. }
         | CostShareOverflow { .. }
         | SubcontractKindMismatch(_) => StatusCode::CONFLICT,

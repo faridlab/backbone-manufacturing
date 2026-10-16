@@ -46,6 +46,10 @@ impl ManufacturingWriteService {
         if o.quantity <= Decimal::ZERO {
             return Err(ManufacturingError::Invalid("unbuild quantity must be positive".into()));
         }
+        // An unbuild reverses what its source produced: the item is the work order's.
+        if self.load_wo(o.work_order_id).await?.item_id != o.item_id {
+            return Err(ManufacturingError::UnbuildItemMismatch);
+        }
         let id = Uuid::new_v4();
         // The pool insert rides `org_scope::execute_scoped` — the ambient org scope (the
         // composing service sets it per request) makes the decorator's fence see it (ADR-0029).
@@ -106,6 +110,11 @@ impl ManufacturingWriteService {
         let wo = self.load_wo(u.work_order_id).await?;
         if wo.status != "done" {
             return Err(ManufacturingError::UnbuildSourceNotDone);
+        }
+        // The draft may predate the check at create, or have been edited since: checked again here,
+        // before any stock or GL is reversed.
+        if wo.item_id != u.item_id {
+            return Err(ManufacturingError::UnbuildItemMismatch);
         }
         let fg_wh = wo.fg_warehouse_id
             .ok_or(ManufacturingError::MissingAccount("fg_warehouse"))?;
