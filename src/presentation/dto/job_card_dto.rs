@@ -45,7 +45,6 @@ pub struct CreateJobCardDto {
     pub hour_rate: Decimal,
     #[serde(alias = "operating_cost")]
     pub operating_cost: Decimal,
-    pub status: JobCardState,
 }
 
 // =============================================================================
@@ -246,7 +245,7 @@ impl From<CreateJobCardDto> for JobCard {
             total_time_mins: dto.total_time_mins,
             hour_rate: dto.hour_rate,
             operating_cost: dto.operating_cost,
-            status: dto.status,
+            status: JobCardState::Ready,
             metadata: AuditMetadata::default(),
         }
     }

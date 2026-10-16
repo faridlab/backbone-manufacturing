@@ -52,7 +52,6 @@ pub struct CreateBomDto {
     pub operating_cost: Decimal,
     #[serde(alias = "total_cost")]
     pub total_cost: Decimal,
-    pub status: BomStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_default")]
     pub is_default: bool,
@@ -293,7 +292,7 @@ impl From<CreateBomDto> for Bom {
             raw_material_cost: dto.raw_material_cost,
             operating_cost: dto.operating_cost,
             total_cost: dto.total_cost,
-            status: dto.status,
+            status: BomStatus::Active,
             is_default: dto.is_default,
             metadata: AuditMetadata::default(),
         }

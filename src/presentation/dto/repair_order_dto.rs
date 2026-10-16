@@ -39,7 +39,6 @@ pub struct CreateRepairOrderDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
     pub quantity: Decimal,
-    pub status: RepairStatus,
 }
 
 // =============================================================================
@@ -222,7 +221,7 @@ impl From<CreateRepairOrderDto> for RepairOrder {
             item_id: dto.item_id,
             product_category_id: dto.product_category_id,
             quantity: dto.quantity,
-            status: dto.status,
+            status: RepairStatus::Draft,
             metadata: AuditMetadata::default(),
         }
     }

@@ -43,9 +43,6 @@ pub struct CreateWorkOrderDto {
     pub quantity: Decimal,
     #[serde(alias = "produced_qty")]
     pub produced_qty: Decimal,
-    pub status: WorkOrderState,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reservation_state")]
-    pub reservation_state: Option<ReservationState>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
     #[serde(alias = "raw_material_cost")]
@@ -324,8 +321,8 @@ impl From<CreateWorkOrderDto> for WorkOrder {
             bom_id: dto.bom_id,
             quantity: dto.quantity,
             produced_qty: dto.produced_qty,
-            status: dto.status,
-            reservation_state: dto.reservation_state,
+            status: WorkOrderState::Draft,
+            reservation_state: None,
             product_category_id: dto.product_category_id,
             raw_material_cost: dto.raw_material_cost,
             operating_cost: dto.operating_cost,

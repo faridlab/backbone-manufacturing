@@ -38,7 +38,6 @@ pub struct CreateWorkstationDto {
     pub capacity: Decimal,
     #[serde(alias = "time_efficiency")]
     pub time_efficiency: Decimal,
-    pub status: WorkstationStatus,
 }
 
 // =============================================================================
@@ -218,7 +217,7 @@ impl From<CreateWorkstationDto> for Workstation {
             hour_rate: dto.hour_rate,
             capacity: dto.capacity,
             time_efficiency: dto.time_efficiency,
-            status: dto.status,
+            status: WorkstationStatus::Active,
             metadata: AuditMetadata::default(),
         }
     }

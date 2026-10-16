@@ -40,7 +40,6 @@ pub struct CreateUnbuildOrderDto {
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
     pub quantity: Decimal,
-    pub status: UnbuildStatus,
 }
 
 // =============================================================================
@@ -226,7 +225,7 @@ impl From<CreateUnbuildOrderDto> for UnbuildOrder {
             work_order_id: dto.work_order_id,
             item_id: dto.item_id,
             quantity: dto.quantity,
-            status: dto.status,
+            status: UnbuildStatus::Draft,
             metadata: AuditMetadata::default(),
         }
     }

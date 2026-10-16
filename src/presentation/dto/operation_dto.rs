@@ -34,7 +34,6 @@ pub struct CreateOperationDto {
     pub operation_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "default_workstation_id")]
     pub default_workstation_id: Option<Uuid>,
-    pub status: OperationStatus,
 }
 
 // =============================================================================
@@ -201,7 +200,7 @@ impl From<CreateOperationDto> for Operation {
             id: Uuid::new_v4(),
             operation_name: dto.operation_name,
             default_workstation_id: dto.default_workstation_id,
-            status: dto.status,
+            status: OperationStatus::Active,
             metadata: AuditMetadata::default(),
         }
     }
