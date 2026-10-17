@@ -272,6 +272,20 @@ impl WorkOrderRepository {
         Ok(done.rows_affected())
     }
 
+    /// Take the work order's lock on the caller's transaction, held until it ends. Every verb
+    /// that reads an order, drives its stock and ledger posts and then advances it (consume,
+    /// receive, a job card's completion, an unbuild, the cancels) takes it first, so two of them
+    /// on one order run one after the other and the second reads what the first left. It is an
+    /// advisory lock, not a row lock, because each verb's gate updates the row on a transaction
+    /// of its own.
+    pub async fn hold(&self, conn: &mut sqlx::PgConnection, wo_id: Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('manufacturing.work_order:' || $1::text, 0))")
+            .bind(wo_id)
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
     /// THE CANCEL GATE: draft|confirmed → cancel. Returns rows affected (1 = this caller won;
     /// 0 = the order had already left the cancellable pair).
     ///

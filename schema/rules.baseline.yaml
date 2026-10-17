@@ -1,15 +1,10 @@
 # The rule ratchet (schema doctor): these counts may only go down. Regenerate with
 # `metaphor schema rules . --update-baseline` after enforcing a rule.
-unenforced: 6
+unenforced: 1
 warnings: 0
 machines_without_verbs: 0
 untested_rule_ids: 11
 unenforced_rules:
-- 'manufacturing.hook.yaml: consume-once'
-- 'manufacturing.hook.yaml: job-card-charge-once'
-- 'manufacturing.hook.yaml: over-produce-bound'
 - 'manufacturing.hook.yaml: repair-tag-name-unique'
-- 'manufacturing.hook.yaml: unbuild-from-done-and-bounded'
-- 'manufacturing.hook.yaml: wip-ordering'
-bypassable_rules:
-- 'manufacturing.hook.yaml: product-immutable-after-draft'
+bypassable_rules: []
+unclaimed_guards: []

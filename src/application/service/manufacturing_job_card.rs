@@ -99,6 +99,22 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<Decimal, ManufacturingError> {
+        // Under the work order's lock, then read again: a receive that closed the order or a
+        // cancel of the card that got in first refuses this completion before it posts.
+        let jc = self.job_cards.find_completion_source(&self.rpool(), job_card_id).await?
+            .ok_or(ManufacturingError::NotFound("job card"))?;
+        let hold = self.hold_work_order(jc.work_order_id).await?;
+        let out = self.complete_job_card_held(job_card_id, gl, sink).await;
+        let _ = hold.rollback().await;
+        out
+    }
+
+    async fn complete_job_card_held(
+        &self,
+        job_card_id: Uuid,
+        gl: &dyn GlPostSink,
+        sink: &dyn ManufacturingEventSink,
+    ) -> Result<Decimal, ManufacturingError> {
         // ID-only pattern (ADR-0029): the join read rides the request-dedicated connection; under
         // the composed decorator the org fence scopes the card to the caller's unit.
         let jc = self.job_cards.find_completion_source(&self.rpool(), job_card_id).await?
@@ -193,6 +209,8 @@ impl ManufacturingWriteService {
         // The ambient org scope — the cancel gate rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
+        // Wait out a completion in flight on the card's order; the gate then reads its outcome.
+        self.work_orders.hold(&mut tx, jc.work_order_id).await?;
         let moved = self.job_cards.gate_cancel(&mut tx, job_card_id).await?;
         if moved != 1 {
             tx.rollback().await?;

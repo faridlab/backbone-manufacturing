@@ -159,6 +159,8 @@ impl ManufacturingWriteService {
         // The ambient org scope — the cancel tx rides the composed decorator's fence
         // (ADR-0029). Undecorated, the tx stays plain.
         relay_ambient_scope(&mut tx).await?;
+        // Wait out a consume or receive in flight on the order; the gate then reads its outcome.
+        self.work_orders.hold(&mut tx, wo_id).await?;
         let moved = self.work_orders.gate_cancel(&mut tx, wo_id).await?;
         if moved != 1 {
             return Err(ManufacturingError::InvalidState(

@@ -330,6 +330,19 @@ impl ManufacturingWriteService {
         crate::request_pool::current().unwrap_or_else(|| self.pool.clone())
     }
 
+    /// Hold a work order's lock for the length of a verb: the returned transaction carries it, and
+    /// committing or dropping it lets the next verb on the order in. Taken before the verb reads
+    /// the order, so its idempotency keys and amounts come from a state no other verb is moving.
+    pub(super) async fn hold_work_order(
+        &self,
+        wo_id: Uuid,
+    ) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, ManufacturingError> {
+        let mut hold = self.rpool().begin().await?;
+        relay_ambient_scope(&mut hold).await?;
+        self.work_orders.hold(&mut hold, wo_id).await?;
+        Ok(hold)
+    }
+
     // ---- shared helpers -----------------------------------------------------------------------
 
     pub(super) async fn post(

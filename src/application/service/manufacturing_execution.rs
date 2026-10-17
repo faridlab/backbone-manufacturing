@@ -48,6 +48,23 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<ConsumeOutcome, ManufacturingError> {
+        // Under the order's lock: a cancel or a second consume waits until this one is done.
+        let hold = self.hold_work_order(wo_id).await?;
+        let out = self.consume_materials_held(wo_id, raw_warehouse_id, inventory, gl, sink).await;
+        // The hold wrote nothing; ending it releases the lock (a failed rollback means the
+        // connection is gone, and the lock with it).
+        let _ = hold.rollback().await;
+        out
+    }
+
+    async fn consume_materials_held(
+        &self,
+        wo_id: Uuid,
+        raw_warehouse_id: Uuid,
+        inventory: &dyn InventoryPort,
+        gl: &dyn GlPostSink,
+        sink: &dyn ManufacturingEventSink,
+    ) -> Result<ConsumeOutcome, ManufacturingError> {
         let wo = self.load_wo(wo_id).await?;
         if wo.status == "progress" || wo.status == "done" {
             return Ok(ConsumeOutcome { raw_material_value: wo.raw_material_cost, already: true });
@@ -156,6 +173,22 @@ impl ManufacturingWriteService {
     /// The subcontract extra cost (PO quoted value prorated by receipt share) posts on the credit
     /// side against the interim account.
     pub async fn receive_finished(
+        &self,
+        wo_id: Uuid,
+        order: ReceiveFinishedOrder,
+        inventory: &dyn InventoryPort,
+        gl: &dyn GlPostSink,
+        sink: &dyn ManufacturingEventSink,
+    ) -> Result<ReceiveOutcome, ManufacturingError> {
+        // Under the order's lock: a second receive reads the quantity this one produced, so the
+        // two never share an idempotency key or both pass a bound only one fits.
+        let hold = self.hold_work_order(wo_id).await?;
+        let out = self.receive_finished_held(wo_id, order, inventory, gl, sink).await;
+        let _ = hold.rollback().await;
+        out
+    }
+
+    async fn receive_finished_held(
         &self,
         wo_id: Uuid,
         order: ReceiveFinishedOrder,

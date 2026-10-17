@@ -83,6 +83,25 @@ impl ManufacturingWriteService {
         gl: &dyn GlPostSink,
         sink: &dyn ManufacturingEventSink,
     ) -> Result<UnbuildOutcome, ManufacturingError> {
+        // Under the source work order's lock, then read again: two unbuilds of one order see
+        // each other's quantity, so together they never reverse more than it produced.
+        let u = self.unbuilds.find_execute_source(&self.rpool(), unbuild_id).await?
+            .ok_or(ManufacturingError::NotFound("unbuild order"))?;
+        let hold = self.hold_work_order(u.work_order_id).await?;
+        let out = self.execute_unbuild_held(unbuild_id, raw_warehouse_id, inventory, gl, sink).await;
+        let _ = hold.rollback().await;
+        out
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn execute_unbuild_held(
+        &self,
+        unbuild_id: Uuid,
+        raw_warehouse_id: Uuid,
+        inventory: &dyn InventoryPort,
+        gl: &dyn GlPostSink,
+        sink: &dyn ManufacturingEventSink,
+    ) -> Result<UnbuildOutcome, ManufacturingError> {
         let u = self.unbuilds.find_execute_source(&self.rpool(), unbuild_id).await?
             .ok_or(ManufacturingError::NotFound("unbuild order"))?;
         if u.status == "done" {
