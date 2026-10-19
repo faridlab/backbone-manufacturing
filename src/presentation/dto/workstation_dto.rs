@@ -33,11 +33,20 @@ pub struct CreateWorkstationDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "workstation_name")]
     pub workstation_name: String,
-    #[serde(alias = "hour_rate")]
+    #[serde(default, alias = "hour_rate")]
     pub hour_rate: Decimal,
+    #[serde(default = "default_create_workstation_capacity")]
     pub capacity: Decimal,
-    #[serde(alias = "time_efficiency")]
+    #[serde(default = "default_create_workstation_time_efficiency", alias = "time_efficiency")]
     pub time_efficiency: Decimal,
+}
+
+fn default_create_workstation_capacity() -> Decimal {
+    Decimal::from(1_i64)
+}
+
+fn default_create_workstation_time_efficiency() -> Decimal {
+    Decimal::from(100_i64)
 }
 
 // =============================================================================
@@ -253,12 +262,4 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationDto> for Workstation {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Workstation here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

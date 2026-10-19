@@ -39,11 +39,11 @@ pub struct CreateJobCardDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "workstation_id")]
     pub workstation_id: Uuid,
-    #[serde(alias = "total_time_mins")]
+    #[serde(default, alias = "total_time_mins")]
     pub total_time_mins: Decimal,
-    #[serde(alias = "hour_rate")]
+    #[serde(default, alias = "hour_rate")]
     pub hour_rate: Decimal,
-    #[serde(alias = "operating_cost")]
+    #[serde(default, alias = "operating_cost")]
     pub operating_cost: Decimal,
 }
 
@@ -285,12 +285,4 @@ impl backbone_core::ApplyUpdateDto<UpdateJobCardDto> for JobCard {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to JobCard here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

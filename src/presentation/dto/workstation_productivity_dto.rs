@@ -37,12 +37,16 @@ pub struct CreateWorkstationProductivityDto {
     #[serde(alias = "loss_id")]
     pub loss_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
-    #[serde(alias = "date_start")]
+    #[serde(default = "default_create_workstation_productivity_date_start", alias = "date_start")]
     pub date_start: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "date_end")]
     pub date_end: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+}
+
+fn default_create_workstation_productivity_date_start() -> DateTime<Utc> {
+    Utc::now()
 }
 
 // =============================================================================
@@ -89,18 +93,18 @@ pub struct PatchWorkstationProductivityDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "workstation_id")]
     pub workstation_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "job_card_id")]
-    pub job_card_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "job_card_id")]
+    pub job_card_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "loss_id")]
     pub loss_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "date_start")]
     pub date_start: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "date_end")]
-    pub date_end: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "date_end")]
+    pub date_end: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub description: Option<Option<String>>,
 }
 
 impl PatchWorkstationProductivityDto {
@@ -275,12 +279,4 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationProductivityDto> for Worksta
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to WorkstationProductivity here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

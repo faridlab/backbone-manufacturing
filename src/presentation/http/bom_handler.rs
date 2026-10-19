@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for BomError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `bom:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn bom_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("bom")
+        .in_module("manufacturing")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for Bom.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for BomError {
 /// let router = create_bom_routes(service);
 /// ```
 pub fn create_bom_routes(service: Arc<BomService>) -> Router {
-    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::routes(
+    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::routes_guarded(
         service,
         "/boms",
+        bom_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for Bom.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_bom_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_bom_read_routes(service: Arc<BomService>) -> Router {
-    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::read_routes(
+    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::read_routes_guarded(
         service,
         "/boms",
+        bom_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_bom_read_routes(service: Arc<BomService>) -> Router {
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_bom_write_routes(service: Arc<BomService>) -> Router {
-    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::write_routes(
+    BackboneCrudHandler::<BomService, Bom, CreateBomDto, UpdateBomDto, BomResponseDto>::write_routes_guarded(
         service,
         "/boms",
+        bom_permissions(),
     )
 }
 

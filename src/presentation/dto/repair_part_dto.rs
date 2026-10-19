@@ -41,6 +41,7 @@ pub struct CreateRepairPartDto {
     #[serde(alias = "line_type")]
     pub line_type: RepairLineType,
     pub quantity: Decimal,
+    #[serde(default)]
     pub rate: Decimal,
 }
 
@@ -88,8 +89,8 @@ pub struct PatchRepairPartDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "item_id")]
     pub item_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "warehouse_id")]
-    pub warehouse_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "warehouse_id")]
+    pub warehouse_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "line_type")]
     pub line_type: Option<RepairLineType>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -269,12 +270,4 @@ impl backbone_core::ApplyUpdateDto<UpdateRepairPartDto> for RepairPart {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to RepairPart here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

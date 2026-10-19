@@ -301,6 +301,15 @@ impl backbone_core::PersistentEntity for WorkOrder {
     fn write_protected_fields() -> &'static [&'static str] {
         &["reservation_state"]
     }
+    fn state_fields() -> &'static [&'static str] {
+        &["status"]
+    }
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("bom_id", "manufacturing.boms", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

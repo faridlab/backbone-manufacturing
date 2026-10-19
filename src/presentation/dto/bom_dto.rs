@@ -38,23 +38,42 @@ pub struct CreateBomDto {
     #[serde(alias = "bom_code")]
     pub bom_code: String,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(default = "default_create_bom_version")]
     pub version: i32,
-    #[serde(alias = "bom_type")]
+    #[serde(default = "default_create_bom_bom_type", alias = "bom_type")]
     pub bom_type: BomType,
+    #[serde(default = "default_create_bom_quantity")]
     pub quantity: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uom: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_bom_currency")]
     pub currency: String,
-    #[serde(alias = "raw_material_cost")]
+    #[serde(default, alias = "raw_material_cost")]
     pub raw_material_cost: Decimal,
-    #[serde(alias = "operating_cost")]
+    #[serde(default, alias = "operating_cost")]
     pub operating_cost: Decimal,
-    #[serde(alias = "total_cost")]
+    #[serde(default, alias = "total_cost")]
     pub total_cost: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_default")]
+    #[serde(default, alias = "is_default")]
     pub is_default: bool,
+}
+
+fn default_create_bom_version() -> i32 {
+    1
+}
+
+fn default_create_bom_bom_type() -> BomType {
+    BomType::Normal
+}
+
+fn default_create_bom_quantity() -> Decimal {
+    Decimal::from(1_i64)
+}
+
+fn default_create_bom_currency() -> String {
+    "IDR".to_string()
 }
 
 // =============================================================================
@@ -121,8 +140,8 @@ pub struct PatchBomDto {
     pub bom_type: Option<BomType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub uom: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub uom: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
@@ -343,12 +362,4 @@ impl backbone_core::ApplyUpdateDto<UpdateBomDto> for Bom {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Bom here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

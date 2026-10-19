@@ -226,11 +226,3 @@ impl backbone_core::ApplyUpdateDto<UpdateSubcontractMoLinkDto> for SubcontractMo
     }
 }
 
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to SubcontractMoLink here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
-

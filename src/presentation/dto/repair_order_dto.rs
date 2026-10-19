@@ -83,8 +83,8 @@ pub struct PatchRepairOrderDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "item_id")]
     pub item_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
-    pub product_category_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "product_category_id")]
+    pub product_category_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -257,12 +257,4 @@ impl backbone_core::ApplyUpdateDto<UpdateRepairOrderDto> for RepairOrder {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to RepairOrder here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

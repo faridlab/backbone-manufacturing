@@ -177,6 +177,12 @@ impl super::Entity for BomItem {
 }
 
 impl backbone_core::PersistentEntity for BomItem {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("bom_id", "manufacturing.boms", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

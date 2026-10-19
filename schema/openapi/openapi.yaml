@@ -71,30 +71,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - Workstations
-      summary: Create Workstation
-      description: Create a new Workstation
-      operationId: createWorkstation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWorkstationRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workstation'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/manufacturing/workstations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -114,181 +90,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - Workstations
-      summary: Update Workstation (full)
-      operationId: updateWorkstation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateWorkstationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workstation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - Workstations
-      summary: Update Workstation (partial)
-      operationId: patchWorkstation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchWorkstationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workstation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - Workstations
-      summary: Delete Workstation (soft)
-      operationId: deleteWorkstation
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/workstations/bulk:
-    post:
-      tags:
-        - Workstations
-      summary: Bulk create Workstations
-      operationId: bulkCreateWorkstations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateWorkstationRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Workstation'
-    put:
-      tags:
-        - Workstations
-      summary: Bulk update Workstations (full, atomic)
-      operationId: bulkUpdateWorkstations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateWorkstationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkstationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - Workstations
-      summary: Bulk partial-update Workstations (atomic)
-      operationId: bulkPatchWorkstations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkstationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/workstations/upsert:
-    post:
-      tags:
-        - Workstations
-      summary: Upsert Workstation
-      operationId: upsertWorkstation
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateWorkstationRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workstation'
-
   /api/v1/manufacturing/workstations/trash:
     get:
       tags:
@@ -305,115 +106,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkstationList'
-
-  /api/v1/manufacturing/workstations/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - Workstations
-      summary: Restore deleted Workstation
-      operationId: restoreWorkstation
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workstation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/workstations/empty:
-    delete:
-      tags:
-        - Workstations
-      summary: Empty trash for Workstations
-      operationId: emptyTrashWorkstations
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/manufacturing/workstations/delete/bulk:
-    post:
-      tags:
-        - Workstations
-      summary: Bulk soft-delete Workstations by ids (atomic)
-      operationId: bulkDeleteWorkstations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/workstations/restore/bulk:
-    post:
-      tags:
-        - Workstations
-      summary: Bulk restore Workstations by ids (atomic)
-      operationId: bulkRestoreWorkstations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkstationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/workstations/restore/all:
-    post:
-      tags:
-        - Workstations
-      summary: Restore all soft-deleted Workstations
-      operationId: restoreAllWorkstations
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/manufacturing/workstations/trash/bulk:
-    delete:
-      tags:
-        - Workstations
-      summary: Bulk permanently-delete Workstations from trash by ids (atomic)
-      operationId: bulkPermanentDeleteWorkstations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/manufacturing/workstation_losses:
     get:
@@ -1169,30 +861,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - Operations
-      summary: Create Operation
-      description: Create a new Operation
-      operationId: createOperation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateOperationRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/manufacturing/operations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -1212,181 +880,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - Operations
-      summary: Update Operation (full)
-      operationId: updateOperation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateOperationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - Operations
-      summary: Update Operation (partial)
-      operationId: patchOperation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchOperationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - Operations
-      summary: Delete Operation (soft)
-      operationId: deleteOperation
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/operations/bulk:
-    post:
-      tags:
-        - Operations
-      summary: Bulk create Operations
-      operationId: bulkCreateOperations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateOperationRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Operation'
-    put:
-      tags:
-        - Operations
-      summary: Bulk update Operations (full, atomic)
-      operationId: bulkUpdateOperations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateOperationRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OperationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - Operations
-      summary: Bulk partial-update Operations (atomic)
-      operationId: bulkPatchOperations
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OperationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/operations/upsert:
-    post:
-      tags:
-        - Operations
-      summary: Upsert Operation
-      operationId: upsertOperation
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateOperationRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-
   /api/v1/manufacturing/operations/trash:
     get:
       tags:
@@ -1403,115 +896,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OperationList'
-
-  /api/v1/manufacturing/operations/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - Operations
-      summary: Restore deleted Operation
-      operationId: restoreOperation
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Operation'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/operations/empty:
-    delete:
-      tags:
-        - Operations
-      summary: Empty trash for Operations
-      operationId: emptyTrashOperations
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/manufacturing/operations/delete/bulk:
-    post:
-      tags:
-        - Operations
-      summary: Bulk soft-delete Operations by ids (atomic)
-      operationId: bulkDeleteOperations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/operations/restore/bulk:
-    post:
-      tags:
-        - Operations
-      summary: Bulk restore Operations by ids (atomic)
-      operationId: bulkRestoreOperations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OperationBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/operations/restore/all:
-    post:
-      tags:
-        - Operations
-      summary: Restore all soft-deleted Operations
-      operationId: restoreAllOperations
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/manufacturing/operations/trash/bulk:
-    delete:
-      tags:
-        - Operations
-      summary: Bulk permanently-delete Operations from trash by ids (atomic)
-      operationId: bulkPermanentDeleteOperations
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/manufacturing/boms:
     get:
@@ -1535,30 +919,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - Boms
-      summary: Create Bom
-      description: Create a new Bom
-      operationId: createBom
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateBomRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Bom'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/manufacturing/boms/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -1578,181 +938,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - Boms
-      summary: Update Bom (full)
-      operationId: updateBom
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateBomRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Bom'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - Boms
-      summary: Update Bom (partial)
-      operationId: patchBom
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchBomRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Bom'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - Boms
-      summary: Delete Bom (soft)
-      operationId: deleteBom
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/boms/bulk:
-    post:
-      tags:
-        - Boms
-      summary: Bulk create Boms
-      operationId: bulkCreateBoms
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateBomRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Bom'
-    put:
-      tags:
-        - Boms
-      summary: Bulk update Boms (full, atomic)
-      operationId: bulkUpdateBoms
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateBomRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BomBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - Boms
-      summary: Bulk partial-update Boms (atomic)
-      operationId: bulkPatchBoms
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BomBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/boms/upsert:
-    post:
-      tags:
-        - Boms
-      summary: Upsert Bom
-      operationId: upsertBom
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateBomRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Bom'
-
   /api/v1/manufacturing/boms/trash:
     get:
       tags:
@@ -1769,115 +954,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BomList'
-
-  /api/v1/manufacturing/boms/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - Boms
-      summary: Restore deleted Bom
-      operationId: restoreBom
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Bom'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/boms/empty:
-    delete:
-      tags:
-        - Boms
-      summary: Empty trash for Boms
-      operationId: emptyTrashBoms
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/manufacturing/boms/delete/bulk:
-    post:
-      tags:
-        - Boms
-      summary: Bulk soft-delete Boms by ids (atomic)
-      operationId: bulkDeleteBoms
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/boms/restore/bulk:
-    post:
-      tags:
-        - Boms
-      summary: Bulk restore Boms by ids (atomic)
-      operationId: bulkRestoreBoms
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BomBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/boms/restore/all:
-    post:
-      tags:
-        - Boms
-      summary: Restore all soft-deleted Boms
-      operationId: restoreAllBoms
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/manufacturing/boms/trash/bulk:
-    delete:
-      tags:
-        - Boms
-      summary: Bulk permanently-delete Boms from trash by ids (atomic)
-      operationId: bulkPermanentDeleteBoms
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/manufacturing/bom_items:
     get:
@@ -3731,30 +2807,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - RepairOrders
-      summary: Create RepairOrder
-      description: Create a new RepairOrder
-      operationId: createRepairOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRepairOrderRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrder'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/manufacturing/repair_orders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -3774,181 +2826,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - RepairOrders
-      summary: Update RepairOrder (full)
-      operationId: updateRepairOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateRepairOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - RepairOrders
-      summary: Update RepairOrder (partial)
-      operationId: patchRepairOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchRepairOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - RepairOrders
-      summary: Delete RepairOrder (soft)
-      operationId: deleteRepairOrder
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/repair_orders/bulk:
-    post:
-      tags:
-        - RepairOrders
-      summary: Bulk create RepairOrders
-      operationId: bulkCreateRepairOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateRepairOrderRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RepairOrder'
-    put:
-      tags:
-        - RepairOrders
-      summary: Bulk update RepairOrders (full, atomic)
-      operationId: bulkUpdateRepairOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateRepairOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - RepairOrders
-      summary: Bulk partial-update RepairOrders (atomic)
-      operationId: bulkPatchRepairOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/repair_orders/upsert:
-    post:
-      tags:
-        - RepairOrders
-      summary: Upsert RepairOrder
-      operationId: upsertRepairOrder
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateRepairOrderRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrder'
-
   /api/v1/manufacturing/repair_orders/trash:
     get:
       tags:
@@ -3965,115 +2842,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RepairOrderList'
-
-  /api/v1/manufacturing/repair_orders/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - RepairOrders
-      summary: Restore deleted RepairOrder
-      operationId: restoreRepairOrder
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/repair_orders/empty:
-    delete:
-      tags:
-        - RepairOrders
-      summary: Empty trash for RepairOrders
-      operationId: emptyTrashRepairOrders
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/manufacturing/repair_orders/delete/bulk:
-    post:
-      tags:
-        - RepairOrders
-      summary: Bulk soft-delete RepairOrders by ids (atomic)
-      operationId: bulkDeleteRepairOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/repair_orders/restore/bulk:
-    post:
-      tags:
-        - RepairOrders
-      summary: Bulk restore RepairOrders by ids (atomic)
-      operationId: bulkRestoreRepairOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RepairOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/repair_orders/restore/all:
-    post:
-      tags:
-        - RepairOrders
-      summary: Restore all soft-deleted RepairOrders
-      operationId: restoreAllRepairOrders
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/manufacturing/repair_orders/trash/bulk:
-    delete:
-      tags:
-        - RepairOrders
-      summary: Bulk permanently-delete RepairOrders from trash by ids (atomic)
-      operationId: bulkPermanentDeleteRepairOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/manufacturing/repair_parts:
     get:
@@ -4829,30 +3597,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Create UnbuildOrder
-      description: Create a new UnbuildOrder
-      operationId: createUnbuildOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUnbuildOrderRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrder'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/manufacturing/unbuild_orders/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -4872,181 +3616,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - UnbuildOrders
-      summary: Update UnbuildOrder (full)
-      operationId: updateUnbuildOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - UnbuildOrders
-      summary: Update UnbuildOrder (partial)
-      operationId: patchUnbuildOrder
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchUnbuildOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - UnbuildOrders
-      summary: Delete UnbuildOrder (soft)
-      operationId: deleteUnbuildOrder
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/unbuild_orders/bulk:
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Bulk create UnbuildOrders
-      operationId: bulkCreateUnbuildOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateUnbuildOrderRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UnbuildOrder'
-    put:
-      tags:
-        - UnbuildOrders
-      summary: Bulk update UnbuildOrders (full, atomic)
-      operationId: bulkUpdateUnbuildOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - UnbuildOrders
-      summary: Bulk partial-update UnbuildOrders (atomic)
-      operationId: bulkPatchUnbuildOrders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/unbuild_orders/upsert:
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Upsert UnbuildOrder
-      operationId: upsertUnbuildOrder
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUnbuildOrderRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrder'
-
   /api/v1/manufacturing/unbuild_orders/trash:
     get:
       tags:
@@ -5063,115 +3632,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UnbuildOrderList'
-
-  /api/v1/manufacturing/unbuild_orders/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Restore deleted UnbuildOrder
-      operationId: restoreUnbuildOrder
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrder'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/manufacturing/unbuild_orders/empty:
-    delete:
-      tags:
-        - UnbuildOrders
-      summary: Empty trash for UnbuildOrders
-      operationId: emptyTrashUnbuildOrders
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/manufacturing/unbuild_orders/delete/bulk:
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Bulk soft-delete UnbuildOrders by ids (atomic)
-      operationId: bulkDeleteUnbuildOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/unbuild_orders/restore/bulk:
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Bulk restore UnbuildOrders by ids (atomic)
-      operationId: bulkRestoreUnbuildOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnbuildOrderBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/manufacturing/unbuild_orders/restore/all:
-    post:
-      tags:
-        - UnbuildOrders
-      summary: Restore all soft-deleted UnbuildOrders
-      operationId: restoreAllUnbuildOrders
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/manufacturing/unbuild_orders/trash/bulk:
-    delete:
-      tags:
-        - UnbuildOrders
-      summary: Bulk permanently-delete UnbuildOrders from trash by ids (atomic)
-      operationId: bulkPermanentDeleteUnbuildOrders
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/manufacturing/work_orders:
     get:
@@ -6684,11 +5144,6 @@ components:
       type: object
       required:
         - workstation_name
-        - hour_rate
-        - capacity
-        - time_efficiency
-        - status
-        - metadata
       properties:
         workstation_name:
           type: string
@@ -6699,10 +5154,6 @@ components:
           type: string
         time_efficiency:
           type: string
-        status:
-          type: string
-        metadata:
-          type: object
 
     UpdateWorkstationRequest:
       type: object
@@ -6712,7 +5163,6 @@ components:
         - capacity
         - time_efficiency
         - status
-        - metadata
       properties:
         workstation_name:
           type: string
@@ -6725,8 +5175,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchWorkstationRequest:
       type: object
@@ -6742,8 +5190,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     WorkstationList:
       type: object
@@ -6792,30 +5238,24 @@ components:
       required:
         - name
         - loss_type
-        - metadata
       properties:
         name:
           type: string
           maxLength: 140
         loss_type:
           type: string
-        metadata:
-          type: object
 
     UpdateWorkstationLossRequest:
       type: object
       required:
         - name
         - loss_type
-        - metadata
       properties:
         name:
           type: string
           maxLength: 140
         loss_type:
           type: string
-        metadata:
-          type: object
 
     PatchWorkstationLossRequest:
       type: object
@@ -6825,8 +5265,6 @@ components:
           maxLength: 140
         loss_type:
           type: string
-        metadata:
-          type: object
 
     WorkstationLossList:
       type: object
@@ -6891,8 +5329,6 @@ components:
       required:
         - workstation_id
         - loss_id
-        - date_start
-        - metadata
       properties:
         workstation_id:
           type: string
@@ -6914,8 +5350,6 @@ components:
         description:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     UpdateWorkstationProductivityRequest:
       type: object
@@ -6923,7 +5357,6 @@ components:
         - workstation_id
         - loss_id
         - date_start
-        - metadata
       properties:
         workstation_id:
           type: string
@@ -6945,8 +5378,6 @@ components:
         description:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     PatchWorkstationProductivityRequest:
       type: object
@@ -6971,8 +5402,6 @@ components:
         description:
           nullable: true
           type: string
-        metadata:
-          type: object
 
     WorkstationProductivityList:
       type: object
@@ -7024,8 +5453,6 @@ components:
       type: object
       required:
         - operation_name
-        - status
-        - metadata
       properties:
         operation_name:
           type: string
@@ -7034,17 +5461,12 @@ components:
           nullable: true
           type: string
           format: uuid
-        status:
-          type: string
-        metadata:
-          type: object
 
     UpdateOperationRequest:
       type: object
       required:
         - operation_name
         - status
-        - metadata
       properties:
         operation_name:
           type: string
@@ -7055,8 +5477,6 @@ components:
           format: uuid
         status:
           type: string
-        metadata:
-          type: object
 
     PatchOperationRequest:
       type: object
@@ -7070,8 +5490,6 @@ components:
           format: uuid
         status:
           type: string
-        metadata:
-          type: object
 
     OperationList:
       type: object
@@ -7153,16 +5571,6 @@ components:
       required:
         - item_id
         - bom_code
-        - version
-        - bom_type
-        - quantity
-        - currency
-        - raw_material_cost
-        - operating_cost
-        - total_cost
-        - status
-        - is_default
-        - metadata
       properties:
         item_id:
           type: string
@@ -7189,12 +5597,8 @@ components:
           type: string
         total_cost:
           type: string
-        status:
-          type: string
         is_default:
           type: boolean
-        metadata:
-          type: object
 
     UpdateBomRequest:
       type: object
@@ -7210,7 +5614,6 @@ components:
         - total_cost
         - status
         - is_default
-        - metadata
       properties:
         item_id:
           type: string
@@ -7241,8 +5644,6 @@ components:
           type: string
         is_default:
           type: boolean
-        metadata:
-          type: object
 
     PatchBomRequest:
       type: object
@@ -7276,8 +5677,6 @@ components:
           type: string
         is_default:
           type: boolean
-        metadata:
-          type: object
 
     BomList:
       type: object
@@ -7340,10 +5739,6 @@ components:
         - bom_id
         - item_id
         - quantity
-        - rate
-        - amount
-        - is_phantom
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7359,8 +5754,6 @@ components:
           type: string
         is_phantom:
           type: boolean
-        metadata:
-          type: object
 
     UpdateBomItemRequest:
       type: object
@@ -7371,7 +5764,6 @@ components:
         - rate
         - amount
         - is_phantom
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7387,8 +5779,6 @@ components:
           type: string
         is_phantom:
           type: boolean
-        metadata:
-          type: object
 
     PatchBomItemRequest:
       type: object
@@ -7407,8 +5797,6 @@ components:
           type: string
         is_phantom:
           type: boolean
-        metadata:
-          type: object
 
     BomItemList:
       type: object
@@ -7473,9 +5861,6 @@ components:
         - operation_id
         - workstation_id
         - time_in_mins
-        - hour_rate
-        - operating_cost
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7492,8 +5877,6 @@ components:
           type: string
         operating_cost:
           type: string
-        metadata:
-          type: object
 
     UpdateBomOperationRequest:
       type: object
@@ -7504,7 +5887,6 @@ components:
         - time_in_mins
         - hour_rate
         - operating_cost
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7521,8 +5903,6 @@ components:
           type: string
         operating_cost:
           type: string
-        metadata:
-          type: object
 
     PatchBomOperationRequest:
       type: object
@@ -7542,8 +5922,6 @@ components:
           type: string
         operating_cost:
           type: string
-        metadata:
-          type: object
 
     BomOperationList:
       type: object
@@ -7604,8 +5982,6 @@ components:
         - bom_id
         - item_id
         - quantity
-        - cost_share
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7621,8 +5997,6 @@ components:
           type: string
         cost_share:
           type: string
-        metadata:
-          type: object
 
     UpdateBomByproductRequest:
       type: object
@@ -7631,7 +6005,6 @@ components:
         - item_id
         - quantity
         - cost_share
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7647,8 +6020,6 @@ components:
           type: string
         cost_share:
           type: string
-        metadata:
-          type: object
 
     PatchBomByproductRequest:
       type: object
@@ -7667,8 +6038,6 @@ components:
           type: string
         cost_share:
           type: string
-        metadata:
-          type: object
 
     BomByproductList:
       type: object
@@ -7718,7 +6087,6 @@ components:
       required:
         - bom_id
         - partner_id
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7726,15 +6094,12 @@ components:
         partner_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateBomSubcontractorRequest:
       type: object
       required:
         - bom_id
         - partner_id
-        - metadata
       properties:
         bom_id:
           type: string
@@ -7742,8 +6107,6 @@ components:
         partner_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchBomSubcontractorRequest:
       type: object
@@ -7754,8 +6117,6 @@ components:
         partner_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     BomSubcontractorList:
       type: object
@@ -7832,7 +6193,6 @@ components:
       type: object
       required:
         - product_category_id
-        - metadata
       properties:
         product_category_id:
           type: string
@@ -7869,14 +6229,11 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateCategoryCostingDefaultsRequest:
       type: object
       required:
         - product_category_id
-        - metadata
       properties:
         product_category_id:
           type: string
@@ -7913,8 +6270,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchCategoryCostingDefaultsRequest:
       type: object
@@ -7954,8 +6309,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     CategoryCostingDefaultsList:
       type: object
@@ -8016,8 +6369,6 @@ components:
         - repair_number
         - item_id
         - quantity
-        - status
-        - metadata
       properties:
         repair_number:
           type: string
@@ -8031,10 +6382,6 @@ components:
           format: uuid
         quantity:
           type: string
-        status:
-          type: string
-        metadata:
-          type: object
 
     UpdateRepairOrderRequest:
       type: object
@@ -8043,7 +6390,6 @@ components:
         - item_id
         - quantity
         - status
-        - metadata
       properties:
         repair_number:
           type: string
@@ -8059,8 +6405,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchRepairOrderRequest:
       type: object
@@ -8079,8 +6423,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     RepairOrderList:
       type: object
@@ -8145,8 +6487,6 @@ components:
         - item_id
         - line_type
         - quantity
-        - rate
-        - metadata
       properties:
         repair_order_id:
           type: string
@@ -8164,8 +6504,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     UpdateRepairPartRequest:
       type: object
@@ -8175,7 +6513,6 @@ components:
         - line_type
         - quantity
         - rate
-        - metadata
       properties:
         repair_order_id:
           type: string
@@ -8193,8 +6530,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     PatchRepairPartRequest:
       type: object
@@ -8215,8 +6550,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     RepairPartList:
       type: object
@@ -8261,25 +6594,19 @@ components:
       type: object
       required:
         - name
-        - metadata
       properties:
         name:
           type: string
           maxLength: 140
-        metadata:
-          type: object
 
     UpdateRepairTagRequest:
       type: object
       required:
         - name
-        - metadata
       properties:
         name:
           type: string
           maxLength: 140
-        metadata:
-          type: object
 
     PatchRepairTagRequest:
       type: object
@@ -8287,8 +6614,6 @@ components:
         name:
           type: string
           maxLength: 140
-        metadata:
-          type: object
 
     RepairTagList:
       type: object
@@ -8350,8 +6675,6 @@ components:
         - work_order_id
         - item_id
         - quantity
-        - status
-        - metadata
       properties:
         unbuild_number:
           type: string
@@ -8364,10 +6687,6 @@ components:
           format: uuid
         quantity:
           type: string
-        status:
-          type: string
-        metadata:
-          type: object
 
     UpdateUnbuildOrderRequest:
       type: object
@@ -8377,7 +6696,6 @@ components:
         - item_id
         - quantity
         - status
-        - metadata
       properties:
         unbuild_number:
           type: string
@@ -8392,8 +6710,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchUnbuildOrderRequest:
       type: object
@@ -8411,8 +6727,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     UnbuildOrderList:
       type: object
@@ -8518,11 +6832,6 @@ components:
         - item_id
         - bom_id
         - quantity
-        - produced_qty
-        - status
-        - raw_material_cost
-        - operating_cost
-        - metadata
       properties:
         work_order_number:
           type: string
@@ -8536,11 +6845,6 @@ components:
         quantity:
           type: string
         produced_qty:
-          type: string
-        status:
-          type: string
-        reservation_state:
-          nullable: true
           type: string
         product_category_id:
           nullable: true
@@ -8578,8 +6882,6 @@ components:
           nullable: true
           type: string
           format: date-time
-        metadata:
-          type: object
 
     UpdateWorkOrderRequest:
       type: object
@@ -8592,7 +6894,6 @@ components:
         - status
         - raw_material_cost
         - operating_cost
-        - metadata
       properties:
         work_order_number:
           type: string
@@ -8648,8 +6949,6 @@ components:
           nullable: true
           type: string
           format: date-time
-        metadata:
-          type: object
 
     PatchWorkOrderRequest:
       type: object
@@ -8708,8 +7007,6 @@ components:
           nullable: true
           type: string
           format: date-time
-        metadata:
-          type: object
 
     WorkOrderList:
       type: object
@@ -8769,9 +7066,6 @@ components:
         - work_order_id
         - item_id
         - required_qty
-        - consumed_qty
-        - rate
-        - metadata
       properties:
         work_order_id:
           type: string
@@ -8785,8 +7079,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     UpdateWorkOrderItemRequest:
       type: object
@@ -8796,7 +7088,6 @@ components:
         - required_qty
         - consumed_qty
         - rate
-        - metadata
       properties:
         work_order_id:
           type: string
@@ -8810,8 +7101,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     PatchWorkOrderItemRequest:
       type: object
@@ -8828,8 +7117,6 @@ components:
           type: string
         rate:
           type: string
-        metadata:
-          type: object
 
     WorkOrderItemList:
       type: object
@@ -8896,11 +7183,6 @@ components:
         - work_order_id
         - operation_id
         - workstation_id
-        - total_time_mins
-        - hour_rate
-        - operating_cost
-        - status
-        - metadata
       properties:
         work_order_id:
           type: string
@@ -8917,10 +7199,6 @@ components:
           type: string
         operating_cost:
           type: string
-        status:
-          type: string
-        metadata:
-          type: object
 
     UpdateJobCardRequest:
       type: object
@@ -8932,7 +7210,6 @@ components:
         - hour_rate
         - operating_cost
         - status
-        - metadata
       properties:
         work_order_id:
           type: string
@@ -8951,8 +7228,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     PatchJobCardRequest:
       type: object
@@ -8974,8 +7249,6 @@ components:
           type: string
         status:
           type: string
-        metadata:
-          type: object
 
     JobCardList:
       type: object
@@ -9025,7 +7298,6 @@ components:
       required:
         - purchase_order_id
         - work_order_id
-        - metadata
       properties:
         purchase_order_id:
           type: string
@@ -9033,15 +7305,12 @@ components:
         work_order_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateSubcontractMoLinkRequest:
       type: object
       required:
         - purchase_order_id
         - work_order_id
-        - metadata
       properties:
         purchase_order_id:
           type: string
@@ -9049,8 +7318,6 @@ components:
         work_order_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchSubcontractMoLinkRequest:
       type: object
@@ -9061,8 +7328,6 @@ components:
         work_order_id:
           type: string
           format: uuid
-        metadata:
-          type: object
 
     SubcontractMoLinkList:
       type: object

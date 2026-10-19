@@ -97,22 +97,22 @@ pub struct PatchCategoryCostingDefaultsDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "wip_account_id")]
-    pub wip_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fg_account_id")]
-    pub fg_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "raw_material_account_id")]
-    pub raw_material_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "conversion_cost_account_id")]
-    pub conversion_cost_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "subcontract_interim_account_id")]
-    pub subcontract_interim_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "cost_variance_account_id")]
-    pub cost_variance_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "inventory_loss_account_id")]
-    pub inventory_loss_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "repair_expense_account_id")]
-    pub repair_expense_account_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "wip_account_id")]
+    pub wip_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fg_account_id")]
+    pub fg_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "raw_material_account_id")]
+    pub raw_material_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "conversion_cost_account_id")]
+    pub conversion_cost_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "subcontract_interim_account_id")]
+    pub subcontract_interim_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "cost_variance_account_id")]
+    pub cost_variance_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "inventory_loss_account_id")]
+    pub inventory_loss_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "repair_expense_account_id")]
+    pub repair_expense_account_id: Option<Option<Uuid>>,
 }
 
 impl PatchCategoryCostingDefaultsDto {
@@ -300,12 +300,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCategoryCostingDefaultsDto> for Categor
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to CategoryCostingDefaults here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -71,8 +71,8 @@ pub struct PatchOperationDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "operation_name")]
     pub operation_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "default_workstation_id")]
-    pub default_workstation_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "default_workstation_id")]
+    pub default_workstation_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<OperationStatus>,
 }
@@ -232,12 +232,4 @@ impl backbone_core::ApplyUpdateDto<UpdateOperationDto> for Operation {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Operation here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

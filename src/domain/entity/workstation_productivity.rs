@@ -198,6 +198,14 @@ impl super::Entity for WorkstationProductivity {
 }
 
 impl backbone_core::PersistentEntity for WorkstationProductivity {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("workstation_id", "manufacturing.workstations", "id"),
+            backbone_core::Reference::new("job_card_id", "manufacturing.job_cards", "id"),
+            backbone_core::Reference::new("loss_id", "manufacturing.workstation_losses", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

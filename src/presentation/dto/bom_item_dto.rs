@@ -36,10 +36,12 @@ pub struct CreateBomItemDto {
     #[serde(alias = "item_id")]
     pub item_id: Uuid,
     pub quantity: Decimal,
+    #[serde(default)]
     pub rate: Decimal,
+    #[serde(default)]
     pub amount: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_phantom")]
+    #[serde(default, alias = "is_phantom")]
     pub is_phantom: bool,
 }
 
@@ -270,12 +272,4 @@ impl backbone_core::ApplyUpdateDto<UpdateBomItemDto> for BomItem {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to BomItem here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

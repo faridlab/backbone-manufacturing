@@ -189,6 +189,17 @@ impl super::Entity for JobCard {
 }
 
 impl backbone_core::PersistentEntity for JobCard {
+    fn state_fields() -> &'static [&'static str] {
+        &["status"]
+    }
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("work_order_id", "manufacturing.work_orders", "id"),
+            backbone_core::Reference::new("operation_id", "manufacturing.operations", "id"),
+            backbone_core::Reference::new("workstation_id", "manufacturing.workstations", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

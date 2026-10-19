@@ -221,11 +221,3 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkstationLossDto> for WorkstationLoss
     }
 }
 
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to WorkstationLoss here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
-

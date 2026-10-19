@@ -38,7 +38,7 @@ pub struct CreateBomByproductDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
     pub quantity: Decimal,
-    #[serde(alias = "cost_share")]
+    #[serde(default, alias = "cost_share")]
     pub cost_share: Decimal,
 }
 
@@ -85,8 +85,8 @@ pub struct PatchBomByproductDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "item_id")]
     pub item_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
-    pub product_category_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "product_category_id")]
+    pub product_category_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "cost_share")]
@@ -259,12 +259,4 @@ impl backbone_core::ApplyUpdateDto<UpdateBomByproductDto> for BomByproduct {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to BomByproduct here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

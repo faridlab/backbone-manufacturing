@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for RepairOrderError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `repair_order:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn repair_order_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("repair_order")
+        .in_module("manufacturing")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for RepairOrder.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for RepairOrderError {
 /// let router = create_repair_order_routes(service);
 /// ```
 pub fn create_repair_order_routes(service: Arc<RepairOrderService>) -> Router {
-    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::routes(
+    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::routes_guarded(
         service,
         "/repair_orders",
+        repair_order_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for RepairOrder.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_repair_order_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_repair_order_read_routes(service: Arc<RepairOrderService>) -> Router {
-    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::read_routes(
+    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::read_routes_guarded(
         service,
         "/repair_orders",
+        repair_order_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_repair_order_read_routes(service: Arc<RepairOrderService>) -> Rout
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_repair_order_write_routes(service: Arc<RepairOrderService>) -> Router {
-    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::write_routes(
+    BackboneCrudHandler::<RepairOrderService, RepairOrder, CreateRepairOrderDto, UpdateRepairOrderDto, RepairOrderResponseDto>::write_routes_guarded(
         service,
         "/repair_orders",
+        repair_order_permissions(),
     )
 }
 

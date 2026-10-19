@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for BomOperationError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `bom_operation:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn bom_operation_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("bom_operation")
+        .in_module("manufacturing")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for BomOperation.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for BomOperationError {
 /// let router = create_bom_operation_routes(service);
 /// ```
 pub fn create_bom_operation_routes(service: Arc<BomOperationService>) -> Router {
-    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::routes(
+    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::routes_guarded(
         service,
         "/bom_operations",
+        bom_operation_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for BomOperation.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_bom_operation_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_bom_operation_read_routes(service: Arc<BomOperationService>) -> Router {
-    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::read_routes(
+    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::read_routes_guarded(
         service,
         "/bom_operations",
+        bom_operation_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_bom_operation_read_routes(service: Arc<BomOperationService>) -> Ro
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_bom_operation_write_routes(service: Arc<BomOperationService>) -> Router {
-    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::write_routes(
+    BackboneCrudHandler::<BomOperationService, BomOperation, CreateBomOperationDto, UpdateBomOperationDto, BomOperationResponseDto>::write_routes_guarded(
         service,
         "/bom_operations",
+        bom_operation_permissions(),
     )
 }
 

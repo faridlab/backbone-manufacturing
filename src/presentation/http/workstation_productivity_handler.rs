@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for WorkstationProductivityError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `workstation_productivity:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn workstation_productivity_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("workstation_productivity")
+        .in_module("manufacturing")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for WorkstationProductivity.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for WorkstationProductivityError {
 /// let router = create_workstation_productivity_routes(service);
 /// ```
 pub fn create_workstation_productivity_routes(service: Arc<WorkstationProductivityService>) -> Router {
-    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::routes(
+    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::routes_guarded(
         service,
         "/workstation_productivities",
+        workstation_productivity_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for WorkstationProductivity.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_workstation_productivity_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_workstation_productivity_read_routes(service: Arc<WorkstationProductivityService>) -> Router {
-    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::read_routes(
+    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::read_routes_guarded(
         service,
         "/workstation_productivities",
+        workstation_productivity_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_workstation_productivity_read_routes(service: Arc<WorkstationProdu
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_workstation_productivity_write_routes(service: Arc<WorkstationProductivityService>) -> Router {
-    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::write_routes(
+    BackboneCrudHandler::<WorkstationProductivityService, WorkstationProductivity, CreateWorkstationProductivityDto, UpdateWorkstationProductivityDto, WorkstationProductivityResponseDto>::write_routes_guarded(
         service,
         "/workstation_productivities",
+        workstation_productivity_permissions(),
     )
 }
 

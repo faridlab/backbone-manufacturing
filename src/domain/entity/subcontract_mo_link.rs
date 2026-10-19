@@ -156,6 +156,12 @@ impl super::Entity for SubcontractMoLink {
 }
 
 impl backbone_core::PersistentEntity for SubcontractMoLink {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("work_order_id", "manufacturing.work_orders", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

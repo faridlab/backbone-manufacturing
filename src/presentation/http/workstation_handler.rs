@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for WorkstationError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `workstation:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn workstation_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("workstation")
+        .in_module("manufacturing")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for Workstation.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for WorkstationError {
 /// let router = create_workstation_routes(service);
 /// ```
 pub fn create_workstation_routes(service: Arc<WorkstationService>) -> Router {
-    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::routes(
+    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::routes_guarded(
         service,
         "/workstations",
+        workstation_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for Workstation.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_workstation_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_workstation_read_routes(service: Arc<WorkstationService>) -> Router {
-    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::read_routes(
+    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::read_routes_guarded(
         service,
         "/workstations",
+        workstation_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_workstation_read_routes(service: Arc<WorkstationService>) -> Route
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_workstation_write_routes(service: Arc<WorkstationService>) -> Router {
-    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::write_routes(
+    BackboneCrudHandler::<WorkstationService, Workstation, CreateWorkstationDto, UpdateWorkstationDto, WorkstationResponseDto>::write_routes_guarded(
         service,
         "/workstations",
+        workstation_permissions(),
     )
 }
 

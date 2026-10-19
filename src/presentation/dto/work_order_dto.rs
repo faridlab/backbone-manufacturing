@@ -41,13 +41,13 @@ pub struct CreateWorkOrderDto {
     #[serde(alias = "bom_id")]
     pub bom_id: Uuid,
     pub quantity: Decimal,
-    #[serde(alias = "produced_qty")]
+    #[serde(default, alias = "produced_qty")]
     pub produced_qty: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "product_category_id")]
     pub product_category_id: Option<Uuid>,
-    #[serde(alias = "raw_material_cost")]
+    #[serde(default, alias = "raw_material_cost")]
     pub raw_material_cost: Decimal,
-    #[serde(alias = "operating_cost")]
+    #[serde(default, alias = "operating_cost")]
     pub operating_cost: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "wip_warehouse_id")]
     pub wip_warehouse_id: Option<Uuid>,
@@ -141,28 +141,28 @@ pub struct PatchWorkOrderDto {
     pub produced_qty: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<WorkOrderState>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reservation_state")]
-    pub reservation_state: Option<ReservationState>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "product_category_id")]
-    pub product_category_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reservation_state")]
+    pub reservation_state: Option<Option<ReservationState>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "product_category_id")]
+    pub product_category_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "raw_material_cost")]
     pub raw_material_cost: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "operating_cost")]
     pub operating_cost: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "wip_warehouse_id")]
-    pub wip_warehouse_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fg_warehouse_id")]
-    pub fg_warehouse_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "wip_account_id")]
-    pub wip_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fg_account_id")]
-    pub fg_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "raw_material_account_id")]
-    pub raw_material_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "conversion_cost_account_id")]
-    pub conversion_cost_account_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "planned_start_date")]
-    pub planned_start_date: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "wip_warehouse_id")]
+    pub wip_warehouse_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fg_warehouse_id")]
+    pub fg_warehouse_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "wip_account_id")]
+    pub wip_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fg_account_id")]
+    pub fg_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "raw_material_account_id")]
+    pub raw_material_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "conversion_cost_account_id")]
+    pub conversion_cost_account_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "planned_start_date")]
+    pub planned_start_date: Option<Option<DateTime<Utc>>>,
 }
 
 impl PatchWorkOrderDto {
@@ -392,12 +392,4 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkOrderDto> for WorkOrder {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to WorkOrder here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

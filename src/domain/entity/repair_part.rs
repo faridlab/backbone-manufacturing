@@ -189,6 +189,12 @@ impl super::Entity for RepairPart {
 }
 
 impl backbone_core::PersistentEntity for RepairPart {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("repair_order_id", "manufacturing.repair_orders", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

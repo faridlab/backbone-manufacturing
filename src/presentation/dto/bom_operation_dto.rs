@@ -40,9 +40,9 @@ pub struct CreateBomOperationDto {
     pub workstation_id: Uuid,
     #[serde(alias = "time_in_mins")]
     pub time_in_mins: Decimal,
-    #[serde(alias = "hour_rate")]
+    #[serde(default, alias = "hour_rate")]
     pub hour_rate: Decimal,
-    #[serde(alias = "operating_cost")]
+    #[serde(default, alias = "operating_cost")]
     pub operating_cost: Decimal,
 }
 
@@ -276,12 +276,4 @@ impl backbone_core::ApplyUpdateDto<UpdateBomOperationDto> for BomOperation {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to BomOperation here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

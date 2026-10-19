@@ -37,8 +37,9 @@ pub struct CreateWorkOrderItemDto {
     pub item_id: Uuid,
     #[serde(alias = "required_qty")]
     pub required_qty: Decimal,
-    #[serde(alias = "consumed_qty")]
+    #[serde(default, alias = "consumed_qty")]
     pub consumed_qty: Decimal,
+    #[serde(default)]
     pub rate: Decimal,
 }
 
@@ -259,12 +260,4 @@ impl backbone_core::ApplyUpdateDto<UpdateWorkOrderItemDto> for WorkOrderItem {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to WorkOrderItem here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 
